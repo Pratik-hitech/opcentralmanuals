@@ -83,10 +83,10 @@ const Navbar = () => {
       />
     </ListItem>
 
-    <ListItem button component={NavLink} to="/admin/news" style={navLinkStyle} sx={{ pl: 4 }}>
+    <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="News Content" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
-    <ListItem button component={NavLink} to="/admin/users" style={navLinkStyle} sx={{ pl: 4 }}>
+    <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="User Management" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
     <ListItem button component={NavLink} to="/admin/locations" style={navLinkStyle} sx={{ pl: 4 }}>
@@ -205,7 +205,7 @@ const Navbar = () => {
                   PaperProps={{ onMouseLeave: handleClose }}
                   disableAutoFocusItem
                 >
-                  <MenuItem component={NavLink} to="/admin/news" onClick={handleClose}>
+                  <MenuItem component={NavLink} to="/manage/news" onClick={handleClose}>
                     News Content
                   </MenuItem>
                   <MenuItem component={NavLink} to="/admin/users" onClick={handleClose}>
