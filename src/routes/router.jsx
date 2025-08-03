@@ -21,6 +21,13 @@ import ManageUsers, {loader as manageUsersLoader} from "../pages/ManageUsers/Man
 import EditNews from "../pages/EditNews/EditNews";
 import EditForm from "../pages/EditNews/components/EditForm";
 import Permissions from "../pages/EditNews/components/Permissions";
+import { Navigate } from "react-router-dom";
+import UserProfile from "../pages/UserProfile/UserProfile";
+import UserProfileLayout from "../pages/UserProfile/components/UserProfileLayout";
+import ActivityLog from "../pages/UserProfile/components/ActivityLog";
+import FileManager from "../pages/UserProfile/components/FileManager";
+import Opmanualsuser from "../pages/UserProfile/components/Opmanualsuser";
+import UserForm, { userLoader } from "../pages/UserProfile/components/UserForm";
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
 export const router = createBrowserRouter([
@@ -41,9 +48,7 @@ export const router = createBrowserRouter([
        loader: dashboardLoader,
        },
       
-      // { path: "profile", element: <Profile /> },
-      //   { path: "overview", element: <Overview /> },
-      // add more dashboard sub-routes here
+     
     ],
   },
   {
@@ -54,7 +59,7 @@ export const router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      { index: true, element: <Overview /> }, // this renders on /overview
+      { index: true, element: <Overview /> },
     ],
   },
   {
@@ -76,10 +81,10 @@ export const router = createBrowserRouter([
     children: [
       {
         path: "",
-        element: <ManualsDocs />, // this will show at /operations/manuals/docs
+        element: <ManualsDocs />,
         children: [
-          // { index: true, element: <div>Select a document</div> },
-          { path: "policy/:id", element: <SideDocs /> }, // this will render inside ManualsDocs via <Outlet />
+          
+          { path: "policy/:id", element: <SideDocs /> }, 
         ],
       },
     ],
@@ -146,6 +151,10 @@ export const router = createBrowserRouter([
   ),
   children: [
     {
+  index: true,
+  element: <Navigate to="create" replace />
+},
+    {
       path: "create",
       element: <EditForm /> // Create mode (no ID)
     },
@@ -182,6 +191,138 @@ export const router = createBrowserRouter([
       
     }],
   },
+
+  // ******USERS PROFILE SECTION****
+
+//   {
+//   path: "/users/profile",
+//   element: (
+//     <PrivateRoute>
+//       <PrivateLayout />
+//     </PrivateRoute>
+//   ),
+//   children: [
+
+//     {
+//       index:true , element : <UserProfile />
+//     },
+// //     {
+// //   index: true,
+// //   element: <Navigate to="create" replace />
+// // },
+//     // {
+//     //   path: "create",
+//     //   element: <EditForm /> // Create mode (no ID)
+//     // },
+//     {
+//       path: ":userid",
+//       element: <UserProfile />, // Parent layout for edit operations
+//       children: [
+//         {
+//           index: true,
+//           element: <UserProfileLayout />
+//         },
+//         { 
+//           path: "activitylog", 
+//           element: <ActivityLog /> 
+//         },
+//         { 
+//           path: "filemanager", 
+//           element: <FileManager /> 
+//         },
+//          { 
+//           path: "opmanuals", 
+//           element: <Opmanualsuser /> 
+//         },
+//         //  { 
+//         //   path: "permissions", 
+//         //   element: <Permissions /> 
+//         // }
+//       ]
+//     }
+//   ]
+// },
+{
+  path: "/users/profile",
+  element: (
+    <PrivateRoute>
+      <PrivateLayout />
+    </PrivateRoute>
+  ),
+  children: [
+    {
+      index: true,
+      element: <Navigate to="/manage/users" replace /> // Redirect to users list if no ID
+    },
+    {
+      path: ":userid",
+      element: <UserProfile />,
+      children: [
+        {
+          index: true,
+          element: <UserProfileLayout />
+        },
+        { 
+          path: "activitylog", 
+          element: <ActivityLog /> 
+        },
+        { 
+          path: "filemanager", 
+          element: <FileManager /> 
+        },
+        { 
+          path: "opmanuals", 
+          element: <Opmanualsuser /> 
+        },
+        
+       
+      ]
+    },
+    {
+      path: "activitylog",
+      element: <Navigate to="/manage/users" replace />
+    },
+    {
+      path: "filemanager",
+      element: <Navigate to="/manage/users" replace />
+    },
+    {
+      path: "opmanuals",
+      element: <Navigate to="/manage/users" replace />
+    },
+    
+  ]
+},
+// {
+//   path : "/users/create",
+//   element : <UserForm />
+// },
+{
+  path: "/users",
+  element: (
+    <PrivateRoute>
+      <PrivateLayout />
+    </PrivateRoute>
+  ),
+  children: [
+    // Create route
+    {
+      path: "create",
+      element: <UserForm /> // Create mode
+    },
+    // Edit route
+    {
+      path: ":id/edit",
+      element: <UserForm />, // Edit mode
+     loader:userLoader
+    }
+  ]
+},
+
+// {
+//     path: "/users/profile/create",
+//     element: <UserForm />,
+//   },
 
   // ✅ Catch-all route for 404
   {

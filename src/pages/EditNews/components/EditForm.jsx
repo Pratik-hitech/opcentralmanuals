@@ -125,18 +125,18 @@ const EditForm = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <Box
-        display="flex"
-        justifyContent="center"
-        alignItems="center"
-        height="100vh"
-      >
-        <CircularProgress />
-      </Box>
-    );
-  }
+  // if (loading) {
+  //   return (
+  //     <Box
+  //       display="flex"
+  //       justifyContent="center"
+  //       alignItems="center"
+  //       height="100vh"
+  //     >
+  //       <CircularProgress />
+  //     </Box>
+  //   );
+  // }
 
   return (
     <Box

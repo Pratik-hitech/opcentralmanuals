@@ -500,6 +500,7 @@ const ManageArticles = () => {
   const [error, setError] = useState(null);
 
   // UI state
+  const [isLoading, setIsLoading] = useState(true);
   const [selected, setSelected] = useState([]);
   const [tab, setTab] = useState("active");
   const [searchTerm, setSearchTerm] = useState("");
@@ -522,6 +523,30 @@ const ManageArticles = () => {
     message: "",
     severity: "success",
   });
+
+    const fetchArticles = async () => {
+    setIsLoading(true);
+    try {
+      const response = await httpClient.get("news", {
+        params: { archived: tab === "archived" }
+      });
+      
+      if (response.data.success) {
+        setArticles(response.data.data);
+        setFilteredArticles(response.data.data);
+        setSelected([]);
+      } else {
+        setError(response.data.message || "Failed to fetch articles");
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to load articles");
+    } finally {
+      setIsLoading(false);
+    }
+  }
+    useEffect(() => {
+    fetchArticles();
+  }, [tab]);
 
   // Filter articles based on search term
   useEffect(() => {
@@ -747,7 +772,7 @@ const ManageArticles = () => {
           <Button 
             variant="contained" 
             color="warning" 
-            onClick={() => navigate("/manage/newsarticle/new")}
+            onClick={() => navigate("/manage/newsarticle/create")}
           >
             Create Article
           </Button>
@@ -831,59 +856,61 @@ const ManageArticles = () => {
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
-        <TableBody>
-          {filteredArticles.length > 0 ? (
-            filteredArticles
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((article) => (
-                <TableRow key={article.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.includes(article.id)}
-                      onChange={() => handleSelect(article.id)}
-                    />
-                  </TableCell>
-                  <TableCell>{article.title}</TableCell>
-                  <TableCell>{article.slug}</TableCell>
-                  <TableCell>{article.views}</TableCell>
-                  <TableCell>{article.percent_viewed}%</TableCell>
-                  <TableCell>{formatDate(article.created_at)}</TableCell>
-                  <TableCell>{article.published_by}</TableCell>
-                  <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
-                  <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
-                  <TableCell>
-                    {article.status === "publish" ? "Published" : "Unpublished"}
-                  </TableCell>
-                  <TableCell>{formatDate(article.archived_at)}</TableCell>
-                  <TableCell>{article.schedule || "-"}</TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Switch
-                        checked={article.status === "publish"}
-                        onChange={() => handleTogglePublish(article.id, article.status)}
-                        color="primary"
-                        size="small"
-                      />
-                      <IconButton
-                        onClick={(e) => {
-                          setActiveRowId(article.id);
-                          handleMenuOpen(setRowMenuAnchorEl)(e);
-                        }}
-                      >
-                        <MoreVert />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={13} align="center">
-                No articles found
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
+       <TableBody>
+  {isLoading ? (
+    renderSkeletonRows()
+  ) : filteredArticles.length > 0 ? (
+    filteredArticles
+      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+      .map((article) => (
+        <TableRow key={article.id}>
+          <TableCell>
+            <Checkbox
+              checked={selected.includes(article.id)}
+              onChange={() => handleSelect(article.id)}
+            />
+          </TableCell>
+          <TableCell>{article.title}</TableCell>
+          <TableCell>{article.slug}</TableCell>
+          <TableCell>{article.views}</TableCell>
+          <TableCell>{article.percent_viewed}%</TableCell>
+          <TableCell>{formatDate(article.created_at)}</TableCell>
+          <TableCell>{article.published_by}</TableCell>
+          <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
+          <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
+          <TableCell>
+            {article.status === "publish" ? "Published" : "Unpublished"}
+          </TableCell>
+          <TableCell>{formatDate(article.archived_at)}</TableCell>
+          <TableCell>{article.schedule || "-"}</TableCell>
+          <TableCell>
+            <Box display="flex" alignItems="center" gap={1}>
+              <Switch
+                checked={article.status === "publish"}
+                onChange={() => handleTogglePublish(article.id, article.status)}
+                color="primary"
+                size="small"
+              />
+              <IconButton
+                onClick={(e) => {
+                  setActiveRowId(article.id);
+                  handleMenuOpen(setRowMenuAnchorEl)(e);
+                }}
+              >
+                <MoreVert />
+              </IconButton>
+            </Box>
+          </TableCell>
+        </TableRow>
+      ))
+  ) : (
+    <TableRow>
+      <TableCell colSpan={13} align="center">
+        No articles found
+      </TableCell>
+    </TableRow>
+  )}
+</TableBody>
       </Table>
 
       {/* Pagination */}
@@ -936,7 +963,7 @@ const ManageArticles = () => {
         open={Boolean(rowMenuAnchorEl)}
         onClose={handleMenuClose(setRowMenuAnchorEl)}
       >
-        <MenuItem onClick={() => navigate(`/manage/newsarticle/${activeRowId}/edit`)}>
+        <MenuItem onClick={() => navigate(`/manage/newsarticle/${activeRowId}/details`)}>
           Edit
         </MenuItem>
         <MenuItem>Clone</MenuItem>

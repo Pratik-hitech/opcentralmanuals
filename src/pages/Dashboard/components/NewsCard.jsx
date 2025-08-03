@@ -76,7 +76,7 @@ function NewsCard({newsData}) {
           anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
-          <MenuItem onClick={() => handleMenuItemClick("/admin/news/edit")}>
+          <MenuItem onClick={() => handleMenuItemClick("/manage/news")}>
         Manage Articles
           </MenuItem>
           <MenuItem onClick={() => handleMenuItemClick("/admin/news/delete")}>

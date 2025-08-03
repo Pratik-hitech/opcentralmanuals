@@ -86,7 +86,7 @@ const Navbar = () => {
     <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="News Content" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
-    <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
+    <ListItem button component={NavLink} to="/manage/users" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="User Management" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
     <ListItem button component={NavLink} to="/admin/locations" style={navLinkStyle} sx={{ pl: 4 }}>
@@ -208,7 +208,7 @@ const Navbar = () => {
                   <MenuItem component={NavLink} to="/manage/news" onClick={handleClose}>
                     News Content
                   </MenuItem>
-                  <MenuItem component={NavLink} to="/admin/users" onClick={handleClose}>
+                  <MenuItem component={NavLink} to="/manage/users" onClick={handleClose}>
                     User Management
                   </MenuItem>
                   <MenuItem component={NavLink} to="/admin/locations" onClick={handleClose}>

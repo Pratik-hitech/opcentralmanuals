@@ -47,9 +47,8 @@ export async function loader({ request }) {
     const url = new URL(request.url);
     const status = url.searchParams.get("status") || "active";
     
-    // First try fetching without filters to verify API works
     const apiUrl = 'https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users';
-    console.log('Fetching from:', apiUrl); // Debug log
+    console.log('Fetching from:', apiUrl);
     
     const response = await fetch(apiUrl, {
       headers: {
@@ -58,12 +57,12 @@ export async function loader({ request }) {
     });
     
     if (!response.ok) {
-      console.error('API Response:', response.status, response.statusText); // Debug log
+      console.error('API Response:', response.status, response.statusText);
       throw new Error(`Failed to fetch users: ${response.status} ${response.statusText}`);
     }
     
     const apiUsers = await response.json();
-    console.log('API Response:', apiUsers); // Debug log
+    console.log('API Response:', apiUsers);
     
     // Filter based on status if needed
     const filteredUsers = status === "active" 
@@ -87,10 +86,11 @@ export async function loader({ request }) {
     
     return { users: transformedUsers };
   } catch (error) {
-    console.error('Loader Error:', error); // Debug log
+    console.error('Loader Error:', error);
     throw new Error(error.message || "Failed to load users");
   }
 }
+
 const ManageUsers = () => {
   const navigate = useNavigate();
   const { users: initialUsers } = useLoaderData();
@@ -116,6 +116,7 @@ const ManageUsers = () => {
   const [activeRowId, setActiveRowId] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
 
   // Notification
   const [snackbar, setSnackbar] = useState({
@@ -171,53 +172,53 @@ const ManageUsers = () => {
 
   // Toggle activation status
   const handleToggleActivation = async (userId, currentStatus) => {
-  setIsActionLoading(true);
-  try {
-    const newStatus = !currentStatus;
-    
-    const response = await fetch(
-      `https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${userId}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ activated: newStatus }), // Changed from isActive to activated
+    setIsActionLoading(true);
+    try {
+      const newStatus = !currentStatus;
+      
+      const response = await fetch(
+        `https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ activated: newStatus }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update user status");
       }
-    );
 
-    if (!response.ok) {
-      throw new Error("Failed to update user status");
+      const updatedUser = await response.json();
+
+      setUsers(prev => prev.map(user => 
+        user.id === userId 
+          ? { ...user, activated: updatedUser.activated }
+          : user
+      ));
+      setFilteredUsers(prev => prev.map(user => 
+        user.id === userId 
+          ? { ...user, activated: updatedUser.activated }
+          : user
+      ));
+      
+      setSnackbar({
+        open: true,
+        message: `User ${newStatus ? "activated" : "deactivated"} successfully`,
+        severity: "success",
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to update user status",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
     }
-
-    const updatedUser = await response.json();
-
-    setUsers(prev => prev.map(user => 
-      user.id === userId 
-        ? { ...user, activated: updatedUser.activated } // Changed from isActive to activated
-        : user
-    ));
-    setFilteredUsers(prev => prev.map(user => 
-      user.id === userId 
-        ? { ...user, activated: updatedUser.activated } // Changed from isActive to activated
-        : user
-    ));
-    
-    setSnackbar({
-      open: true,
-      message: `User ${newStatus ? "activated" : "deactivated"} successfully`,
-      severity: "success",
-    });
-  } catch (error) {
-    setSnackbar({
-      open: true,
-      message: error.message || "Failed to update user status",
-      severity: "error",
-    });
-  } finally {
-    setIsActionLoading(false);
-  }
-};
+  };
 
   // Export
   const exportData = (type) => {
@@ -253,41 +254,77 @@ const ManageUsers = () => {
   // Delete actions
   const handleDeleteClick = (id) => {
     setUserToDelete(id);
+    setIsBulkDelete(false);
     setOpenDeleteModal(true);
     handleMenuClose(setRowMenuAnchorEl)();
+  };
+
+  const handleBulkDeleteClick = () => {
+    setIsBulkDelete(true);
+    setOpenDeleteModal(true);
+    handleMenuClose(setBulkAnchorEl)();
   };
 
   const confirmDelete = async () => {
     setIsActionLoading(true);
     try {
-      const response = await fetch(
-        `https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${userToDelete}`,
-        {
-          method: "DELETE",
+      if (isBulkDelete) {
+        // Bulk delete
+        const deletePromises = selected.map(id => 
+          fetch(`https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${id}`, {
+            method: "DELETE",
+          })
+        );
+        
+        const responses = await Promise.all(deletePromises);
+        const allSuccessful = responses.every(response => response.ok);
+        
+        if (!allSuccessful) {
+          throw new Error("Failed to delete some users");
         }
-      );
+        
+        setUsers(prev => prev.filter(u => !selected.includes(u.id)));
+        setFilteredUsers(prev => prev.filter(u => !selected.includes(u.id)));
+        setSelected([]);
+        
+        setSnackbar({
+          open: true,
+          message: `${selected.length} users deleted successfully`,
+          severity: "success",
+        });
+      } else {
+        // Single delete
+        const response = await fetch(
+          `https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${userToDelete}`,
+          {
+            method: "DELETE",
+          }
+        );
 
-      if (!response.ok) {
-        throw new Error("Failed to delete user");
+        if (!response.ok) {
+          throw new Error("Failed to delete user");
+        }
+
+        setSnackbar({
+          open: true,
+          message: "User deleted successfully",
+          severity: "success",
+        });
+        setUsers(prev => prev.filter(u => u.id !== userToDelete));
+        setFilteredUsers(prev => prev.filter(u => u.id !== userToDelete));
+        setSelected(prev => prev.filter(id => id !== userToDelete));
       }
-
-      setSnackbar({
-        open: true,
-        message: "User deleted successfully",
-        severity: "success",
-      });
-      setUsers((prev) => prev.filter((u) => u.id !== userToDelete));
-      setSelected((prev) => prev.filter((id) => id !== userToDelete));
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error.message || "Failed to delete user",
+        message: error.message || "Failed to delete user(s)",
         severity: "error",
       });
     } finally {
       setIsActionLoading(false);
       setOpenDeleteModal(false);
       setUserToDelete(null);
+      setIsBulkDelete(false);
     }
   };
 
@@ -330,7 +367,7 @@ const ManageUsers = () => {
           <Button 
             variant="contained" 
             color="warning" 
-            onClick={() => navigate("/manage/users/new")}
+            onClick={() => navigate("/users/create")}
           >
             Create User
           </Button>
@@ -426,23 +463,26 @@ const ManageUsers = () => {
                       checked={user.activated}
                       onChange={() => handleToggleActivation(user.id, user.activated)}
                       color="primary"
-                      size="small"
                     />
                   </TableCell>
                   <TableCell>{user.brand}</TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <IconButton
-                        onClick={() => navigate(`/manage/users/${user.id}/profile`)}
+                        onClick={() => navigate(`/users/profile/${user.id}`)}
                         size="small"
                       >
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          {user.avatar ? (
-                            <img src={user.avatar} alt={`${user.firstName} ${user.lastName}`} />
-                          ) : (
-                            <Person />
-                          )}
-                        </Avatar>
+                        <Box
+                          width={32}
+                          height={32}
+                          display="flex"
+                          justifyContent="center"
+                          alignItems="center"
+                          border="1px solid #ccc"
+                          borderRadius={1}
+                        >
+                          <Person fontSize="small" />
+                        </Box>
                       </IconButton>
                       <IconButton
                         onClick={(e) => {
@@ -484,6 +524,7 @@ const ManageUsers = () => {
         open={Boolean(bulkAnchorEl)}
         onClose={handleMenuClose(setBulkAnchorEl)}
       >
+        <MenuItem onClick={handleBulkDeleteClick}>Delete Selected Users</MenuItem>
         <MenuItem>Change Roles</MenuItem>
         <MenuItem onClick={() => {
           // Bulk activate
@@ -538,7 +579,7 @@ const ManageUsers = () => {
         open={Boolean(rowMenuAnchorEl)}
         onClose={handleMenuClose(setRowMenuAnchorEl)}
       >
-        <MenuItem onClick={() => navigate(`/manage/users/${activeRowId}/edit`)}>
+        <MenuItem onClick={() => navigate(`/users/${activeRowId}/edit`)}>
           Edit
         </MenuItem>
         <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
@@ -553,10 +594,14 @@ const ManageUsers = () => {
         open={openDeleteModal}
         onClose={() => setOpenDeleteModal(false)}
       >
-        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogTitle>
+          {isBulkDelete ? `Delete ${selected.length} Users?` : "Confirm Delete"}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete this user? This action cannot be undone.
+            {isBulkDelete 
+              ? `Are you sure you want to delete ${selected.length} selected users? This action cannot be undone.`
+              : "Are you sure you want to delete this user? This action cannot be undone."}
           </DialogContentText>
         </DialogContent>
         <DialogActions>
