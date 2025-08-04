@@ -1,142 +1,28 @@
-// import { Outlet } from "react-router-dom";
-// import { Box, Paper, Typography } from "@mui/material";
-// import NewsCard from "./components/NewsCard";
-// import RightCard from "./components/RightCard1"
-// import { httpClient } from "../../utils/httpClientSetup";
-// import { useEffect, useState } from "react";
-
-// function Dashboard() {
-//   const[news,setNews] = useState([]);
-//   const[loading,setLoading]= useState(true);
-//   const[error,setError] = useState(null);        
-
-//    const getNews=() => {
-//     setLoading(true)
-//   httpClient.get("news").then( (response)=>{
-//     const data = response.data;
-//   if(data.success){
-//     setNews(data.data);
-
-//   }  }, (error) => {
-//     setError(error.response?.data?.message || "failed to fetch news")
-//   }
-
-//   ) .finally(()=>{
-//     setLoading(false);
-//   })
-  
-  
-//   }
-
-//   useEffect(()=>{
-//     getNews()
-//   },[])
-//   return (
-//     <Box
-//       sx={{
-//          justifyContent: { xs: "center", md: "center" },
-//          alignItems: { xs: "center", md: "flex-start",lg:"flex-start" },
-//         display: "flex",
-//         backgroundColor: "#FAF7F3",
-//         flexDirection: { xs: "column", md: "row" },
-//         minHeight: "70vh",
-//         px: { xs: 1, sm: 2 },
-//         padding: 2,
-//         boxSizing: "border-box",
-//           gap: { xs: 2, md: 3 },
-//       }}
-//     >
-//       {/* Left spacing fixed at 150px */}
-//       <Box sx={{ width: "150px",display: { xs: "none", md: "block" },flexShrink: 0, }} />
-
-//       {/* Center card with flexible width and max width */}
-//       <Paper
-//         elevation={3}
-//         // sx={{
-//         //   // flexGrow: 1,
-//         //   flex:1,
-//         //   // flexBasis: 0,
-//         //   width: { xs: "100%", md: "60%" },
-//         //   minWidth: 100,    // minimum reasonable width
-//         //   maxWidth: "60%",  // max 60% of container width
-//         //   padding: 2,
-//         //   marginRight: 2,
-//         //   borderRadius: 2,
-//         //   boxSizing: "border-box",
-//         //   height:"fit-content"
-//         // }}
-
-//          sx={{
-//           flex: 1,
-//           width: { xs: "100%", md: "60%" },
-//           padding: 2,
-//           borderRadius: 2,
-//           boxSizing: "border-box",
-//           height:"fit-content"
-//         }}
-//       >
-//         <NewsCard newsData={news} />
-//       </Paper>
-
-//       {/* Right column with two cards stacked, flexible width */}
-//       <Box
-//         sx={{
-//           display: "flex",
-//           flexDirection: "column",
-//           gap: 2,
-//            width: { xs: "100%", md: "25%" },
-//           // minWidth: 250,
-//           // maxWidth: 350,
-//           // flexShrink: 0,
-//         }}
-//       >
-//         <RightCard />
-//         {/* <Paper elevation={2} sx={{ padding: 2, borderRadius: 2, boxSizing: "border-box" }}>
-//           <Typography variant="subtitle1">Lorem ipsum dolor sit amet consectetur adipisicing elit. Quam sapiente nostrum impedit nobis laudantium recusandae illum necessitatibus, quos atque? Tenetur illum similique omnis rerum cumque, sapiente, blanditiis molestiae ad tempore eligendi nisi fuga numquam voluptatem est dolorem sit quia nobis minima. Corrupti pariatur nulla odit quis veniam eum at vero?</Typography>
-//           <Typography variant="body2">Some content here...</Typography>
-//         </Paper> */}
-//         <Paper elevation={2} sx={{ padding: 2, borderRadius: 2, boxSizing: "border-box", overflowY: "auto", }}>
-
-//           <Typography variant="subtitle1">Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae, officiis rem ad vel quibusdam, explicabo tempore illum, quasi odit sequi dolor blanditiis obcaecati soluta maxime nisi porro delectus maiores impedit dignissimos aliquam deleniti magni vitae optio repellat. Officia nam itaque, aperiam quis ex tenetur magnam consectetur earum accusantium assumenda numquam!Lorem ipsum dolor sit amet consectetur adipisicing elit. Recusandae, officiis rem ad vel quibusdam, explicabo tempore illum, quasi odit sequi dolor blanditiis obcaecati soluta maxime nisi porro delectus maiores impedit dignissimos aliquam deleniti magni vitae optio repellat. Officia nam itaque, aperiam quis ex tenetur magnam consectetur earum accusantium assumenda numquam</Typography>
-//           <Typography variant="body2">Additional info...</Typography>
-//         </Paper>
-//       </Box>
-//     </Box>
-//   );
-// }
-
-// export default Dashboard;
-import { Outlet, useLoaderData } from "react-router-dom";
-import { Box, Paper, Typography, CircularProgress } from "@mui/material";
+import { Outlet, useLoaderData, useNavigation } from "react-router-dom";
+import { Box, Paper, Typography, CircularProgress, Container, Stack } from "@mui/material";
 import NewsCard from "./components/NewsCard";
 import RightCard from "./components/RightCard1";
 import { httpClient } from "../../utils/httpClientSetup";
-import { useNavigation } from "react-router-dom";
 
 export async function loader() {
   try {
     const response = await httpClient.get("news");
     const data = response.data;
-    
-    if (!data.success) {
-      throw new Error(data.message || "Failed to fetch news");
-    }
-    
-    // Ensure we always return an array with proper structure
-    const formattedData = Array.isArray(data.data) 
-      ? data.data.map(item => ({
+
+    if (!data.success) throw new Error(data.message || "Failed to fetch news");
+
+    const formattedData = Array.isArray(data.data)
+      ? data.data.map((item) => ({
           id: item.id || Math.random().toString(36).substring(2, 9),
           title: item.title || "Untitled",
           content: item.content || "No content available",
-          created_at: item.created_at || new Date().toISOString()
+          created_at: item.created_at || new Date().toISOString(),
         }))
       : [];
-    
+
     return formattedData;
-    
   } catch (error) {
     console.error("Loader error:", error);
-    // Return empty array as fallback
     return [];
   }
 }
@@ -145,63 +31,140 @@ function Dashboard() {
   const news = useLoaderData();
   const navigation = useNavigation();
 
-  // Show loading indicator while data is being loaded
   if (navigation.state === "loading") {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-        <CircularProgress />
+      <Box sx={{ 
+        display: "flex", 
+        justifyContent: "center", 
+        alignItems: "center", 
+        height: "100vh",
+        background: "linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)"
+      }}>
+        <CircularProgress size={80} thickness={4} sx={{ color: "primary.main" }} />
       </Box>
     );
   }
 
   return (
-    <Box
-      sx={{
-        justifyContent: { xs: "center", md: "center" },
-        alignItems: { xs: "center", md: "flex-start", lg: "flex-start" },
-        display: "flex",
-        backgroundColor: "#FAF7F3",
-        flexDirection: { xs: "column", md: "row" },
-        minHeight: "70vh",
-        px: { xs: 1, sm: 2 },
-        padding: 2,
-        boxSizing: "border-box",
-        gap: { xs: 2, md: 3 },
-      }}
-    >
-      {/* Left spacing fixed at 150px */}
-      <Box sx={{ width: "150px", display: { xs: "none", md: "block" }, flexShrink: 0 }} />
+    <Box sx={{
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%)",
+      py: 6
+    }}>
+      <Container maxWidth="xl">
+        <Typography variant="h3" sx={{
+          fontWeight: 800,
+          mb: 6,
+          color: "text.primary",
+          textAlign: "center",
+          position: "relative",
+          "&:after": {
+            content: '""',
+            position: "absolute",
+            bottom: -12,
+            left: "50%",
+            transform: "translateX(-50%)",
+            width: "100px",
+            height: "6px",
+            background: "linear-gradient(90deg, #3f51b5 0%, #2196f3 100%)",
+            borderRadius: 3
+          }
+        }}>
+          Dashboard
+        </Typography>
 
-      {/* Center card with flexible width and max width */}
-      <Paper
-        elevation={3}
-        sx={{
-          flex: 1,
-          width: { xs: "100%", md: "60%" },
-          padding: 2,
-          borderRadius: 2,
-          boxSizing: "border-box",
-          height: "fit-content"
-        }}
-      >
-        <NewsCard newsData={news} />
-      </Paper>
+        <Stack direction={{ xs: "column", lg: "row" }} spacing={4}>
+          {/* Main Content Column */}
+          <Box sx={{ flex: 2.5 }}>
+            <Paper elevation={0} sx={{
+              p: 4,
+              borderRadius: 4,
+              background: "rgba(255,255,255,0.8)",
+              backdropFilter: "blur(10px)",
+              border: "1px solid rgba(0,0,0,0.05)",
+              boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
+              mb: 4
+            }}>
+              <Typography variant="h4" sx={{
+                fontWeight: 700,
+                mb: 3,
+                display: "flex",
+                alignItems: "center",
+                gap: 2
+              }}>
+                <Box component="span" sx={{
+                  width: 8,
+                  height: 32,
+                  bgcolor: "primary.main",
+                  borderRadius: 1
+                }} />
+                News Updates
+              </Typography>
+              <NewsCard newsData={news} />
+            </Paper>
+          </Box>
 
-      {/* Right column with two cards stacked, flexible width */}
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 2,
-          width: { xs: "100%", md: "25%" },
-        }}
-      >
-        <RightCard />
-        <Paper elevation={2} sx={{ padding: 2, borderRadius: 2, boxSizing: "border-box", overflowY: "auto" }}>
-          <Typography variant="subtitle1">Lorem ipsum dolor...</Typography>
-          <Typography variant="body2">Additional info...</Typography>
-        </Paper>
-      </Box>
+          {/* Sidebar Column */}
+          <Box sx={{ flex: 1 }}>
+            <Stack spacing={4}>
+              <Paper elevation={0} sx={{
+                p: 4,
+                borderRadius: 4,
+                background: "rgba(255,255,255,0.8)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(0,0,0,0.05)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)"
+              }}>
+                <RightCard />
+              </Paper>
+
+              <Paper elevation={0} sx={{
+                p: 4,
+                borderRadius: 4,
+                background: "rgba(255,255,255,0.8)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(0,0,0,0.05)",
+                boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
+                overflow: "hidden"
+              }}>
+                <Typography variant="h5" sx={{
+                  mb: 3,
+                  fontWeight: 700,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 2
+                }}>
+                  <Box component="span" sx={{
+                    width: 6,
+                    height: 24,
+                    bgcolor: "secondary.main",
+                    borderRadius: 1
+                  }} />
+                  Social Feed
+                </Typography>
+                <Box sx={{ 
+                  height: 500, 
+                  borderRadius: 3, 
+                  overflow: "hidden",
+                  border: "1px solid rgba(0,0,0,0.1)"
+                }}>
+                  {/* <iframe
+                    src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FBlueWheelers%2F&tabs=timeline&width=471&height=550&small_header=true&adapt_container_width=true&hide_cover=true&hide_cta=true&show_facepile=false"
+                    width="100%"
+                    height="100%"
+                    style={{ border: "none" }}
+                    scrolling="no"
+                    frameBorder="0"
+                    allowFullScreen={true}
+                    allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                    title="Facebook Stream"
+                  /> */}
+                </Box>
+              </Paper>
+            </Stack>
+          </Box>
+        </Stack>
+      </Container>
     </Box>
   );
 }

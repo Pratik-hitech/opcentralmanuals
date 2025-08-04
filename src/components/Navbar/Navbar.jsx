@@ -89,7 +89,7 @@ const Navbar = () => {
     <ListItem button component={NavLink} to="/manage/users" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="User Management" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
-    <ListItem button component={NavLink} to="/admin/locations" style={navLinkStyle} sx={{ pl: 4 }}>
+    <ListItem button component={NavLink} to="/location" style={navLinkStyle} sx={{ pl: 4 }}>
       <ListItemText primary="Location Management" primaryTypographyProps={{ fontWeight: "bold" }} />
     </ListItem>
   </List>
@@ -211,7 +211,7 @@ const Navbar = () => {
                   <MenuItem component={NavLink} to="/manage/users" onClick={handleClose}>
                     User Management
                   </MenuItem>
-                  <MenuItem component={NavLink} to="/admin/locations" onClick={handleClose}>
+                  <MenuItem component={NavLink} to="/location" onClick={handleClose}>
                     Location Management
                   </MenuItem>
                 </Menu>

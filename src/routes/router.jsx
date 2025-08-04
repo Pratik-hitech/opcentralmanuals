@@ -28,6 +28,9 @@ import ActivityLog from "../pages/UserProfile/components/ActivityLog";
 import FileManager from "../pages/UserProfile/components/FileManager";
 import Opmanualsuser from "../pages/UserProfile/components/Opmanualsuser";
 import UserForm, { userLoader } from "../pages/UserProfile/components/UserForm";
+import ManageLocation from "../pages/ManageLocation/ManageLocation";
+import LocationForm from "../pages/ManageLocation/components/LocationForm";
+
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
 export const router = createBrowserRouter([
@@ -318,6 +321,31 @@ export const router = createBrowserRouter([
     }
   ]
 },
+{
+    path: "/location",
+    element: (
+      <PrivateRoute>
+       
+
+        <PrivateLayout />
+       
+      </PrivateRoute>
+    ),
+    children: [
+      { index: true, element: <ManageLocation /> },
+      {
+        path: "create",
+        element: <LocationForm />
+      },
+       {
+        path: ":id/edit",
+        element: <LocationForm />
+      }
+    ],
+  },
+
+
+
 
 // {
 //     path: "/users/profile/create",
