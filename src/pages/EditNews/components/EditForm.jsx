@@ -1,357 +1,598 @@
-import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Paper,
-  Typography,
-  TextField,
-  MenuItem,
-  Button,
-  Grid,
-  Divider,
-  InputAdornment,
-  IconButton,
-  CircularProgress,
-  Snackbar,
-  Alert
-} from '@mui/material';
-import {
-  LocationOn as LocationIcon,
-  Phone as PhoneIcon,
-  Email as EmailIcon,
-  Fax as FaxIcon,
-  Person as PersonIcon,
-  ArrowBack as ArrowBackIcon,
-  Check as CheckIcon
-} from '@mui/icons-material';
-import { httpClient } from '../../../utils/httpClientSetup';
+// import { useParams, useNavigate } from "react-router-dom";
+// import { useEffect, useState } from "react";
+// import MDEditor from "@uiw/react-md-editor";
+// import {
+//   Box, TextField, FormControl, InputLabel, Select, MenuItem,
+//   Switch, FormControlLabel, Button, Typography,
+//   Paper, Divider, Alert, CircularProgress, IconButton, Stack
+// } from "@mui/material";
+// import { httpClient } from "../../../utils/httpClientSetup";
+// import {
+//   FormatBold as FormatBoldIcon,
+//   FormatUnderlined as FormatUnderlinedIcon,
+//   FormatListNumbered as FormatListNumberedIcon,
+//   FormatListBulleted as FormatListBulletedIcon,
+//   FormatQuote as FormatQuoteIcon,
+//   Link as LinkIcon,
+//   Image as ImageIcon
+// } from "@mui/icons-material";
 
-const LocationForm = () => {
+// const NewsArticleForm = () => {
+//   const { id } = useParams();
+//   const navigate = useNavigate();
+//   const isEditMode = Boolean(id);
+  
+//   const [formData, setFormData] = useState({
+//     title: "",
+//     content: "",
+//     category: "",
+//     hasVideo: false,
+//     primaryImage: null,
+//     attachments: [],
+//     privateUrl: "",
+//     featured: false,
+//     autoArchive: false,
+//     status: "draft"
+//   });
+//   const [isLoading, setIsLoading] = useState(false);
+//   const [error, setError] = useState(null);
+
+//   useEffect(() => {
+//     if (!isEditMode) return;
+
+//     const fetchData = async () => {
+//       setIsLoading(true);
+//       try {
+//         const response = await httpClient.get(`news/${id}`);
+//         if (response.data.success) {
+//           setFormData(response.data.data);
+//         }
+//       } catch (error) {
+//         setError(error.response?.data?.message || "Failed to load article");
+//       } finally {
+//         setIsLoading(false);
+//       }
+//     };
+
+//     fetchData();
+//   }, [id, isEditMode]);
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     setIsLoading(true);
+    
+//     try {
+//       const response = isEditMode
+//         ? await httpClient.put(`news/${id}`, formData)
+//         : await httpClient.post("news", formData);
+
+//       if (response.data.success) {
+//         navigate(`/manage/newsarticle/${response.data.data.id}/details`);
+//       }
+//     } catch (error) {
+//       setError(error.response?.data?.message || "Failed to save article");
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
+
+//   const handleChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+//     setFormData(prev => ({
+//       ...prev,
+//       [name]: type === "checkbox" ? checked : value
+//     }));
+//   };
+
+//   const handleFileChange = (e) => {
+//     const { name, files } = e.target;
+//     setFormData(prev => ({
+//       ...prev,
+//       [name]: files[0]
+//     }));
+//   };
+
+//   return (
+//     <Box 
+//       component="form" 
+//       onSubmit={handleSubmit}
+//       sx={{
+//         maxWidth: '70%',
+//         margin: '0 auto',
+//         '@media (max-width: 900px)': {
+//           maxWidth: '90%'
+//         }
+//       }}
+//     >
+//       <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+//         {isEditMode ? "Edit News Article" : "Create New Article"}
+//       </Typography>
+
+//       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+//       <Paper elevation={3} sx={{ p: 3 }}>
+//         <Typography variant="h6" sx={{ mb: 2 }}>DETAILS</Typography>
+//         <Divider sx={{ mb: 3 }} />
+
+//         {/* Title */}
+//         <TextField
+//           fullWidth
+//           label="Title *"
+//           name="title"
+//           value={formData.title}
+//           onChange={handleChange}
+//           required
+//           sx={{ mb: 3 }}
+//         />
+
+//         {/* Content */}
+//         <Typography variant="subtitle2" sx={{ mb: 1 }}>Content *</Typography>
+//         <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+//           <IconButton size="small">
+//             <FormatBoldIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <FormatUnderlinedIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <FormatListNumberedIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <FormatListBulletedIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <FormatQuoteIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <LinkIcon fontSize="small" />
+//           </IconButton>
+//           <IconButton size="small">
+//             <ImageIcon fontSize="small" />
+//           </IconButton>
+//         </Stack>
+//         <MDEditor
+//           value={formData.content}
+//           onChange={(val) => setFormData(prev => ({ ...prev, content: val }))}
+//           height={400}
+//           sx={{ mb: 3 }}
+//         />
+
+//         {/* News Category */}
+//         <Typography variant="subtitle1" sx={{ mb: 1, mt: 3 }}>News Category(s)</Typography>
+//         <FormControl fullWidth sx={{ mb: 2 }}>
+//           <InputLabel>Select News Category</InputLabel>
+//           <Select
+//             name="category"
+//             value={formData.category}
+//             onChange={handleChange}
+//             label="Select News Category"
+//           >
+//             <MenuItem value="current">Current Affairs</MenuItem>
+//             <MenuItem value="sports">Sports</MenuItem>
+//             <MenuItem value="business">Business</MenuItem>
+//             <MenuItem value="entertainment">Entertainment</MenuItem>
+//             <MenuItem value="technology">Technology</MenuItem>
+//             <MenuItem value="health">Health & Wellness</MenuItem>
+//           </Select>
+//         </FormControl>
+
+//         {/* Video Switch */}
+//         <FormControlLabel
+//           control={
+//             <Switch
+//               name="hasVideo"
+//               checked={formData.hasVideo}
+//               onChange={handleChange}
+//               color="primary"
+//             />
+//           }
+//           label="Includes Video Content"
+//           sx={{ mb: 3, display: 'block' }}
+//         />
+
+//         {/* Primary Image */}
+//         <Typography variant="subtitle1" sx={{ mb: 1 }}>Primary Image</Typography>
+//         <Button
+//           variant="outlined"
+//           component="label"
+//           sx={{ mb: 3 }}
+//         >
+//           Upload File
+//           <input
+//             type="file"
+//             name="primaryImage"
+//             hidden
+//             onChange={handleFileChange}
+//           />
+//         </Button>
+
+//         {/* Attachments */}
+//         <Typography variant="subtitle1" sx={{ mb: 1 }}>Attachments</Typography>
+//         <Button
+//           variant="outlined"
+//           component="label"
+//           sx={{ mb: 3 }}
+//         >
+//           Upload File
+//           <input
+//             type="file"
+//             name="attachments"
+//             hidden
+//             multiple
+//             onChange={handleFileChange}
+//           />
+//         </Button>
+
+//         {/* Private URL */}
+//         <Typography variant="subtitle1" sx={{ mb: 1 }}>Private URL</Typography>
+//         <TextField
+//           fullWidth
+//           name="privateUrl"
+//           value={formData.privateUrl}
+//           onChange={handleChange}
+//           placeholder="https://bluewheelers.opcentral.com.au/#/news/article/reference/2ed948"
+//           sx={{ mb: 3 }}
+//         />
+
+//         {/* Featured Article */}
+//         <FormControlLabel
+//           control={
+//             <Switch
+//               name="featured"
+//               checked={formData.featured}
+//               onChange={handleChange}
+//             />
+//           }
+//           label="Featured Article"
+//           sx={{ mb: 2, display: 'block' }}
+//         />
+
+//         {/* Auto Archive */}
+//         <FormControlLabel
+//           control={
+//             <Switch
+//               name="autoArchive"
+//               checked={formData.autoArchive}
+//               onChange={handleChange}
+//             />
+//           }
+//           label="Auto Archive"
+//           sx={{ mb: 3, display: 'block' }}
+//         />
+
+//         {/* Status (Edit Mode Only) */}
+//         {isEditMode && (
+//           <>
+//             <Typography variant="subtitle1" sx={{ mb: 1 }}>Status</Typography>
+//             <FormControl fullWidth sx={{ mb: 3 }}>
+//               <InputLabel>Status</InputLabel>
+//               <Select
+//                 name="status"
+//                 value={formData.status}
+//                 onChange={handleChange}
+//                 label="Status"
+//               >
+//                 <MenuItem value="draft">Draft</MenuItem>
+//                 <MenuItem value="published">Published</MenuItem>
+//                 <MenuItem value="archived">Archived</MenuItem>
+//               </Select>
+//             </FormControl>
+//           </>
+//         )}
+
+//         {/* Submit Button */}
+//         <Button
+//           type="submit"
+//           variant="contained"
+//           color="primary"
+//           fullWidth
+//           size="large"
+//           disabled={isLoading}
+//           startIcon={isLoading ? <CircularProgress size={20} /> : null}
+//         >
+//           {isEditMode ? "Update Article" : "Create Article"}
+//         </Button>
+//       </Paper>
+//     </Box>
+//   );
+// };
+
+// export default NewsArticleForm;
+
+import { useParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import MDEditor from "@uiw/react-md-editor";
+import {
+  Box, TextField, FormControl, InputLabel, Select, MenuItem,
+  Switch, FormControlLabel, Button, Typography,
+  Paper, Divider, Alert, CircularProgress, IconButton, Stack,
+  Chip
+} from "@mui/material";
+import { httpClient } from "../../../utils/httpClientSetup";
+import {
+  FormatBold as FormatBoldIcon,
+  FormatUnderlined as FormatUnderlinedIcon,
+  FormatListNumbered as FormatListNumberedIcon,
+  FormatListBulleted as FormatListBulletedIcon,
+  FormatQuote as FormatQuoteIcon,
+  Link as LinkIcon,
+  Image as ImageIcon
+} from "@mui/icons-material";
+
+const NewsArticleForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = Boolean(id);
-  const API_ENDPOINT = "https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/location";
   
   const [formData, setFormData] = useState({
-    name: '',
-    location: '',
-    suburb: '',
-    state: '',
-    postcode: '',
-    phone: '',
-    email: '',
-    active: true,
-    createdAt: new Date().toISOString()
+    title: "",
+    slug: "",
+    content: "",
+    categories: [],
+    pinned: false,
+    featured: false,
+    status: "draft",
+    schedule: null
   });
-
-  const [errors, setErrors] = useState({});
+  
   const [isLoading, setIsLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: '',
-    severity: 'success'
-  });
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (isEditMode) {
-      const fetchLocation = async () => {
-        setIsLoading(true);
-        try {
-          const response = await httpClient.get(`${API_ENDPOINT}/${id}`);
-          if (response.data) {
-            setFormData(response.data);
-          } else {
-            setSnackbar({
-              open: true,
-              message: 'Failed to fetch location data',
-              severity: 'error'
-            });
-          }
-        } catch (error) {
-          setSnackbar({
-            open: true,
-            message: error.message || 'Error loading location',
-            severity: 'error'
+    if (!isEditMode) return;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      try {
+        const response = await httpClient.get(`news/${id}`);
+        if (response.data.success) {
+          const { data } = response.data;
+          setFormData({
+            title: data.title || "",
+            slug: data.slug || "",
+            content: data.content || "",
+            categories: data.categories || [],
+            pinned: data.pinned === 1,
+            featured: data.featured === 1,
+            status: data.status || "draft",
+            schedule: data.schedule || null
           });
-        } finally {
-          setIsLoading(false);
         }
-      };
-      
-      fetchLocation();
-    }
+      } catch (error) {
+        setError(error.response?.data?.message || "Failed to load article");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, [id, isEditMode]);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
-
-  const validate = () => {
-    const newErrors = {};
-    
-    if (!formData.name) newErrors.name = 'Name is required';
-    if (!formData.location) newErrors.location = 'Address is required';
-    if (!formData.suburb) newErrors.suburb = 'Suburb is required';
-    if (!formData.state) newErrors.state = 'State is required';
-    if (!formData.postcode) newErrors.postcode = 'Postcode is required';
-    if (!formData.phone) newErrors.phone = 'Phone is required';
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
     
-    if (!validate()) return;
-    
-    setIsSubmitting(true);
     try {
-      const url = isEditMode ? `${API_ENDPOINT}/${id}` : API_ENDPOINT;
-      const method = isEditMode ? 'PUT' : 'POST';
-      
-      const response = await httpClient[method.toLowerCase()](url, formData);
-      
-      if (response.data) {
-        setSnackbar({
-          open: true,
-          message: `Location ${isEditMode ? 'updated' : 'created'} successfully`,
-          severity: 'success'
-        });
-        // Redirect to /location after 1.5 seconds
-        setTimeout(() => navigate('/location'), 1500);
+      const payload = {
+        title: formData.title,
+        slug: formData.slug,
+        content: formData.content,
+        categories: formData.categories,
+        pinned: formData.pinned ? 1 : 0,
+        featured: formData.featured ? 1 : 0,
+        status: formData.status,
+        schedule: formData.schedule
+      };
+
+      const response = isEditMode
+        ? await httpClient.put(`news/${id}`, payload)
+        : await httpClient.post("news", payload);
+
+      if (response.data.success) {
+        navigate(`/manage/newsarticle/${response.data.data.id}/details`);
       }
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: error.message || `Failed to ${isEditMode ? 'update' : 'create'} location`,
-        severity: 'error'
-      });
+      setError(error.response?.data?.message || "Failed to save article");
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  if (isLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
-        <CircularProgress />
-      </Box>
-    );
-  }
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value
+    }));
+  };
+
+  const handleCategoryChange = (e) => {
+    const { value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      categories: Array.isArray(value) ? value : [value]
+    }));
+  };
 
   return (
-    <Paper elevation={3} sx={{ p: 4, maxWidth: 800, margin: 'auto' }}>
-      <Box display="flex" alignItems="center" mb={4}>
-        <IconButton onClick={() => navigate('/location')} sx={{ mr: 1 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h5" component="h1" fontWeight="bold">
-          {isEditMode ? 'Edit Location' : 'Create New Location'}
-        </Typography>
-      </Box>
+    <Box 
+      component="form" 
+      onSubmit={handleSubmit}
+      sx={{
+        maxWidth: '70%',
+        margin: '0 auto',
+        '@media (max-width: 900px)': {
+          maxWidth: '90%'
+        }
+      }}
+    >
+      <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+        {isEditMode ? "Edit News Article" : "Create New Article"}
+      </Typography>
 
-      <form onSubmit={handleSubmit}>
-        {/* Basic Information Section */}
-        <Box mb={4}>
-          <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
-            Basic Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Location Name *"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                error={!!errors.name}
-                helperText={errors.name}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Phone *"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                error={!!errors.phone}
-                helperText={errors.phone}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PhoneIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <EmailIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-          </Grid>
-        </Box>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-        {/* Address Section */}
-        <Box mb={4}>
-          <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
-            Address Information
-          </Typography>
-          <Divider sx={{ mb: 3 }} />
-          
-          <Grid container spacing={3}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Address *"
-                name="location"
-                value={formData.location}
-                onChange={handleChange}
-                error={!!errors.location}
-                helperText={errors.location}
-                size="small"
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <LocationIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            
-            <Grid item xs={12} md={6}>
-              <TextField
-                fullWidth
-                label="Suburb *"
-                name="suburb"
-                value={formData.suburb}
-                onChange={handleChange}
-                error={!!errors.suburb}
-                helperText={errors.suburb}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid item xs={6} md={3}>
-              <TextField
-                fullWidth
-                label="State *"
-                name="state"
-                value={formData.state}
-                onChange={handleChange}
-                error={!!errors.state}
-                helperText={errors.state}
-                size="small"
-              />
-            </Grid>
-            
-            <Grid item xs={6} md={3}>
-              <TextField
-                fullWidth
-                label="Postcode *"
-                name="postcode"
-                value={formData.postcode}
-                onChange={handleChange}
-                error={!!errors.postcode}
-                helperText={errors.postcode}
-                size="small"
-              />
-            </Grid>
-          </Grid>
-        </Box>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h6" sx={{ mb: 2 }}>DETAILS</Typography>
+        <Divider sx={{ mb: 3 }} />
 
-        {/* Status Section - Only visible in edit mode */}
-        {isEditMode && (
-          <Box mb={4}>
-            <Typography variant="h6" gutterBottom fontWeight="bold" color="primary">
-              Status
-            </Typography>
-            <Divider sx={{ mb: 3 }} />
-            <Grid container spacing={3}>
-              <Grid item xs={12}>
-                <TextField
-                  select
-                  fullWidth
-                  label="Status"
-                  name="active"
-                  value={formData.active}
-                  onChange={handleChange}
-                  size="small"
-                >
-                  <MenuItem value={true}>Active</MenuItem>
-                  <MenuItem value={false}>Inactive</MenuItem>
-                </TextField>
-              </Grid>
-            </Grid>
-          </Box>
-        )}
+        {/* Title */}
+        <TextField
+          fullWidth
+          label="Title *"
+          name="title"
+          value={formData.title}
+          onChange={handleChange}
+          required
+          sx={{ mb: 3 }}
+        />
 
-        {/* Form Actions */}
-        <Box mt={4} display="flex" justifyContent="flex-end" gap={2}>
-          <Button
-            variant="outlined"
-            onClick={() => navigate('/location')}
-            disabled={isSubmitting}
-            size="large"
+        {/* Slug */}
+        <TextField
+          fullWidth
+          label="Slug *"
+          name="slug"
+          value={formData.slug}
+          onChange={handleChange}
+          required
+          sx={{ mb: 3 }}
+          helperText="URL-friendly version of the title"
+        />
+
+        {/* Content */}
+        <Typography variant="subtitle2" sx={{ mb: 1 }}>Content *</Typography>
+        <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+          <IconButton size="small">
+            <FormatBoldIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <FormatUnderlinedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <FormatListNumberedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <FormatListBulletedIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <FormatQuoteIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <LinkIcon fontSize="small" />
+          </IconButton>
+          <IconButton size="small">
+            <ImageIcon fontSize="small" />
+          </IconButton>
+        </Stack>
+        <MDEditor
+          value={formData.content}
+          onChange={(val) => setFormData(prev => ({ ...prev, content: val }))}
+          height={400}
+          sx={{ mb: 3 }}
+        />
+
+        {/* News Categories */}
+        <Typography variant="subtitle1" sx={{ mb: 1, mt: 3 }}>News Categories</Typography>
+        <FormControl fullWidth sx={{ mb: 2 }}>
+          <InputLabel>Select News Categories</InputLabel>
+          <Select
+            name="categories"
+            multiple
+            value={formData.categories}
+            onChange={handleCategoryChange}
+            label="Select News Categories"
+            renderValue={(selected) => (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                {selected.map((value) => (
+                  <Chip key={value} label={value} />
+                ))}
+              </Box>
+            )}
           >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            variant="contained"
-            color="primary"
-            disabled={isSubmitting}
-            startIcon={isSubmitting ? <CircularProgress size={20} /> : <CheckIcon />}
-            size="large"
-          >
-            {isEditMode ? 'Update Location' : 'Create Location'}
-          </Button>
-        </Box>
-      </form>
+            <MenuItem value="current">Current Affairs</MenuItem>
+            <MenuItem value="sports">Sports</MenuItem>
+            <MenuItem value="business">Business</MenuItem>
+            <MenuItem value="entertainment">Entertainment</MenuItem>
+            <MenuItem value="technology">Technology</MenuItem>
+            <MenuItem value="health">Health & Wellness</MenuItem>
+          </Select>
+        </FormControl>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={6000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          sx={{ width: '100%' }}
+        {/* Pinned Article */}
+        <FormControlLabel
+          control={
+            <Switch
+              name="pinned"
+              checked={formData.pinned}
+              onChange={handleChange}
+            />
+          }
+          label="Pinned Article"
+          sx={{ mb: 2, display: 'block' }}
+        />
+
+        {/* Featured Article */}
+        <FormControlLabel
+          control={
+            <Switch
+              name="featured"
+              checked={formData.featured}
+              onChange={handleChange}
+            />
+          }
+          label="Featured Article"
+          sx={{ mb: 3, display: 'block' }}
+        />
+
+        {/* Schedule */}
+        <TextField
+          fullWidth
+          label="Schedule Date"
+          type="datetime-local"
+          name="schedule"
+          value={formData.schedule || ""}
+          onChange={handleChange}
+          InputLabelProps={{
+            shrink: true,
+          }}
+          sx={{ mb: 3 }}
+        />
+
+        {/* Status */}
+        <Typography variant="subtitle1" sx={{ mb: 1 }}>Status</Typography>
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            name="status"
+            value={formData.status}
+            onChange={handleChange}
+            label="Status"
+          >
+            <MenuItem value="draft">Draft</MenuItem>
+            <MenuItem value="published">Published</MenuItem>
+            <MenuItem value="archived">Archived</MenuItem>
+          </Select>
+        </FormControl>
+
+        {/* Submit Button */}
+        <Button
+          type="submit"
+          variant="contained"
+          color="primary"
+          fullWidth
+          size="large"
+          disabled={isLoading}
+          startIcon={isLoading ? <CircularProgress size={20} /> : null}
         >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Paper>
+          {isEditMode ? "Update Article" : "Create Article"}
+        </Button>
+      </Paper>
+    </Box>
   );
 };
 
-export default LocationForm;
+export default NewsArticleForm;
+
+
+
+

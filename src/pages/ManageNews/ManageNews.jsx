@@ -429,7 +429,7 @@
 
 // export default ManageArticles;
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLoaderData } from "react-router-dom";
 import {
   Box,
@@ -456,6 +456,7 @@ import {
   Alert,
   CircularProgress,
   Switch,
+  Tooltip,
 } from "@mui/material";
 import {
   MoreVert,
@@ -468,20 +469,27 @@ import {
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { httpClient } from "../../utils/httpClientSetup";
-import { useEffect } from "react";
 
 // Loader function to be used in route configuration
 export async function loader({ request }) {
   const url = new URL(request.url);
   const tab = url.searchParams.get("tab") || "active";
+  const token = localStorage.getItem("token");
+  if (!token) {
+    throw new Error("Unauthenticated");
+  }
   
   try {
-    const response = await httpClient.get("news", {
-      params: { archived: tab === "archived" ? 1 : 0 },
-    });
+    const response = await httpClient.get("news");
     
     if (response.data.success) {
-      return { articles: response.data.data };
+      const allArticles = response.data.data;
+      const filteredArticles = allArticles.filter(article => 
+        tab === "archived" 
+          ? article.status === "archived" 
+          : article.status !== "archived"
+      );
+      return { articles: filteredArticles };
     }
     throw new Error("Failed to fetch articles");
   } catch (error) {
@@ -493,21 +501,17 @@ const ManageArticles = () => {
   const navigate = useNavigate();
   const { articles: initialArticles } = useLoaderData();
 
-  // Data state
+  // State declarations
   const [articles, setArticles] = useState(initialArticles);
   const [filteredArticles, setFilteredArticles] = useState(initialArticles);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // UI state
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [selected, setSelected] = useState([]);
   const [tab, setTab] = useState("active");
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-
-  // Menu/dialog state
   const [anchorEl, setAnchorEl] = useState(null);
   const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
@@ -516,24 +520,27 @@ const ManageArticles = () => {
   const [openArchiveModal, setOpenArchiveModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState(null);
-
-  // Notification
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
 
-    const fetchArticles = async () => {
+  // Fetch articles when tab changes
+  const fetchArticles = async () => {
     setIsLoading(true);
     try {
-      const response = await httpClient.get("news", {
-        params: { archived: tab === "archived" }
-      });
+      const response = await httpClient.get("news");
       
       if (response.data.success) {
-        setArticles(response.data.data);
-        setFilteredArticles(response.data.data);
+        const allArticles = response.data.data;
+        const filteredArticles = allArticles.filter(article => 
+          tab === "archived" 
+            ? article.status === "archived" 
+            : article.status !== "archived"
+        );
+        setArticles(filteredArticles);
+        setFilteredArticles(filteredArticles);
         setSelected([]);
       } else {
         setError(response.data.message || "Failed to fetch articles");
@@ -543,8 +550,9 @@ const ManageArticles = () => {
     } finally {
       setIsLoading(false);
     }
-  }
-    useEffect(() => {
+  };
+
+  useEffect(() => {
     fetchArticles();
   }, [tab]);
 
@@ -560,14 +568,13 @@ const ManageArticles = () => {
       );
       setFilteredArticles(filtered);
     }
-    setPage(0); // Reset to first page when filtering
+    setPage(0);
   }, [searchTerm, articles]);
 
-  // Menu handlers
+  // Helper functions
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
   const handleMenuClose = (setter) => () => setter(null);
 
-  // Row selection
   const handleSelectAll = (e) => {
     setSelected(e.target.checked ? filteredArticles.map((a) => a.id) : []);
   };
@@ -578,7 +585,6 @@ const ManageArticles = () => {
     );
   };
 
-  // Pagination
   const handleChangePage = (_, newPage) => setPage(newPage);
   const handleChangeRowsPerPage = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
@@ -587,30 +593,29 @@ const ManageArticles = () => {
 
   // Toggle publish status
   const handleTogglePublish = async (articleId, currentStatus) => {
+    if (currentStatus === "archived") {
+      setSnackbar({
+        open: true,
+        message: "Cannot modify status of archived articles",
+        severity: "warning",
+      });
+      return;
+    }
+
     setIsActionLoading(true);
     try {
       const newStatus = currentStatus === "published" ? "unpublished" : "published";
-      
-      const response = await httpClient.put(`news/${articleId}/status`, {
+      const response = await httpClient.put(`news/${articleId}`, {
         status: newStatus
       });
       
       if (response.data.success) {
-        setArticles(prev => prev.map(article => 
-          article.id === articleId 
-            ? { ...article, status: newStatus } 
-            : article
-        ));
-        setFilteredArticles(prev => prev.map(article => 
-          article.id === articleId 
-            ? { ...article, status: newStatus } 
-            : article
-        ));
         setSnackbar({
           open: true,
           message: `Article ${newStatus} successfully`,
           severity: "success",
         });
+        fetchArticles();
       }
     } catch (error) {
       setSnackbar({
@@ -623,15 +628,15 @@ const ManageArticles = () => {
     }
   };
 
-  // Export
+  // Export data
   const exportData = (type) => {
     const data = filteredArticles.map((article) => ({
       Title: article.title,
       Slug: article.slug,
-      Status: article.status === "published" ? "Published" : "Unpublished",
+      Status: article.status,
       Views: article.views,
-      Featured: article.featured ? "Yes" : "No",
-      Pinned: article.pinned ? "Yes" : "No",
+      Featured: article.featured,
+      Pinned: article.pinned,
       "Created At": article.created_at,
       "Published By": article.published_by,
     }));
@@ -658,24 +663,25 @@ const ManageArticles = () => {
     setIsActionLoading(true);
     try {
       const responses = await Promise.all(
-        selected.map((id) =>
-          httpClient.put(`news/${id}/archive`, { archived: true })
+        selected.map(id =>
+          httpClient.put(`news/${id}`, { 
+            status: "archived",
+            archived_at: new Date().toISOString()
+          })
         )
       );
 
       const successfulArchives = responses.filter(
-        (response) => response.data.success
+        response => response.data.success
       );
 
       if (successfulArchives.length > 0) {
         setSnackbar({
           open: true,
-          message: `Archived ${successfulArchives.length} article(s)`,
+          message: `Successfully archived ${successfulArchives.length} article(s)`,
           severity: "success",
         });
-        // Refresh the list
-        setArticles((prev) => prev.filter((a) => !selected.includes(a.id)));
-        setSelected([]);
+        fetchArticles();
       }
     } catch (error) {
       setSnackbar({
@@ -686,6 +692,38 @@ const ManageArticles = () => {
     } finally {
       setIsActionLoading(false);
       setOpenArchiveModal(false);
+    }
+  };
+
+  const handleUnarchiveSelected = async () => {
+    setIsActionLoading(true);
+    try {
+      const responses = await Promise.all(
+        selected.map(id =>
+          httpClient.put(`news/${id}`, { status: "unpublished" })
+        )
+      );
+
+      const successfulUnarchives = responses.filter(
+        response => response.data.success
+      );
+
+      if (successfulUnarchives.length > 0) {
+        setSnackbar({
+          open: true,
+          message: `Successfully unarchived ${successfulUnarchives.length} article(s)`,
+          severity: "success",
+        });
+        fetchArticles();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || "Failed to unarchive articles",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
     }
   };
 
@@ -707,8 +745,7 @@ const ManageArticles = () => {
           message: "Article deleted successfully",
           severity: "success",
         });
-        setArticles((prev) => prev.filter((a) => a.id !== articleToDelete));
-        setSelected((prev) => prev.filter((id) => id !== articleToDelete));
+        fetchArticles();
       }
     } catch (error) {
       setSnackbar({
@@ -856,61 +893,71 @@ const ManageArticles = () => {
             <TableCell>Actions</TableCell>
           </TableRow>
         </TableHead>
-       <TableBody>
-  {isLoading ? (
-    renderSkeletonRows()
-  ) : filteredArticles.length > 0 ? (
-    filteredArticles
-      .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-      .map((article) => (
-        <TableRow key={article.id}>
-          <TableCell>
-            <Checkbox
-              checked={selected.includes(article.id)}
-              onChange={() => handleSelect(article.id)}
-            />
-          </TableCell>
-          <TableCell>{article.title}</TableCell>
-          <TableCell>{article.slug}</TableCell>
-          <TableCell>{article.views}</TableCell>
-          <TableCell>{article.percent_viewed}%</TableCell>
-          <TableCell>{formatDate(article.created_at)}</TableCell>
-          <TableCell>{article.published_by}</TableCell>
-          <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
-          <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
-          <TableCell>
-            {article.status === "publish" ? "Published" : "Unpublished"}
-          </TableCell>
-          <TableCell>{formatDate(article.archived_at)}</TableCell>
-          <TableCell>{article.schedule || "-"}</TableCell>
-          <TableCell>
-            <Box display="flex" alignItems="center" gap={1}>
-              <Switch
-                checked={article.status === "publish"}
-                onChange={() => handleTogglePublish(article.id, article.status)}
-                color="primary"
-                size="small"
-              />
-              <IconButton
-                onClick={(e) => {
-                  setActiveRowId(article.id);
-                  handleMenuOpen(setRowMenuAnchorEl)(e);
-                }}
-              >
-                <MoreVert />
-              </IconButton>
-            </Box>
-          </TableCell>
-        </TableRow>
-      ))
-  ) : (
-    <TableRow>
-      <TableCell colSpan={13} align="center">
-        No articles found
-      </TableCell>
-    </TableRow>
-  )}
-</TableBody>
+        <TableBody>
+          {isLoading ? (
+            renderSkeletonRows()
+          ) : filteredArticles.length > 0 ? (
+            filteredArticles
+              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+              .map((article) => (
+                <TableRow key={article.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selected.includes(article.id)}
+                      onChange={() => handleSelect(article.id)}
+                    />
+                  </TableCell>
+                  <TableCell>{article.title}</TableCell>
+                  <TableCell>{article.slug}</TableCell>
+                  <TableCell>{article.views}</TableCell>
+                  <TableCell>{article.percent_viewed}%</TableCell>
+                  <TableCell>{formatDate(article.created_at)}</TableCell>
+                  <TableCell>{article.published_by}</TableCell>
+                  <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
+                  <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {article.status === "published" 
+                      ? "Published" 
+                      : article.status === "archived" 
+                        ? "Archived" 
+                        : "Unpublished"}
+                  </TableCell>
+                  <TableCell>{formatDate(article.archived_at)}</TableCell>
+                  <TableCell>{article.schedule || "-"}</TableCell>
+                  <TableCell>
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Tooltip 
+                        title={article.status === "published" ? "Unpublish" : "Publish"} 
+                        placement="top"
+                      >
+                        <Switch
+                          checked={article.status === "published"}
+                          onChange={() => handleTogglePublish(article.id, article.status)}
+                          color="primary"
+                          size="small"
+                          disabled={article.status === "archived"}
+                        />
+                      </Tooltip>
+                      <IconButton
+                        onClick={(e) => {
+                          setActiveRowId(article.id);
+                          handleMenuOpen(setRowMenuAnchorEl)(e);
+                        }}
+                      >
+                        <MoreVert />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={13} align="center">
+                No articles found
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
       </Table>
 
       {/* Pagination */}
@@ -932,7 +979,11 @@ const ManageArticles = () => {
       >
         <MenuItem>Change Permissions</MenuItem>
         <MenuItem>Download Viewer Lists</MenuItem>
-        <MenuItem onClick={() => setOpenArchiveModal(true)}>Archive</MenuItem>
+        {tab === "active" ? (
+          <MenuItem onClick={() => setOpenArchiveModal(true)}>Archive</MenuItem>
+        ) : (
+          <MenuItem onClick={handleUnarchiveSelected}>Unarchive</MenuItem>
+        )}
         <MenuItem>Remove Featured</MenuItem>
         <MenuItem>Remove Pinned</MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
@@ -967,6 +1018,22 @@ const ManageArticles = () => {
           Edit
         </MenuItem>
         <MenuItem>Clone</MenuItem>
+        {tab === "active" ? (
+          <MenuItem onClick={() => {
+            setArticleToDelete(activeRowId);
+            setOpenArchiveModal(true);
+            handleMenuClose(setRowMenuAnchorEl)();
+          }}>
+            Archive
+          </MenuItem>
+        ) : (
+          <MenuItem onClick={() => {
+            handleUnarchiveSelected([activeRowId]);
+            handleMenuClose(setRowMenuAnchorEl)();
+          }}>
+            Unarchive
+          </MenuItem>
+        )}
         <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
           Delete
         </MenuItem>

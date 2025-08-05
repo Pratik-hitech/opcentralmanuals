@@ -153,13 +153,27 @@ export const router = createBrowserRouter([
     </PrivateRoute>
   ),
   children: [
-    {
-  index: true,
-  element: <Navigate to="create" replace />
-},
+//     {
+//   index: true,
+//   element: <Navigate to="create" replace />
+// },
     {
       path: "create",
-      element: <EditForm /> // Create mode (no ID)
+      element: <EditNews /> ,
+       children: [
+        {
+          index: true,
+          element: <EditForm /> // Edit mode (with ID)
+        },
+        { 
+          path: "details", 
+          element: <EditForm /> // Alternate edit view
+        },
+        { 
+          path: "permissions", 
+          element: <Permissions /> 
+        }
+      ]// Create mode (no ID)
     },
     {
       path: ":id",
