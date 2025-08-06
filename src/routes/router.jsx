@@ -27,9 +27,14 @@ import UserProfileLayout from "../pages/UserProfile/components/UserProfileLayout
 import ActivityLog from "../pages/UserProfile/components/ActivityLog";
 import FileManager from "../pages/UserProfile/components/FileManager";
 import Opmanualsuser from "../pages/UserProfile/components/Opmanualsuser";
-import UserForm, { userLoader } from "../pages/UserProfile/components/UserForm";
+import UserForm, {  userLoader } from "../pages/UserProfile/components/UserForm";
 import ManageLocation from "../pages/ManageLocation/ManageLocation";
 import LocationForm from "../pages/ManageLocation/components/LocationForm";
+import DashboardNews,{dashboardNewsLoader} from "../pages/DashboardNews/DashboardNews";
+import CreateManuals from "../pages/Operationsmanuals/components/CreateManuals";
+import ManualsDetails from "../pages/Operationsmanuals/components/ManualsDetails";
+import ManualsContent from "../pages/Operationsmanuals/components/ManualsContent";
+import ManualsPermissions from "../pages/Operationsmanuals/components/ManualsPermissions";
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
@@ -54,6 +59,20 @@ export const router = createBrowserRouter([
      
     ],
   },
+{
+  path : "/dashboardnews/:id",
+  element :(
+    <PrivateRoute>
+<PrivateLayout />
+    </PrivateRoute>
+  ),
+  children:[
+    {index:true, element :<DashboardNews />,
+      loader : dashboardNewsLoader
+    }
+  ]
+},
+
   {
     path: "/overview",
     element: (
@@ -92,6 +111,8 @@ export const router = createBrowserRouter([
       },
     ],
   },
+
+
   {
     path: "/reporting",
     element: (
@@ -145,6 +166,35 @@ export const router = createBrowserRouter([
       loader: manageArticlesLoader, 
     }],
   },
+
+  {
+  path: "/manuals/create",
+  element : (
+    <PrivateRoute>
+      <PrivateLayout />
+    </PrivateRoute>
+  ),
+  children :[
+{
+  path : "",
+  element : <CreateManuals />,
+  children :[
+    {
+      path : "details",
+      element:<ManualsDetails />
+    },
+    {
+      path : "content",
+      element : <ManualsContent />
+    },
+    {
+      path : "permission",
+      element : <ManualsPermissions />
+    }
+  ]
+}
+  ]
+},
   {
   path: "/manage/newsarticle",
   element: (

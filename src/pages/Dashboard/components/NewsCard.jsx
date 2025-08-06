@@ -1,4 +1,5 @@
-import { useState } from "react";
+// src/components/NewsCard.js
+import { useState, useTransition } from "react";
 import {
   Box,
   Button,
@@ -7,13 +8,16 @@ import {
   IconButton,
   Menu,
   MenuItem,
+CircularProgress,
+  Skeleton
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
-function NewsCard({newsData}) {
-  
+export default function NewsCard({ newsData }) {
   const [anchorEl, setAnchorEl] = useState(null);
+  const [isPending, startTransition] = useTransition();
+  const [prefetching, setPrefetching] = useState(null);
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
 
@@ -27,13 +31,30 @@ function NewsCard({newsData}) {
 
   const handleMenuItemClick = (path) => {
     handleClose();
-    navigate(path); // Go to the specified route
+    startTransition(() => {
+      navigate(path);
+    });
+  };
+
+  const handleReadMore = (id) => {
+    startTransition(() => {
+      navigate(`/dashboardnews/${id}`);
+    });
+  };
+
+  const prefetchData = async (id) => {
+    if (!prefetching || prefetching !== id) {
+      setPrefetching(id);
+      // Simulate prefetch - replace with actual prefetch logic
+      await new Promise(resolve => setTimeout(resolve, 300));
+      setPrefetching(null);
+    }
   };
 
   return (
     <Box
       sx={{
-        alignItems:"flex-start",
+        alignItems: "flex-start",
         bgcolor: "inherit",
         paddingLeft: "1rem",
         paddingBottom: 0,
@@ -41,8 +62,26 @@ function NewsCard({newsData}) {
         boxShadow: 1,
         maxWidth: "100%",
         mx: "auto",
+        position: "relative"
       }}
     >
+      {isPending && (
+        <Box sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(255, 255, 255, 0.7)',
+          zIndex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          {/* <CircularProgress /> */}
+        </Box>
+      )}
+
       <div
         style={{
           textAlign: "center",
@@ -77,7 +116,7 @@ function NewsCard({newsData}) {
           transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
           <MenuItem onClick={() => handleMenuItemClick("/manage/news")}>
-        Manage Articles
+            Manage Articles
           </MenuItem>
           <MenuItem onClick={() => handleMenuItemClick("/admin/news/delete")}>
             View all articles
@@ -87,190 +126,58 @@ function NewsCard({newsData}) {
 
       <Divider sx={{ mb: 2 }} />
 
-      {newsData.map((newsItem)=>{
-        return (
-          <Box
-            key={newsItem.id}
-            sx={{
-              mb: 2,
-              p: 2,
-              backgroundColor: "#fff",
-              borderRadius: 1,
-              boxShadow: 1,
-            }}
-          >
-            <Typography variant="h6">{newsItem.title}</Typography>
-            <Typography variant="body2" sx={{ mt: 1 }}>
-              {newsItem.content}
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-              {new Date(newsItem.created_at).toLocaleDateString()}
-            </Typography>
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
+      {newsData.map((newsItem) => (
+        <Box
+          key={newsItem.id}
           sx={{
-            bgcolor: "#D8D80E",
-            textTransform: "none",
-            marginBottom: "1rem",
-            marginRight: "1rem",
+            mb: 2,
+            p: 2,
+            backgroundColor: "#fff",
+            borderRadius: 1,
+            boxShadow: 1,
+            position: "relative"
           }}
+          onMouseEnter={() => prefetchData(newsItem.id)}
         >
-          Read More
-        </Button>
-        
-      </Box>
+          <Typography variant="h6">{newsItem.title}</Typography>
+          <Typography variant="body2" sx={{ mt: 1 }}>
+            {newsItem.content}
+          </Typography>
+          <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+            {new Date(newsItem.created_at).toLocaleDateString()}
+          </Typography>
+          <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+            <Button
+              onClick={() => handleReadMore(newsItem.id)}
+              variant="contained"
+              sx={{
+                bgcolor: "#D8D80E",
+                textTransform: "none",
+                marginBottom: "1rem",
+                marginRight: "1rem",
+                position: "relative"
+              }}
+              disabled={isPending}
+            >
+              {prefetching === newsItem.id ? (
+                <>
+                  Read More
+                  <CircularProgress 
+                    size={20} 
+                    sx={{ 
+                      position: 'absolute',
+                      right: 8,
+                      color: 'inherit'
+                    }} 
+                  />
+                </>
+              ) : (
+                "Read More"
+              )}
+            </Button>
           </Box>
-          
-        );
-      })
-      }
-
-      {/* <Typography
-        variant="subtitle1"
-        gutterBottom
-        sx={{
-          fontWeight: 450,
-          fontSize: "1.3rem",
-          mb: 1,
-          display: "block",
-          color: "black",
-          textDecoration: "underline",
-        }}
-      >
-        Welcome to your Operations Manual
-      </Typography>
-
-      <Typography variant="body2" sx={{ mb: 2, fontSize: "1.2rem" }}>
-        Please click the side menu button or the Quick Link to access the
-        Manual. If you have any issues, please contact Support Office 03 9826
-        5266 or office@bluewheelers.com.au
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          sx={{
-            bgcolor: "#D8D80E",
-            textTransform: "none",
-            marginBottom: "1rem",
-            marginRight: "1rem",
-          }}
-        >
-          Read More
-        </Button>
-        
-      </Box>
-       <Typography
-        variant="subtitle1"
-        gutterBottom
-        sx={{
-          fontWeight: 450,
-          fontSize: "1.3rem",
-          mb: 1,
-          display: "block",
-          color: "black",
-          textDecoration: "underline",
-        }}
-      >
-        Welcome to your Operations Manual
-      </Typography>
-
-      <Typography variant="body2" sx={{ mb: 2, fontSize: "1.2rem" }}>
-        Please click the side menu button or the Quick Link to access the
-        Manual. If you have any issues, please contact Support Office 03 9826
-        5266 or office@bluewheelers.com.au
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          sx={{
-            bgcolor: "#D8D80E",
-            textTransform: "none",
-            marginBottom: "1rem",
-            marginRight: "1rem",
-          }}
-        >
-          Read More
-        </Button>
-        
-      </Box>
-
-      <Typography
-        variant="subtitle1"
-        gutterBottom
-        sx={{
-          fontWeight: 450,
-          fontSize: "1.3rem",
-          mb: 1,
-          display: "block",
-          color: "black",
-          textDecoration: "underline",
-        }}
-      >
-        Welcome to your Operations Manual
-      </Typography>
-
-      <Typography variant="body2" sx={{ mb: 2, fontSize: "1.2rem" }}>
-        Please click the side menu button or the Quick Link to access the
-        Manual. If you have any issues, please contact Support Office 03 9826
-        5266 or office@bluewheelers.com.au
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          sx={{
-            bgcolor: "#D8D80E",
-            textTransform: "none",
-            marginBottom: "1rem",
-            marginRight: "1rem",
-          }}
-        >
-          Read More
-        </Button>
-        
-      </Box>
-       <Typography
-        variant="subtitle1"
-        gutterBottom
-        sx={{
-          fontWeight: 450,
-          fontSize: "1.3rem",
-          mb: 1,
-          display: "block",
-          color: "black",
-          textDecoration: "underline",
-        }}
-      >
-        Welcome to your Operations Manual
-      </Typography>
-
-      <Typography variant="body2" sx={{ mb: 2, fontSize: "1.2rem" }}>
-        Please click the side menu button or the Quick Link to access the
-        Manual. If you have any issues, please contact Support Office 03 9826
-        5266 or office@bluewheelers.com.au
-      </Typography>
-
-      <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-        <Button
-          variant="contained"
-          sx={{
-            bgcolor: "#D8D80E",
-            textTransform: "none",
-            marginBottom: "1rem",
-            marginRight: "1rem",
-          }}
-        >
-          Read More
-        </Button>
-        
-      </Box> */}
-      
-
+        </Box>
+      ))}
     </Box>
   );
 }
-
-export default NewsCard;

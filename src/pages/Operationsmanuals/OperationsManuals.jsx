@@ -158,6 +158,8 @@ const OperationsManuals = () => {
               <ListIcon />
             </IconButton>
             <Button
+            component = {Link}
+            to = "/manuals/create"
               variant="contained"
               sx={{
                 bgcolor: "#E0CD00",
