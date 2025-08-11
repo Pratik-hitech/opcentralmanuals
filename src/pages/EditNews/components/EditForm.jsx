@@ -308,7 +308,6 @@ import {
   Paper, Divider, Alert, CircularProgress, IconButton, Stack,
   Chip
 } from "@mui/material";
-import { httpClient } from "../../../utils/httpClientSetup";
 import {
   FormatBold as FormatBoldIcon,
   FormatUnderlined as FormatUnderlinedIcon,
@@ -318,6 +317,7 @@ import {
   Link as LinkIcon,
   Image as ImageIcon
 } from "@mui/icons-material";
+import { httpClient } from "../../../utils/httpClientSetup";
 
 const NewsArticleForm = () => {
   const { id } = useParams();
@@ -331,9 +331,12 @@ const NewsArticleForm = () => {
     categories: [],
     pinned: false,
     featured: false,
-    status: "draft",
-    schedule: null
+    status: "",
+    schedule: "",
+    videos: [], // array to hold video files or URLs
   });
+
+  const [showVideosSection, setShowVideosSection] = useState(false);
   
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -355,8 +358,10 @@ const NewsArticleForm = () => {
             pinned: data.pinned === 1,
             featured: data.featured === 1,
             status: data.status || "draft",
-            schedule: data.schedule || null
+            schedule: data.schedule || "",
+            videos: data.videos || [],
           });
+          setShowVideosSection((data.videos?.length ?? 0) > 0);
         }
       } catch (error) {
         setError(error.response?.data?.message || "Failed to load article");
@@ -368,36 +373,7 @@ const NewsArticleForm = () => {
     fetchData();
   }, [id, isEditMode]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
-    try {
-      const payload = {
-        title: formData.title,
-        slug: formData.slug,
-        content: formData.content,
-        categories: formData.categories,
-        pinned: formData.pinned ? 1 : 0,
-        featured: formData.featured ? 1 : 0,
-        status: formData.status,
-        schedule: formData.schedule
-      };
-
-      const response = isEditMode
-        ? await httpClient.put(`news/${id}`, payload)
-        : await httpClient.post("news", payload);
-
-      if (response.data.success) {
-        navigate(`/manage/newsarticle/${response.data.data.id}/details`);
-      }
-    } catch (error) {
-      setError(error.response?.data?.message || "Failed to save article");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Handle form changes
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({
@@ -406,12 +382,68 @@ const NewsArticleForm = () => {
     }));
   };
 
+  // Categories multiple select handler
   const handleCategoryChange = (e) => {
     const { value } = e.target;
+    // Always keep an array of strings
     setFormData(prev => ({
       ...prev,
-      categories: Array.isArray(value) ? value : [value]
+      categories: typeof value === "string" ? value.split(",") : value,
     }));
+  };
+
+  // Video upload handler - for example purpose, we just store file names
+  const handleVideoUpload = (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+    const newVideos = Array.from(files).map(file => file.name);
+    setFormData(prev => ({
+      ...prev,
+      videos: [...prev.videos, ...newVideos],
+    }));
+  };
+
+  // Toggle videos section
+  const toggleVideosSection = (e) => {
+    setShowVideosSection(e.target.checked);
+    if (!e.target.checked) {
+      setFormData(prev => ({ ...prev, videos: [] }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+    
+      const payload = {
+        title: formData.title,
+        slug: formData.slug,
+        content: formData.content,
+        categories: formData.categories,
+        pinned: formData.pinned ? 1 : 0,
+        featured: formData.featured ? 1 : 0,
+        status: formData.status,
+        schedule: formData.schedule || null,
+        videos: showVideosSection ? formData.videos : [],
+      };
+
+      const response = isEditMode
+        ? await httpClient.put(`news/${id}`, payload)
+        : await httpClient.post("news", payload);
+
+      if (response.data.success) {
+        navigate(`/manage/newsarticle/${response.data.data.id}/details`);
+      } else {
+        setError(response.data.message || "Validation failed");
+      }
+    } catch (error) {
+      setError(error.response?.data?.message || "Failed to save article");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -421,9 +453,7 @@ const NewsArticleForm = () => {
       sx={{
         maxWidth: '70%',
         margin: '0 auto',
-        '@media (max-width: 900px)': {
-          maxWidth: '90%'
-        }
+        '@media (max-width: 900px)': { maxWidth: '90%' }
       }}
     >
       <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
@@ -462,27 +492,13 @@ const NewsArticleForm = () => {
         {/* Content */}
         <Typography variant="subtitle2" sx={{ mb: 1 }}>Content *</Typography>
         <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
-          <IconButton size="small">
-            <FormatBoldIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <FormatUnderlinedIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <FormatListNumberedIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <FormatListBulletedIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <FormatQuoteIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <LinkIcon fontSize="small" />
-          </IconButton>
-          <IconButton size="small">
-            <ImageIcon fontSize="small" />
-          </IconButton>
+          <IconButton size="small"><FormatBoldIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><FormatUnderlinedIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><FormatListNumberedIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><FormatListBulletedIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><FormatQuoteIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><LinkIcon fontSize="small" /></IconButton>
+          <IconButton size="small"><ImageIcon fontSize="small" /></IconButton>
         </Stack>
         <MDEditor
           value={formData.content}
@@ -491,11 +507,12 @@ const NewsArticleForm = () => {
           sx={{ mb: 3 }}
         />
 
-        {/* News Categories */}
+        {/* Categories */}
         <Typography variant="subtitle1" sx={{ mb: 1, mt: 3 }}>News Categories</Typography>
         <FormControl fullWidth sx={{ mb: 2 }}>
-          <InputLabel>Select News Categories</InputLabel>
+          <InputLabel id="categories-label">Select News Categories</InputLabel>
           <Select
+            labelId="categories-label"
             name="categories"
             multiple
             value={formData.categories}
@@ -518,7 +535,7 @@ const NewsArticleForm = () => {
           </Select>
         </FormControl>
 
-        {/* Pinned Article */}
+        {/* Pinned */}
         <FormControlLabel
           control={
             <Switch
@@ -531,7 +548,7 @@ const NewsArticleForm = () => {
           sx={{ mb: 2, display: 'block' }}
         />
 
-        {/* Featured Article */}
+        {/* Featured */}
         <FormControlLabel
           control={
             <Switch
@@ -544,6 +561,46 @@ const NewsArticleForm = () => {
           sx={{ mb: 3, display: 'block' }}
         />
 
+        {/* Videos toggle */}
+        <FormControlLabel
+          control={
+            <Switch
+              checked={showVideosSection}
+              onChange={toggleVideosSection}
+            />
+          }
+          label="Add Videos"
+          sx={{ mb: 3 }}
+        />
+
+        {/* Videos upload section */}
+        {showVideosSection && (
+          <Box sx={{ mb: 3 }}>
+            <input
+              type="file"
+              multiple
+              accept="video/*"
+              onChange={handleVideoUpload}
+              style={{ marginBottom: 8 }}
+            />
+            <Stack direction="row" spacing={1} flexWrap="wrap">
+              {formData.videos.map((video, idx) => (
+                <Chip
+                  key={idx}
+                  label={video}
+                  onDelete={() => {
+                    setFormData(prev => ({
+                      ...prev,
+                      videos: prev.videos.filter((_, i) => i !== idx)
+                    }));
+                  }}
+                  sx={{ mb: 1 }}
+                />
+              ))}
+            </Stack>
+          </Box>
+        )}
+
         {/* Schedule */}
         <TextField
           fullWidth
@@ -552,9 +609,7 @@ const NewsArticleForm = () => {
           name="schedule"
           value={formData.schedule || ""}
           onChange={handleChange}
-          InputLabelProps={{
-            shrink: true,
-          }}
+          InputLabelProps={{ shrink: true }}
           sx={{ mb: 3 }}
         />
 
@@ -574,7 +629,7 @@ const NewsArticleForm = () => {
           </Select>
         </FormControl>
 
-        {/* Submit Button */}
+        {/* Submit */}
         <Button
           type="submit"
           variant="contained"
@@ -592,7 +647,3 @@ const NewsArticleForm = () => {
 };
 
 export default NewsArticleForm;
-
-
-
-

@@ -35,12 +35,19 @@ import CreateManuals from "../pages/Operationsmanuals/components/CreateManuals";
 import ManualsDetails from "../pages/Operationsmanuals/components/ManualsDetails";
 import ManualsContent from "../pages/Operationsmanuals/components/ManualsContent";
 import ManualsPermissions from "../pages/Operationsmanuals/components/ManualsPermissions";
+import AllPolicies from "../pages/Operationsmanuals/components/AllPolicies";
+import MediaFolderViewer from "../pages/FileManager/FileManager";
+
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
 export const router = createBrowserRouter([
   {
     path: "/",
+    element: <Login />,
+  },
+  {
+    path: "/login",
     element: <Login />,
   },
   {
@@ -72,7 +79,17 @@ export const router = createBrowserRouter([
     }
   ]
 },
-
+{
+  path : "/file-manager",
+  element :(
+    <PrivateRoute>
+      <PrivateLayout />
+    </PrivateRoute>
+  ),
+  children:[
+    {index : true, element : <MediaFolderViewer />}
+  ]
+},
   {
     path: "/overview",
     element: (
@@ -91,7 +108,9 @@ export const router = createBrowserRouter([
         <PrivateLayout />
       </PrivateRoute>
     ),
-    children: [{ index: true, element: <OperationsManuals /> }],
+    children: [{ index: true, element: <OperationsManuals /> },
+      {path: "policies/all", element :<AllPolicies />}
+    ],
   },
   {
     path: "/operations/manuals/docs",

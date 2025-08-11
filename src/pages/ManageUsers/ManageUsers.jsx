@@ -108,9 +108,10 @@ const ManageUsers = () => {
           displayValue(user.email)
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase()) ||
-          displayValue(user.brand)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase())
+          (user.location && 
+            displayValue(user.location.name)
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase()))
       );
       setFilteredUsers(filtered);
     }
@@ -119,7 +120,13 @@ const ManageUsers = () => {
 
   const handleTabChange = (event, newValue) => {
     setTab(newValue);
-    navigate(`?status=${newValue}`);
+    // Filter users based on status
+    if (newValue === "active") {
+      setFilteredUsers(users.filter(user => user.status === 1));
+    } else {
+      setFilteredUsers(users.filter(user => user.status === 0));
+    }
+    setPage(0);
   };
 
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
@@ -144,25 +151,25 @@ const ManageUsers = () => {
   const handleToggleActivation = async (userId, currentStatus) => {
     setIsActionLoading(true);
     try {
-      const newStatus = !currentStatus;
+      const newStatus = currentStatus === 1 ? 0 : 1;
       const response = await httpClient.put(`/users/${userId}`, {
-        activated: newStatus,
+        status: newStatus,
       });
 
       setUsers((prev) =>
         prev.map((user) =>
-          user.id === userId ? { ...user, activated: newStatus } : user
+          user.id === userId ? { ...user, status: newStatus } : user
         )
       );
       setFilteredUsers((prev) =>
         prev.map((user) =>
-          user.id === userId ? { ...user, activated: newStatus } : user
+          user.id === userId ? { ...user, status: newStatus } : user
         )
       );
 
       setSnackbar({
         open: true,
-        message: `User ${newStatus ? "activated" : "deactivated"} successfully`,
+        message: `User ${newStatus === 1 ? "activated" : "deactivated"} successfully`,
         severity: "success",
       });
     } catch (error) {
@@ -179,14 +186,19 @@ const ManageUsers = () => {
   const exportData = (type) => {
     const data = filteredUsers.map((user) => ({
       "First Name": displayValue(user.first_name),
+      "Middle Name": displayValue(user.middle_name),
       "Last Name": displayValue(user.last_name),
       "Full Name": displayValue(user.name),
       Username: displayValue(user.user_name),
       Email: displayValue(user.email),
-      Location: displayValue(user.location_id),
-      Brand: displayValue(user.brand),
-      Verified: user.email_verified_at ? "Yes" : "No",
+      "Company ID": user.company_id,
+      "Role ID": user.role_id,
+      "Location ID": user.location_id,
+      "Location Name": user.location ? displayValue(user.location.name) : "N/A",
+      "Verified At": user.email_verified_at || "Not Verified",
+      Status: user.status === 1 ? "Active" : "Inactive",
       "Created At": new Date(user.created_at).toLocaleString(),
+      "Updated At": new Date(user.updated_at).toLocaleString(),
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -390,7 +402,7 @@ const ManageUsers = () => {
             <TableCell>Username</TableCell>
             <TableCell>Email</TableCell>
             <TableCell>Location</TableCell>
-            <TableCell>Brand</TableCell>
+            <TableCell>Status</TableCell>
             <TableCell>Verified</TableCell>
             <TableCell>Actions</TableCell>
           </TableRow>
@@ -412,9 +424,21 @@ const ManageUsers = () => {
                   <TableCell>{displayValue(user.name)}</TableCell>
                   <TableCell>{displayValue(user.user_name)}</TableCell>
                   <TableCell>{displayValue(user.email)}</TableCell>
-                  <TableCell>{displayValue(user.location_id)}</TableCell>
-                  <TableCell>{displayValue(user.brand)}</TableCell>
-                  <TableCell>{user.email_verified_at ? "Yes" : "No"}</TableCell>
+                  <TableCell>
+                    {user.location ? displayValue(user.location.name) : "N/A"}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={user.status === 1}
+                      onChange={() => handleToggleActivation(user.id, user.status)}
+                      color="primary"
+                      disabled={isActionLoading}
+                    />
+                    {user.status === 1 ? "Active" : "Inactive"}
+                  </TableCell>
+                  <TableCell>
+                    {user.email_verified_at ? "Yes" : "No"}
+                  </TableCell>
                   <TableCell>
                     <Box display="flex" alignItems="center" gap={1}>
                       <IconButton
@@ -471,12 +495,12 @@ const ManageUsers = () => {
           onClick={() => {
             setUsers((prev) =>
               prev.map((user) =>
-                selected.includes(user.id) ? { ...user, activated: true } : user
+                selected.includes(user.id) ? { ...user, status: 1 } : user
               )
             );
             setFilteredUsers((prev) =>
               prev.map((user) =>
-                selected.includes(user.id) ? { ...user, activated: true } : user
+                selected.includes(user.id) ? { ...user, status: 1 } : user
               )
             );
             setBulkAnchorEl(null);
@@ -488,16 +512,12 @@ const ManageUsers = () => {
           onClick={() => {
             setUsers((prev) =>
               prev.map((user) =>
-                selected.includes(user.id)
-                  ? { ...user, activated: false }
-                  : user
+                selected.includes(user.id) ? { ...user, status: 0 } : user
               )
             );
             setFilteredUsers((prev) =>
               prev.map((user) =>
-                selected.includes(user.id)
-                  ? { ...user, activated: false }
-                  : user
+                selected.includes(user.id) ? { ...user, status: 0 } : user
               )
             );
             setBulkAnchorEl(null);

@@ -31,7 +31,6 @@ const LocationForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isEditMode = Boolean(id);
-  const API_ENDPOINT = "https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/location";
   
   // Initialize places autocomplete
   const {
@@ -44,19 +43,22 @@ const LocationForm = () => {
 
   const [formData, setFormData] = useState({
     name: '',
-    type: '',
-    phone: '',
-    email: '',
-    fax: '',
-    searchAddress: '',
-    buildingName: '',
-    streetNumber: '',
-    streetName: '',
+    type: 'branch',
+    street_number: '',
+    street_name: '',
     suburb: '',
     state: '',
     postcode: '',
-    active: true,
-    createdAt: new Date().toISOString()
+    email: '',
+    phone: '',
+    country: '',
+    contact: '',
+    status: 1, // 1 = active, 0 = inactive
+    parent: null,
+    deleted: 0,
+    deleted_at: null,
+    created_by: 1, // Default user ID
+    updated_by: 1  // Default user ID
   });
 
   const [errors, setErrors] = useState({});
@@ -69,10 +71,10 @@ const LocationForm = () => {
   });
 
   const locationTypes = [
-    'Dash DogWash',
-    'Blue Wheelers',
-    'Office',
-    'Showroom'
+    { value: 'branch', label: 'Branch' },
+    { value: 'office', label: 'Office' },
+    { value: 'warehouse', label: 'Warehouse' },
+    { value: 'showroom', label: 'Showroom' }
   ];
 
   useEffect(() => {
@@ -80,16 +82,38 @@ const LocationForm = () => {
       const fetchLocation = async () => {
         setIsLoading(true);
         try {
-          const response = await httpClient.get(`${API_ENDPOINT}/${id}`);
-          if (response.data) {
-            setFormData(response.data);
-            if (response.data.searchAddress) {
-              setAddressValue(response.data.searchAddress);
+          const response = await httpClient.get(`locations/${id}`);
+          if (response.data && response.data.success) {
+            const locationData = response.data.data;
+            setFormData({
+              name: locationData.name || '',
+              type: locationData.type || 'branch',
+              street_number: locationData.street_number || '',
+              street_name: locationData.street_name || '',
+              suburb: locationData.suburb || '',
+              state: locationData.state || '',
+              postcode: locationData.postcode || '',
+              email: locationData.email || '',
+              phone: locationData.phone || '',
+              country: locationData.country || '',
+              contact: locationData.contact || '',
+              status: locationData.status,
+              parent: locationData.parent || null,
+              deleted: locationData.deleted || 0,
+              deleted_at: locationData.deleted_at || null,
+              created_by: locationData.created_by || 1,
+              updated_by: locationData.updated_by || 1
+            });
+            
+            // Set address value for autocomplete if address exists
+            if (locationData.street_number && locationData.street_name) {
+              const fullAddress = `${locationData.street_number} ${locationData.street_name}, ${locationData.suburb}, ${locationData.state} ${locationData.postcode}`;
+              setAddressValue(fullAddress);
             }
           } else {
             setSnackbar({
               open: true,
-              message: 'Failed to fetch location data',
+              message: response.data?.message || 'Failed to fetch location data',
               severity: 'error'
             });
           }
@@ -122,6 +146,7 @@ const LocationForm = () => {
       let suburb = '';
       let state = '';
       let postcode = '';
+      let country = '';
       
       for (const component of results[0].address_components) {
         const types = component.types;
@@ -135,17 +160,19 @@ const LocationForm = () => {
           state = component.short_name;
         } else if (types.includes('postal_code')) {
           postcode = component.long_name;
+        } else if (types.includes('country')) {
+          country = component.long_name;
         }
       }
       
       setFormData(prev => ({
         ...prev,
-        searchAddress: address,
-        streetNumber,
-        streetName,
+        street_number: streetNumber,
+        street_name: streetName,
         suburb,
         state,
-        postcode
+        postcode,
+        country
       }));
       
     } catch (error) {
@@ -164,13 +191,13 @@ const LocationForm = () => {
   const validate = () => {
     const newErrors = {};
     
-    if (!formData.name) newErrors.name = 'Required';
+    if (!formData.name.trim()) newErrors.name = 'Required';
     if (!formData.type) newErrors.type = 'Required';
-    if (!formData.streetNumber) newErrors.streetNumber = 'Required';
-    if (!formData.streetName) newErrors.streetName = 'Required';
-    if (!formData.suburb) newErrors.suburb = 'Required';
-    if (!formData.state) newErrors.state = 'Required';
-    if (!formData.postcode) newErrors.postcode = 'Required';
+    if (!formData.street_number.trim()) newErrors.street_number = 'Required';
+    if (!formData.street_name.trim()) newErrors.street_name = 'Required';
+    if (!formData.suburb.trim()) newErrors.suburb = 'Required';
+    if (!formData.state.trim()) newErrors.state = 'Required';
+    if (!formData.postcode.trim()) newErrors.postcode = 'Required';
     
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -183,18 +210,32 @@ const LocationForm = () => {
     
     setIsSubmitting(true);
     try {
-      const url = isEditMode ? `${API_ENDPOINT}/${id}` : API_ENDPOINT;
-      const method = isEditMode ? 'PUT' : 'POST';
-      
-      const response = await httpClient[method.toLowerCase()](url, formData);
-      
-      if (response.data) {
-        setSnackbar({
-          open: true,
-          message: `Location ${isEditMode ? 'updated' : 'created'} successfully`,
-          severity: 'success'
-        });
-        setTimeout(() => navigate('/location'), 1500);
+      const payload = {
+        ...formData,
+        updated_by: 1 // Set to current user ID in a real app
+      };
+
+      if (isEditMode) {
+        const response = await httpClient.put(`locations/${id}`, payload);
+        if (response.data && response.data.success) {
+          setSnackbar({
+            open: true,
+            message: 'Location updated successfully',
+            severity: 'success'
+          });
+          setTimeout(() => navigate('/location'), 1500);
+        }
+      } else {
+        payload.created_by = 1; // Set to current user ID in a real app
+        const response = await httpClient.post('locations', payload);
+        if (response.data && response.data.success) {
+          setSnackbar({
+            open: true,
+            message: 'Location created successfully',
+            severity: 'success'
+          });
+          setTimeout(() => navigate('/location'), 1500);
+        }
       }
     } catch (error) {
       setSnackbar({
@@ -267,11 +308,25 @@ const LocationForm = () => {
                   size="small"
                 >
                   {locationTypes.map((type) => (
-                    <MenuItem key={type} value={type}>
-                      {type}
+                    <MenuItem key={type.value} value={type.value}>
+                      {type.label}
                     </MenuItem>
                   ))}
                 </TextField>
+              </Box>
+              
+              <Box>
+                <Typography variant="body2" color="textSecondary" mb={0.5}>
+                  Contact Person
+                </Typography>
+                <TextField
+                  fullWidth
+                  name="contact"
+                  value={formData.contact}
+                  onChange={handleChange}
+                  size="small"
+                  placeholder="Enter contact person name"
+                />
               </Box>
               
               <Box>
@@ -318,22 +373,15 @@ const LocationForm = () => {
               
               <Box>
                 <Typography variant="body2" color="textSecondary" mb={0.5}>
-                  Fax
+                  Country
                 </Typography>
                 <TextField
                   fullWidth
-                  name="fax"
-                  value={formData.fax}
+                  name="country"
+                  value={formData.country}
                   onChange={handleChange}
                   size="small"
-                  placeholder="Enter fax number"
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <FaxIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  }}
+                  placeholder="Enter country"
                 />
               </Box>
             </Stack>
@@ -376,20 +424,6 @@ const LocationForm = () => {
                 />
               </Box>
               
-              <Box>
-                <Typography variant="body2" color="textSecondary" mb={0.5}>
-                  Building Name
-                </Typography>
-                <TextField
-                  fullWidth
-                  name="buildingName"
-                  value={formData.buildingName}
-                  onChange={handleChange}
-                  size="small"
-                  placeholder="Enter building name"
-                />
-              </Box>
-              
               <Box display="flex" gap={2}>
                 <Box flex={1}>
                   <Typography variant="body2" color="textSecondary" mb={0.5}>
@@ -397,11 +431,11 @@ const LocationForm = () => {
                   </Typography>
                   <TextField
                     fullWidth
-                    name="streetNumber"
-                    value={formData.streetNumber}
+                    name="street_number"
+                    value={formData.street_number}
                     onChange={handleChange}
-                    error={!!errors.streetNumber}
-                    helperText={errors.streetNumber}
+                    error={!!errors.street_number}
+                    helperText={errors.street_number}
                     size="small"
                     placeholder="Number"
                   />
@@ -412,11 +446,11 @@ const LocationForm = () => {
                   </Typography>
                   <TextField
                     fullWidth
-                    name="streetName"
-                    value={formData.streetName}
+                    name="street_name"
+                    value={formData.street_name}
                     onChange={handleChange}
-                    error={!!errors.streetName}
-                    helperText={errors.streetName}
+                    error={!!errors.street_name}
+                    helperText={errors.street_name}
                     size="small"
                     placeholder="Street name"
                   />
@@ -484,18 +518,18 @@ const LocationForm = () => {
               
               <Box mt={2}>
                 <Typography variant="body2" color="textSecondary" mb={0.5}>
-                  Active Status
+                  Status
                 </Typography>
                 <TextField
                   select
                   fullWidth
-                  name="active"
-                  value={formData.active}
+                  name="status"
+                  value={formData.status}
                   onChange={handleChange}
                   size="small"
                 >
-                  <MenuItem value={true}>Active</MenuItem>
-                  <MenuItem value={false}>Inactive</MenuItem>
+                  <MenuItem value={1}>Active</MenuItem>
+                  <MenuItem value={0}>Inactive</MenuItem>
                 </TextField>
               </Box>
             </Box>

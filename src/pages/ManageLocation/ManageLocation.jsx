@@ -739,7 +739,6 @@ const ManageLocations = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-  const API_ENDPOINT = "https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/location";
 
   // Data state
   const [locations, setLocations] = useState([]);
@@ -770,20 +769,19 @@ const ManageLocations = () => {
     severity: "success",
   });
 
-  // Define handleMenuOpen at the top level of the component
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
   const handleMenuClose = (setter) => () => setter(null);
 
   const fetchLocations = async () => {
     setIsLoading(true);
     try {
-      const response = await httpClient.get(API_ENDPOINT);
+      const response = await httpClient.get("locations");
       
-      if (response.data) {
-        setLocations(response.data);
-        filterLocations(response.data);
+      if (response.data && response.data.success) {
+        setLocations(response.data.data);
+        filterLocations(response.data.data);
       } else {
-        setError("Failed to fetch locations");
+        setError(response.data?.message || "Failed to fetch locations");
       }
     } catch (error) {
       setError(error.message || "Failed to load locations");
@@ -795,9 +793,9 @@ const ManageLocations = () => {
   const filterLocations = (data) => {
     let filtered = data;
     
-    // Filter by active/inactive tab
+    // Filter by active/inactive tab (status 1 = active, 0 = inactive)
     filtered = filtered.filter(location => 
-      tab === "active" ? location.active : !location.active
+      tab === "active" ? location.status === 1 : location.status === 0
     );
     
     // Filter by search term if provided
@@ -805,7 +803,7 @@ const ManageLocations = () => {
       filtered = filtered.filter(
         (location) =>
           location.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          location.location?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          location.street_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           location.suburb?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           location.state?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           location.phone?.toString().includes(searchTerm)
@@ -813,7 +811,7 @@ const ManageLocations = () => {
     }
     
     setFilteredLocations(filtered);
-    setPage(0); // Reset to first page when filtering
+    setPage(0);
   };
 
   useEffect(() => {
@@ -824,7 +822,6 @@ const ManageLocations = () => {
     filterLocations(locations);
   }, [searchTerm, locations, tab]);
 
-  // Row selection
   const handleSelectAll = (e) => {
     setSelected(e.target.checked ? filteredLocations.map((a) => a.id) : []);
   };
@@ -835,27 +832,26 @@ const ManageLocations = () => {
     );
   };
 
-  // Pagination
   const handleChangePage = (_, newPage) => setPage(newPage);
+  
   const handleChangeRowsPerPage = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
   };
 
-  // Toggle active status
-  const handleToggleActive = async (locationId, currentStatus) => {
+  const handleToggleStatus = async (locationId, currentStatus) => {
     setIsActionLoading(true);
     try {
-      const newStatus = !currentStatus;
+      const newStatus = currentStatus === 1 ? 0 : 1;
       
-      const response = await httpClient.put(`${API_ENDPOINT}/${locationId}`, {
-        active: newStatus
+      const response = await httpClient.put(`locations/${locationId}`, {
+        status: newStatus
       });
       
-      if (response.data) {
+      if (response.data && response.data.success) {
         setSnackbar({
           open: true,
-          message: `${newStatus ? 'Activated' : 'Deactivated'} location successfully`,
+          message: `${newStatus === 1 ? 'Activated' : 'Deactivated'} location successfully`,
           severity: "success",
         });
         fetchLocations();
@@ -871,17 +867,17 @@ const ManageLocations = () => {
     }
   };
 
-  // Bulk activate/deactivate
   const handleBulkStatusChange = async (activate) => {
     setIsActionLoading(true);
     try {
+      const newStatus = activate ? 1 : 0;
       const responses = await Promise.all(
         selected.map(id => 
-          httpClient.put(`${API_ENDPOINT}/${id}`, { active: activate })
+          httpClient.put(`locations/${id}`, { status: newStatus })
         )
       );
 
-      const successfulUpdates = responses.filter(r => r.data);
+      const successfulUpdates = responses.filter(r => r.data && r.data.success);
       
       if (successfulUpdates.length > 0) {
         setSnackbar({
@@ -904,15 +900,14 @@ const ManageLocations = () => {
     }
   };
 
-  // Bulk delete
   const handleBulkDelete = async () => {
     setIsActionLoading(true);
     try {
       const responses = await Promise.all(
-        selected.map(id => httpClient.delete(`${API_ENDPOINT}/${id}`))
+        selected.map(id => httpClient.delete(`locations/${id}`))
       );
 
-      const successfulDeletes = responses.filter(r => r.data);
+      const successfulDeletes = responses.filter(r => r.data && r.data.success);
       
       if (successfulDeletes.length > 0) {
         setSnackbar({
@@ -935,7 +930,6 @@ const ManageLocations = () => {
     }
   };
 
-  // Single delete
   const handleDeleteClick = (id) => {
     setLocationToDelete(id);
     setOpenDeleteModal(true);
@@ -944,9 +938,9 @@ const ManageLocations = () => {
   const confirmDelete = async () => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.delete(`${API_ENDPOINT}/${locationToDelete}`);
+      const response = await httpClient.delete(`locations/${locationToDelete}`);
       
-      if (response.data) {
+      if (response.data && response.data.success) {
         setSnackbar({
           open: true,
           message: "Location deleted successfully",
@@ -967,16 +961,21 @@ const ManageLocations = () => {
     }
   };
 
-  // Export
   const exportData = (type) => {
     const data = filteredLocations.map((location) => ({
       Name: location.name,
-      Location: location.location,
+      Type: location.type,
+      "Street Number": location.street_number,
+      "Street Name": location.street_name,
       Suburb: location.suburb,
       State: location.state,
+      Postcode: location.postcode,
+      Country: location.country,
+      Email: location.email,
       Phone: location.phone,
-      Status: location.active ? "Active" : "Inactive",
-      "Created At": location.createdAt,
+      Contact: location.contact,
+      Status: location.status === 1 ? "Active" : "Inactive",
+      "Created At": location.created_at,
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -996,7 +995,6 @@ const ManageLocations = () => {
     setDownloadAnchorEl(null);
   };
 
-  // Skeleton loader
   const renderSkeletonRows = () => {
     return Array(rowsPerPage).fill(0).map((_, index) => (
       <TableRow key={`skeleton-${index}`}>
@@ -1018,7 +1016,6 @@ const ManageLocations = () => {
 
   return (
     <Box p={isMobile ? 1 : 2}>
-      {/* Header with controls */}
       <Box display="flex" flexDirection={isMobile ? "column" : "row"} justifyContent="space-between" alignItems={isMobile ? "flex-start" : "center"} mb={2} gap={1}>
         <Box display="flex" flexWrap="wrap" gap={1} alignItems="center">
           {selected.length > 0 && (
@@ -1094,14 +1091,12 @@ const ManageLocations = () => {
         </Box>
       </Box>
 
-      {/* Error display */}
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
 
-      {/* Table */}
       <Box sx={{ overflowX: "auto" }}>
         <Table size="small" sx={{ minWidth: isMobile ? "700px" : "100%" }}>
           <TableHead>
@@ -1118,7 +1113,7 @@ const ManageLocations = () => {
               <TableCell>Name</TableCell>
               {!isMobile && (
                 <>
-                  <TableCell>Location</TableCell>
+                  <TableCell>Type</TableCell>
                   <TableCell>Suburb</TableCell>
                   <TableCell>State</TableCell>
                 </>
@@ -1147,21 +1142,21 @@ const ManageLocations = () => {
                     </TableCell>
                     {!isMobile && (
                       <>
-                        <TableCell>{location.location}</TableCell>
+                        <TableCell>{`${location.type}`}</TableCell>
                         <TableCell>{location.suburb}</TableCell>
                         <TableCell>{location.state}</TableCell>
                       </>
                     )}
                     <TableCell>{location.phone}</TableCell>
                     <TableCell>
-                      {location.active ? "Active" : "Inactive"}
+                      {location.status === 1 ? "Active" : "Inactive"}
                     </TableCell>
                     <TableCell>
                       <Box display="flex" alignItems="center" gap={1}>
                         {!isMobile && (
                           <Switch
-                            checked={location.active}
-                            onChange={() => handleToggleActive(location.id, location.active)}
+                            checked={location.status === 1}
+                            onChange={() => handleToggleStatus(location.id, location.status)}
                             color="primary"
                             size="small"
                           />
@@ -1211,7 +1206,6 @@ const ManageLocations = () => {
         </Table>
       </Box>
 
-      {/* Pagination */}
       <TablePagination
         rowsPerPageOptions={[3, 5, 10, 25]}
         component="div"
@@ -1222,7 +1216,6 @@ const ManageLocations = () => {
         onRowsPerPageChange={handleChangeRowsPerPage}
       />
 
-      {/* Bulk Actions Menu */}
       <Menu
         anchorEl={bulkAnchorEl}
         open={Boolean(bulkAnchorEl)}
@@ -1247,7 +1240,6 @@ const ManageLocations = () => {
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
       </Menu>
 
-      {/* Settings Menu */}
       <Menu
         anchorEl={anchorEl}
         open={Boolean(anchorEl)}
@@ -1258,7 +1250,6 @@ const ManageLocations = () => {
         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
       </Menu>
 
-      {/* Download Menu */}
       <Menu
         anchorEl={downloadAnchorEl}
         open={Boolean(downloadAnchorEl)}
@@ -1268,7 +1259,6 @@ const ManageLocations = () => {
         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
       </Menu>
 
-      {/* Single Delete Confirmation Dialog */}
       <Dialog
         open={openDeleteModal}
         onClose={() => setOpenDeleteModal(false)}
@@ -1298,7 +1288,6 @@ const ManageLocations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Bulk Delete Confirmation Dialog */}
       <Dialog
         open={openBulkDeleteModal}
         onClose={() => setOpenBulkDeleteModal(false)}
@@ -1328,7 +1317,6 @@ const ManageLocations = () => {
         </DialogActions>
       </Dialog>
 
-      {/* Action Loader */}
       {isActionLoading && (
         <Box
           position="fixed"
@@ -1346,7 +1334,6 @@ const ManageLocations = () => {
         </Box>
       )}
 
-      {/* Snackbar Notification */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
@@ -1362,7 +1349,6 @@ const ManageLocations = () => {
         </Alert>
       </Snackbar>
     </Box>
-    
   );
 };
 
