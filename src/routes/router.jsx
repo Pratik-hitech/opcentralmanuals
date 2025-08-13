@@ -37,6 +37,12 @@ import ManualsContent from "../pages/Operationsmanuals/components/ManualsContent
 import ManualsPermissions from "../pages/Operationsmanuals/components/ManualsPermissions";
 import AllPolicies from "../pages/Operationsmanuals/components/AllPolicies";
 import MediaFolderViewer from "../pages/FileManager/FileManager";
+import GeneralSettings from "../pages/GeneralSettings/GeneralSettings";
+import Roles from "../pages/GeneralSettings/components/Roles";
+import Security from "../pages/GeneralSettings/components/Security";
+import System from "../pages/GeneralSettings/components/System";
+import Branding from "../pages/GeneralSettings/components/Branding";
+import EditRoles from "../pages/GeneralSettings/components/EditRoles";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -338,7 +344,7 @@ export const router = createBrowserRouter([
   children: [
     {
       index: true,
-      element: <Navigate to="/manage/users" replace /> // Redirect to users list if no ID
+      element: <Navigate to="/manage/users" replace /> 
     },
     {
       path: ":userid",
@@ -394,12 +400,12 @@ export const router = createBrowserRouter([
     // Create route
     {
       path: "create",
-      element: <UserForm /> // Create mode
+      element: <UserForm />
     },
     // Edit route
     {
       path: ":id/edit",
-      element: <UserForm />, // Edit mode
+      element: <UserForm />, 
      loader:userLoader
     }
   ]
@@ -426,16 +432,60 @@ export const router = createBrowserRouter([
       }
     ],
   },
+{
+  path: "/general-settings",
+  element:(
+     <PrivateRoute>
+       
+
+        <PrivateLayout />
+       
+      </PrivateRoute>
+  ),
+  children:[
+    {
+      path:"" , element : <GeneralSettings />,
+      children :[
+            {
+          index: true, 
+          element: <Navigate to="roles" replace />,
+        },
+        {
+          path: "roles",
+          children :[
+            {
+              index:true,
+              element : <Roles />
+            },
+            {
+              path : "edit/:id",
+              element : <EditRoles />
+            }
+          ]
+          
+        },
+        {
+          path : "security",
+          element : <Security />
+        },
+        {
+          path : "system",
+          element: <System />
+        },
+        {
+          path : "branding",
+          element : <Branding />
+        }
+      ]
+    }
+  ]
+},
 
 
 
 
-// {
-//     path: "/users/profile/create",
-//     element: <UserForm />,
-//   },
 
-  // ✅ Catch-all route for 404
+  //  Catch-all route for 404
   {
     path: "*",
     element: <NotFound />,

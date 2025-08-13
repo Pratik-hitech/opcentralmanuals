@@ -1,10 +1,24 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { Card, CardContent, Typography, Avatar, Divider, CircularProgress, IconButton, TextField, Button, Box, Stack } from '@mui/material';
+import {
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  Divider,
+  CircularProgress,
+  IconButton,
+  TextField,
+  Button,
+  Box,
+  Stack
+} from '@mui/material';
 import { styled } from '@mui/material/styles';
 import EditIcon from '@mui/icons-material/Edit';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
+import { httpClient } from "../../../utils/httpClientSetup"
 
+// Styled Components
 const StyledCard = styled(Card)(({ theme }) => ({
   width: '70%',
   margin: '3rem auto',
@@ -72,6 +86,7 @@ const DetailValue = styled(Typography)(({ theme }) => ({
   flex: 1,
 }));
 
+// Main Component
 const UserProfileLayout = () => {
   const { userid } = useParams();
   const [userData, setUserData] = useState(null);
@@ -84,13 +99,12 @@ const UserProfileLayout = () => {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await fetch(`https://6888d05fadf0e59551bb8590.mockapi.io/api/v1/users/${userid}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch user data');
+        const response = await httpClient.get(`/users/${userid}`);
+        if (!response.data.success) {
+          throw new Error(response.data.message || 'Failed to fetch user data');
         }
-        const data = await response.json();
-        setUserData(data);
-        setAvatarUrl(data.avatar || '');
+        setUserData(response.data.data);
+        setAvatarUrl(response.data.data.company?.logo || '');
       } catch (err) {
         setError(err.message);
       } finally {
@@ -118,44 +132,60 @@ const UserProfileLayout = () => {
 
   const handleSaveAvatar = () => {
     setEditMode(false);
-    setUserData({ ...userData, avatar: avatarUrl });
+    setUserData(prev => ({
+      ...prev,
+      company: {
+        ...prev.company,
+        logo: avatarUrl
+      }
+    }));
   };
 
   const handleCancelEdit = () => {
-    setAvatarUrl(userData?.avatar || '');
+    setAvatarUrl(userData?.company?.logo || '');
     setEditMode(false);
   };
 
-  if (loading) return (
-    <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
-      <CircularProgress size={60} />
-    </Box>
-  );
+  // Loading State
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" height="100vh">
+        <CircularProgress size={60} />
+      </Box>
+    );
+  }
 
-  if (error) return (
-    <StyledCard>
-      <CardContent>
-        <Typography color="error" variant="h6">Error: {error}</Typography>
-      </CardContent>
-    </StyledCard>
-  );
+  // Error State
+  if (error) {
+    return (
+      <StyledCard>
+        <CardContent>
+          <Typography color="error" variant="h6">Error: {error}</Typography>
+        </CardContent>
+      </StyledCard>
+    );
+  }
 
-  if (!userData) return (
-    <StyledCard>
-      <CardContent>
-        <Typography variant="h6">No user data found</Typography>
-      </CardContent>
-    </StyledCard>
-  );
+  // No Data State
+  if (!userData) {
+    return (
+      <StyledCard>
+        <CardContent>
+          <Typography variant="h6">No user data found</Typography>
+        </CardContent>
+      </StyledCard>
+    );
+  }
 
+  // Main Render
   return (
     <StyledCard elevation={4}>
       <CardContent>
         {/* Avatar Section */}
         <AvatarContainer>
           <Avatar
-            src={avatarUrl || userData.avatar || ''}
-            alt="User Avatar"
+            src={avatarUrl}
+            alt={`${userData.first_name} ${userData.last_name}`}
             sx={{ 
               width: 80, 
               height: 80,
@@ -220,16 +250,17 @@ const UserProfileLayout = () => {
           </Box>
         )}
 
+        {/* User Details Section */}
         <DetailRow>
           <DetailLabel>Full Name</DetailLabel>
           <DetailValue>
-            {userData.firstName} {userData.LastName}
+            {userData.first_name} {userData.middle_name} {userData.last_name}
           </DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Role</DetailLabel>
-          <DetailValue>{userData.role}</DetailValue>
+          <DetailValue>{userData.role?.name || '-'}</DetailValue>
         </DetailRow>
 
         <SectionHeader variant="subtitle1">
@@ -239,22 +270,22 @@ const UserProfileLayout = () => {
 
         <DetailRow>
           <DetailLabel>First Name</DetailLabel>
-          <DetailValue>{userData.firstName || '-'}</DetailValue>
+          <DetailValue>{userData.first_name || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Middle Name</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.middle_name || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
-          <DetailLabel>Surname</DetailLabel>
-          <DetailValue>{userData.LastName || '-'}</DetailValue>
+          <DetailLabel>Last Name</DetailLabel>
+          <DetailValue>{userData.last_name || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Username</DetailLabel>
-          <DetailValue>{userData.username || '-'}</DetailValue>
+          <DetailValue>{userData.user_name || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
@@ -264,44 +295,19 @@ const UserProfileLayout = () => {
 
         <DetailRow>
           <DetailLabel>Phone Number</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.company?.phone || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
-          <DetailLabel>Job Title</DetailLabel>
-          <DetailValue>-</DetailValue>
-        </DetailRow>
-
-        <DetailRow>
-          <DetailLabel>Role</DetailLabel>
-          <DetailValue>{userData.role || '-'}</DetailValue>
-        </DetailRow>
-
-        <DetailRow>
-          <DetailLabel>Brand</DetailLabel>
-          <DetailValue>{userData.brand || '-'}</DetailValue>
-        </DetailRow>
-
-        <DetailRow>
-          <DetailLabel>User Groups</DetailLabel>
-          <DetailValue>-</DetailValue>
-        </DetailRow>
-
-        <DetailRow>
-          <DetailLabel>Activated</DetailLabel>
-          <DetailValue color={userData.activated ? 'success.main' : 'error.main'}>
-            {userData.activated ? 'Activated' : 'Deactivated'}
+          <DetailLabel>Status</DetailLabel>
+          <DetailValue color={userData.status === 1 ? 'success.main' : 'error.main'}>
+            {userData.status === 1 ? 'Active' : 'Inactive'}
           </DetailValue>
         </DetailRow>
 
         <DetailRow>
-          <DetailLabel>Can Access API Documentation</DetailLabel>
-          <DetailValue>Yes</DetailValue>
-        </DetailRow>
-
-        <DetailRow>
-          <DetailLabel>Can Raise Support Request</DetailLabel>
-          <DetailValue>Yes 😊</DetailValue>
+          <DetailLabel>Company</DetailLabel>
+          <DetailValue>{userData.company?.name || '-'}</DetailValue>
         </DetailRow>
 
         <SectionHeader variant="subtitle1" sx={{ mt: 4 }}>
@@ -311,37 +317,37 @@ const UserProfileLayout = () => {
 
         <DetailRow>
           <DetailLabel>Address Line 1</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.company?.address1 || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Address Line 2</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.company?.address2 || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
-          <DetailLabel>City</DetailLabel>
-          <DetailValue>{userData.location || '-'}</DetailValue>
+          <DetailLabel>Suburb</DetailLabel>
+          <DetailValue>{userData.company?.suburb || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>State</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.location?.state || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Postcode</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.company?.postcode || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
           <DetailLabel>Country</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailValue>{userData.location?.country|| '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
-          <DetailLabel>Date of Birth</DetailLabel>
-          <DetailValue>-</DetailValue>
+          <DetailLabel>Location</DetailLabel>
+          <DetailValue>{userData.location?.name || '-'}</DetailValue>
         </DetailRow>
       </CardContent>
     </StyledCard>

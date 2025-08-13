@@ -867,9 +867,8 @@ import {
 } from "@mui/icons-material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { httpClient } from "../../utils/httpClientSetup"
+import { httpClient } from "../../utils/httpClientSetup";
 
-// Status constants for better maintainability
 const ARTICLE_STATUS = {
   PUBLISHED: 'published',
   DRAFT: 'draft',
@@ -888,13 +887,11 @@ export async function loader({ request }) {
   }
   
   try {
-    const statusFilter = tab === "archived" 
-      ? ARTICLE_STATUS.ARCHIVED 
-      : `${ARTICLE_STATUS.PUBLISHED},${ARTICLE_STATUS.DRAFT}`;
+    const endpoint = tab === "archived" 
+      ? `news?status=${ARTICLE_STATUS.ARCHIVED}&page=${page}&per_page=${perPage}`
+      : `news?status=${ARTICLE_STATUS.PUBLISHED}|${ARTICLE_STATUS.DRAFT}&page=${page}&per_page=${perPage}`;
     
-    const response = await httpClient.get(
-      `news?page=${page}&per_page=${perPage}&status=${statusFilter}`
-    );
+    const response = await httpClient.get(endpoint);
     
     if (response.data.success) {
       return { 
@@ -935,6 +932,7 @@ const ManageArticles = () => {
   const [activeRowId, setActiveRowId] = useState(null);
   const [openArchiveModal, setOpenArchiveModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false);
   const [articleToDelete, setArticleToDelete] = useState(null);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -946,13 +944,11 @@ const ManageArticles = () => {
   const fetchArticles = async (newPage = pagination.current_page, newPerPage = pagination.per_page) => {
     setIsLoading(true);
     try {
-      const statusFilter = tab === "archived" 
-        ? ARTICLE_STATUS.ARCHIVED 
-        : `${ARTICLE_STATUS.PUBLISHED},${ARTICLE_STATUS.DRAFT}`;
+      const endpoint = tab === "archived" 
+        ? `news?status=${ARTICLE_STATUS.ARCHIVED}&page=${newPage}&per_page=${newPerPage}`
+        : `news?status=${ARTICLE_STATUS.PUBLISHED}|${ARTICLE_STATUS.DRAFT}&page=${newPage}&per_page=${newPerPage}`;
       
-      const response = await httpClient.get(
-        `news?page=${newPage}&per_page=${newPerPage}&status=${statusFilter}`
-      );
+      const response = await httpClient.get(endpoint);
       
       if (response.data.success) {
         setArticles(response.data.data);
@@ -973,12 +969,6 @@ const ManageArticles = () => {
   const filterArticles = (articlesToFilter, searchTerm) => {
     let filtered = articlesToFilter;
     
-    filtered = filtered.filter(article => 
-      tab === "active"
-        ? [ARTICLE_STATUS.PUBLISHED, ARTICLE_STATUS.DRAFT].includes(article.status)
-        : article.status === ARTICLE_STATUS.ARCHIVED
-    );
-    
     if (searchTerm.trim() !== "") {
       filtered = filtered.filter(
         article =>
@@ -996,10 +986,10 @@ const ManageArticles = () => {
     fetchArticles(currentPage, currentPerPage);
   }, [tab, searchParams]);
 
-  // Filter articles based on search term and tab
+  // Filter articles based on search term
   useEffect(() => {
     filterArticles(articles, searchTerm);
-  }, [searchTerm, articles, tab]);
+  }, [searchTerm, articles]);
 
   // Helper functions
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
@@ -1054,7 +1044,6 @@ const ManageArticles = () => {
           severity: "success",
         });
         
-        // Update the specific article in state
         setArticles(prevArticles => 
           prevArticles.map(article => 
             article.id === articleId 
@@ -1179,7 +1168,7 @@ const ManageArticles = () => {
     try {
       const responses = await Promise.all(
         selected.map(id =>
-          httpClient.patch(`news/${id}/status`, { 
+          httpClient.patch(`news/${id}`, { 
             status: ARTICLE_STATUS.DRAFT,
             archived_at: null
           })
@@ -1209,6 +1198,66 @@ const ManageArticles = () => {
     }
   };
 
+  const handleCloneArticle = async (articleId) => {
+  setIsActionLoading(true);
+  try {
+    const response = await httpClient.get(`news/clone/${articleId}`);
+    
+    if (response.data.success) {
+      setSnackbar({
+        open: true,
+        message: "Article cloned successfully",
+        severity: "success",
+      });
+      // Refresh the articles list to show the new clone
+      fetchArticles();
+    } else {
+      throw new Error(response.data.message || "Failed to clone article");
+    }
+  } catch (error) {
+    setSnackbar({
+      open: true,
+      message: error.response?.data?.message || "Failed to clone article",
+      severity: "error",
+    });
+  } finally {
+    setIsActionLoading(false);
+    handleMenuClose(setRowMenuAnchorEl)();
+  }
+};
+
+  const handleBulkDelete = async () => {
+    setIsActionLoading(true);
+    try {
+      const responses = await Promise.all(
+        selected.map(id => httpClient.delete(`news/${id}`))
+      );
+
+      const successfulDeletes = responses.filter(
+        response => response.data.success
+      );
+
+      if (successfulDeletes.length > 0) {
+        setSnackbar({
+          open: true,
+          message: `Successfully deleted ${successfulDeletes.length} article(s)`,
+          severity: "success",
+        });
+        fetchArticles();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.response?.data?.message || "Failed to delete articles",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+    
+  setOpenBulkDeleteModal(false);
+   handleMenuClose(setBulkAnchorEl)();
+    }
+  };
   const handleDeleteClick = (id) => {
     setArticleToDelete(id);
     setOpenDeleteModal(true);
@@ -1455,8 +1504,8 @@ const ManageArticles = () => {
                 <TableCell>{article.percent_viewed}%</TableCell>
                 <TableCell>{formatDate(article.created_at)}</TableCell>
                 <TableCell>{article.published_by}</TableCell>
-                <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
-                <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
+                <TableCell>{article.featured === 1 ? "Yes" : "No"}</TableCell>
+<TableCell>{article.pinned === 1 ? "Yes" : "No"}</TableCell>
                 <TableCell>
                   <StatusChip status={article.status} />
                 </TableCell>
@@ -1526,6 +1575,7 @@ const ManageArticles = () => {
         ) : (
           <MenuItem onClick={handleBulkUnarchive}>Unarchive</MenuItem>
         )}
+        <MenuItem onClick={() => setOpenBulkDeleteModal(true)}>Delete</MenuItem>
         <MenuItem>Remove Featured</MenuItem>
         <MenuItem>Remove Pinned</MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
@@ -1562,7 +1612,10 @@ const ManageArticles = () => {
         >
           Edit
         </MenuItem>
-        <MenuItem disabled={isActionLoading}>Clone</MenuItem>
+        <MenuItem      onClick={() => {
+      handleCloneArticle(activeRowId);
+    }}
+ disabled={isActionLoading}>Clone</MenuItem>
         {tab === "active" ? (
           <MenuItem 
             onClick={() => {
@@ -1670,6 +1723,36 @@ const ManageArticles = () => {
         </DialogActions>
       </Dialog>
 
+      {/* Bulk Delete Confirmation Dialog */}
+      <Dialog
+        open={openBulkDeleteModal}
+        onClose={() => setOpenBulkDeleteModal(false)}
+      >
+        <DialogTitle>Confirm Bulk Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete {selected.length} selected articles? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button 
+            onClick={() => setOpenBulkDeleteModal(false)} 
+            color="primary"
+            disabled={isActionLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleBulkDelete}
+            color="error"
+            autoFocus
+            disabled={isActionLoading}
+          >
+            {isActionLoading ? "Deleting..." : "Confirm Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Action Loader */}
       {isActionLoading && (
         <Box
@@ -1708,3 +1791,7 @@ const ManageArticles = () => {
 };
 
 export default ManageArticles;
+
+
+
+

@@ -341,8 +341,8 @@ const Navbar = () => {
   <Divider sx={{ my: 1, borderColor: "#444" }} />
 
   <List>
-  <ListItem button>
-    <ListItemText primary="System Settings" primaryTypographyProps={{ fontWeight: "bold" }} />
+  <ListItem button component={NavLink} to="/general-settings">
+    <ListItemText primary="General Settings" primaryTypographyProps={{ fontWeight: "bold" }} />
   </ListItem>
   <ListItem button>
     <ListItemText primary="Support" primaryTypographyProps={{ fontWeight: "bold" }} />
@@ -530,7 +530,7 @@ const Navbar = () => {
                   <AccountCircle sx={{ fontSize: 32 }} />
                 </IconButton>
                 <Menu anchorEl={profileAnchorEl} open={openProfile} onClose={handleClose}>
-                  <MenuItem onClick={handleClose}>System Settings</MenuItem>
+                  <MenuItem onClick={handleClose} component = {Link} to="/general-settings">General Settings</MenuItem>
                   <MenuItem onClick={handleClose}>Support</MenuItem>
                   <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>

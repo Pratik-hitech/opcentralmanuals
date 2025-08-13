@@ -492,6 +492,280 @@
 
 // ****************************************************
 
+// import React, { useState, useEffect } from 'react';
+// import { useNavigate, useParams, useLoaderData } from 'react-router-dom';
+// import {
+//   Box,
+//   Typography,
+//   TextField,
+//   Button,
+//   Paper,
+//   MenuItem,
+//   Snackbar,
+//   Alert,
+//   Divider
+// } from '@mui/material';
+// import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+// import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+// import { httpClient } from "../../../utils/httpClientSetup";
+
+// const UserForm = () => {
+//   const navigate = useNavigate();
+//   const { id } = useParams();
+//   const userData = useLoaderData();
+//   const isEditMode = Boolean(id);
+
+//   const [formData, setFormData] = useState({
+//     first_name: '',
+//     middle_name: '',
+//     last_name: '',
+//     email: '',
+//     role_id: 1,
+//     location_id: '',
+//     status: 1
+//   });
+
+//   // Hardcoded location options for now
+//   const locationOptions = [
+//     { id: 1, name: 'Nikolaus Ltd Office' },
+//     { id: 2, name: 'New York Branch' },
+//     { id: 3, name: 'London HQ' }
+//   ];
+
+//   const [snackbar, setSnackbar] = useState({
+//     open: false,
+//     message: '',
+//     severity: 'success'
+//   });
+
+//   // Populate form in edit mode
+//   useEffect(() => {
+//     if (isEditMode && userData) {
+//       setFormData({
+//         first_name: userData.data.first_name || '',
+//         middle_name: userData.data.middle_name || '',
+//         last_name: userData.data.last_name || '',
+//         email: userData.data.email || '',
+//         role_id: userData.data.role_id || 1,
+//         location_id: userData.data.location?.id || userData.location_id || '',
+//         status: userData.data.status ?? 1
+//       });
+//     }
+//   }, [isEditMode, userData]);
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     try {
+//       const url = isEditMode ? `/users/${id}` : '/users';
+//       const method = isEditMode ? 'PUT' : 'POST';
+
+//       const payload = {
+//         first_name: formData.first_name,
+//         middle_name: formData.middle_name || null,
+//         last_name: formData.last_name,
+//         email: formData.email,
+//         role_id: formData.role_id,
+//         location_id: formData.location_id,
+//         status: formData.status
+//       };
+
+//       const response = await httpClient(url, { method, data: payload });
+
+//       if (response.data) {
+//         setSnackbar({
+//           open: true,
+//           message: isEditMode ? 'User updated successfully!' : 'User created successfully!',
+//           severity: 'success'
+//         });
+//         setTimeout(() => navigate('/manage/users'), 2000);
+//       } else {
+//         throw new Error('Failed to save user');
+//       }
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message: error.message || 'Failed to save user',
+//         severity: 'error'
+//       });
+//     }
+//   };
+
+//   const handleChange = (e) => {
+//     const { name, value, type, checked } = e.target;
+//     setFormData(prev => ({
+//       ...prev,
+//       [name]: type === 'checkbox' ? checked : value
+//     }));
+//   };
+
+//   const handleCloseSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }));
+
+//   return (
+//     <LocalizationProvider dateAdapter={AdapterDateFns}>
+//       <Box sx={{ width: '85%', mx: 'auto', my: 4 }}>
+//         <Paper elevation={3} sx={{ p: 4 }}>
+//           <Typography variant="h5" gutterBottom sx={{ mb: 4 }}>
+//             {isEditMode ? 'EDIT USER DETAILS' : 'CREATE NEW USER'}
+//           </Typography>
+
+//           <form onSubmit={handleSubmit}>
+//             <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
+//               PERSONAL DETAILS
+//             </Typography>
+
+//             {/* First Name */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>First Name *</Typography>
+//               <TextField
+//                 fullWidth
+//                 name="first_name"
+//                 value={formData.first_name}
+//                 onChange={handleChange}
+//                 required
+//                 size="small"
+//               />
+//             </Box>
+
+//             {/* Middle Name */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>Middle Name</Typography>
+//               <TextField
+//                 fullWidth
+//                 name="middle_name"
+//                 value={formData.middle_name || ''}
+//                 onChange={handleChange}
+//                 size="small"
+//               />
+//             </Box>
+
+//             {/* Last Name */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>Last Name *</Typography>
+//               <TextField
+//                 fullWidth
+//                 name="last_name"
+//                 value={formData.last_name}
+//                 onChange={handleChange}
+//                 required
+//                 size="small"
+//               />
+//             </Box>
+
+//             {/* Email */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>Email *</Typography>
+//               <TextField
+//                 fullWidth
+//                 name="email"
+//                 type="email"
+//                 value={formData.email}
+//                 onChange={handleChange}
+//                 required
+//                 size="small"
+//               />
+//             </Box>
+
+//             <Divider sx={{ my: 2 }} />
+
+//             {/* Role */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>User Role *</Typography>
+//               <TextField
+//                 select
+//                 fullWidth
+//                 name="role_id"
+//                 value={formData.role_id}
+//                 onChange={handleChange}
+//                 size="small"
+//               >
+//                 <MenuItem value={1}>Admin</MenuItem>
+//                 <MenuItem value={2}>User</MenuItem>
+//                 <MenuItem value={3}>Manager</MenuItem>
+//               </TextField>
+//             </Box>
+
+//             <Divider sx={{ my: 2 }} />
+
+//             {/* Location */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>Location *</Typography>
+//               <TextField
+//                 select
+//                 fullWidth
+//                 name="location_id"
+//                 value={formData.location_id}
+//                 onChange={handleChange}
+//                 size="small"
+//               >
+//                 {locationOptions.map(option => (
+//                   <MenuItem key={option.id} value={option.id}>
+//                     {option.name}
+//                   </MenuItem>
+//                 ))}
+//               </TextField>
+//             </Box>
+
+//             <Divider sx={{ my: 2 }} />
+
+//             {/* Status */}
+//             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+//               <Typography sx={{ width: '150px' }}>Status *</Typography>
+//               <TextField
+//                 select
+//                 fullWidth
+//                 name="status"
+//                 value={formData.status}
+//                 onChange={handleChange}
+//                 size="small"
+//               >
+//                 <MenuItem value={1}>Active</MenuItem>
+//                 <MenuItem value={0}>Inactive</MenuItem>
+//               </TextField>
+//             </Box>
+
+//             {/* Buttons */}
+//             <Box sx={{ display: 'flex', gap: 2, mt: 4 }}>
+//               <Button type="submit" variant="contained" color="primary">
+//                 {isEditMode ? 'Update User' : 'Create User'}
+//               </Button>
+//               <Button variant="outlined" onClick={() => navigate('/manage/users')}>
+//                 Cancel
+//               </Button>
+//             </Box>
+//           </form>
+//         </Paper>
+
+//         {/* Snackbar */}
+//         <Snackbar
+//           open={snackbar.open}
+//           autoHideDuration={6000}
+//           onClose={handleCloseSnackbar}
+//           anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+//         >
+//           <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} variant="filled">
+//             {snackbar.message}
+//           </Alert>
+//         </Snackbar>
+//       </Box>
+//     </LocalizationProvider>
+//   );
+// };
+
+// // Loader function to fetch user by ID in edit mode
+// export async function userLoader({ params }) {
+//   if (!params.id) return null;
+//   try {
+//     const response = await httpClient.get(`/users/${params.id}`);
+//     return response.data;
+//   } catch (error) {
+//     console.error('Loader Error:', error);
+//     throw new Error(error.message || 'Failed to load user');
+//   }
+// }
+
+// export default UserForm;
+
+  // ************************************************************
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams, useLoaderData } from 'react-router-dom';
 import {
@@ -503,34 +777,40 @@ import {
   MenuItem,
   Snackbar,
   Alert,
-  Divider
+  Divider,
+  FormControl,
+  InputLabel,
+  Select
 } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { httpClient } from "../../../utils/httpClientSetup";
 
 const UserForm = () => {
+  console.log('Component rendering...');
   const navigate = useNavigate();
   const { id } = useParams();
   const userData = useLoaderData();
   const isEditMode = Boolean(id);
 
+  console.log('Initial props:', { id, isEditMode, userData });
+
   const [formData, setFormData] = useState({
     first_name: '',
     middle_name: '',
     last_name: '',
+    user_name: '',
     email: '',
     role_id: 1,
-    location_id: '',
+    location_id: null, // Changed from '' to null
     status: 1
   });
 
-  // Hardcoded location options for now
-  const locationOptions = [
-    { id: 1, name: 'Nikolaus Ltd Office' },
-    { id: 2, name: 'New York Branch' },
-    { id: 3, name: 'London HQ' }
-  ];
+  console.log('Initial form state:', formData);
+
+  const [locations, setLocations] = useState([]);
+  const [loadingLocations, setLoadingLocations] = useState(true);
+  const [locationError, setLocationError] = useState(null);
 
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -538,23 +818,62 @@ const UserForm = () => {
     severity: 'success'
   });
 
+  // Fetch locations from API
+  useEffect(() => {
+    console.log('Fetching locations...');
+    const fetchLocations = async () => {
+      try {
+        setLoadingLocations(true);
+        const response = await httpClient.get('locations/list');
+        console.log('Locations API response:', response);
+
+        if (response.data && Array.isArray(response.data.data)) {
+          setLocations(response.data.data);
+          console.log('Locations set:', response.data.data);
+        } else {
+          throw new Error('Invalid locations data format');
+        }
+      } catch (error) {
+        console.error('Error fetching locations:', error);
+        setLocationError(error.message || 'Failed to load locations');
+        setSnackbar({
+          open: true,
+          message: 'Failed to load locations',
+          severity: 'error'
+        });
+      } finally {
+        setLoadingLocations(false);
+        console.log('Finished loading locations');
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
   // Populate form in edit mode
   useEffect(() => {
-    if (isEditMode && userData) {
-      setFormData({
+    console.log('Checking edit mode population...');
+    if (isEditMode && userData?.data) {
+      console.log('User data for edit:', userData.data);
+      const initialData = {
         first_name: userData.data.first_name || '',
         middle_name: userData.data.middle_name || '',
         last_name: userData.data.last_name || '',
+        user_name: userData.data.user_name || '',
         email: userData.data.email || '',
         role_id: userData.data.role_id || 1,
-        location_id: userData.data.location?.id || userData.location_id || '',
+        location_id: userData.data.location_id || null, // Changed from empty string to null
         status: userData.data.status ?? 1
-      });
+      };
+      console.log('Setting initial form data:', initialData);
+      setFormData(initialData);
     }
   }, [isEditMode, userData]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('Form submitted with data:', formData);
+    
     try {
       const url = isEditMode ? `/users/${id}` : '/users';
       const method = isEditMode ? 'PUT' : 'POST';
@@ -563,15 +882,20 @@ const UserForm = () => {
         first_name: formData.first_name,
         middle_name: formData.middle_name || null,
         last_name: formData.last_name,
+        user_name: formData.user_name,
         email: formData.email,
         role_id: formData.role_id,
-        location_id: formData.location_id,
+        location_id: formData.location_id, // No conversion needed now
         status: formData.status
       };
 
+      console.log('Prepared payload:', payload);
+
       const response = await httpClient(url, { method, data: payload });
+      console.log('API response:', response);
 
       if (response.data) {
+        console.log('Success!', response.data);
         setSnackbar({
           open: true,
           message: isEditMode ? 'User updated successfully!' : 'User created successfully!',
@@ -582,6 +906,7 @@ const UserForm = () => {
         throw new Error('Failed to save user');
       }
     } catch (error) {
+      console.error('Submission error:', error);
       setSnackbar({
         open: true,
         message: error.message || 'Failed to save user',
@@ -592,13 +917,31 @@ const UserForm = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value
-    }));
+    console.log('Field changed:', { name, value, type });
+
+    const processedValue = name === 'location_id' 
+      ? (value === '' ? null : Number(value))
+      : (type === 'checkbox' ? checked : value);
+
+    console.log('Processed value:', processedValue);
+
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: processedValue
+      };
+      console.log('Updated form data:', newData);
+      return newData;
+    });
   };
 
-  const handleCloseSnackbar = () => setSnackbar(prev => ({ ...prev, open: false }));
+  const handleCloseSnackbar = () => {
+    console.log('Closing snackbar');
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  console.log('Current form state:', formData);
+  console.log('Locations state:', locations);
 
   return (
     <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -609,118 +952,102 @@ const UserForm = () => {
           </Typography>
 
           <form onSubmit={handleSubmit}>
+            {/* PERSONAL DETAILS */}
             <Typography variant="h6" gutterBottom sx={{ mb: 2 }}>
               PERSONAL DETAILS
             </Typography>
 
-            {/* First Name */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>First Name *</Typography>
-              <TextField
-                fullWidth
-                name="first_name"
-                value={formData.first_name}
-                onChange={handleChange}
-                required
-                size="small"
-              />
-            </Box>
-
-            {/* Middle Name */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>Middle Name</Typography>
-              <TextField
-                fullWidth
-                name="middle_name"
-                value={formData.middle_name || ''}
-                onChange={handleChange}
-                size="small"
-              />
-            </Box>
-
-            {/* Last Name */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>Last Name *</Typography>
-              <TextField
-                fullWidth
-                name="last_name"
-                value={formData.last_name}
-                onChange={handleChange}
-                required
-                size="small"
-              />
-            </Box>
-
-            {/* Email */}
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>Email *</Typography>
-              <TextField
-                fullWidth
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                size="small"
-              />
-            </Box>
+            {[
+              { label: 'First Name *', name: 'first_name', required: true },
+              { label: 'Middle Name', name: 'middle_name' },
+              { label: 'Last Name *', name: 'last_name', required: true },
+              { label: 'Username *', name: 'user_name', required: true },
+              { label: 'Email *', name: 'email', type: 'email', required: true }
+            ].map((field) => (
+              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }} key={field.name}>
+                <Typography sx={{ width: '150px', flexShrink: 0 }}>{field.label}</Typography>
+                <TextField
+                  fullWidth
+                  name={field.name}
+                  type={field.type || 'text'}
+                  value={formData[field.name]}
+                  onChange={handleChange}
+                  required={field.required}
+                  size="small"
+                />
+              </Box>
+            ))}
 
             <Divider sx={{ my: 2 }} />
 
             {/* Role */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>User Role *</Typography>
-              <TextField
-                select
-                fullWidth
-                name="role_id"
-                value={formData.role_id}
-                onChange={handleChange}
-                size="small"
-              >
-                <MenuItem value={1}>Admin</MenuItem>
-                <MenuItem value={2}>User</MenuItem>
-                <MenuItem value={3}>Manager</MenuItem>
-              </TextField>
+              <Typography sx={{ width: '150px', flexShrink: 0 }}>User Role *</Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="role-select-label">Select Role</InputLabel>
+                <Select
+                  labelId="role-select-label"
+                  name="role_id"
+                  value={formData.role_id}
+                  onChange={handleChange}
+                  label="Select Role"
+                >
+                  <MenuItem value={1}>Admin</MenuItem>
+                  <MenuItem value={2}>User</MenuItem>
+                  <MenuItem value={3}>Manager</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
             {/* Location */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>Location *</Typography>
-              <TextField
-                select
-                fullWidth
-                name="location_id"
-                value={formData.location_id}
-                onChange={handleChange}
-                size="small"
-              >
-                {locationOptions.map(option => (
-                  <MenuItem key={option.id} value={option.id}>
-                    {option.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <Typography sx={{ width: '150px', flexShrink: 0 }}>Location</Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="location-select-label">Select Location</InputLabel>
+                <Select
+                  labelId="location-select-label"
+                  name="location_id"
+                  value={formData.location_id ?? ''}
+                  onChange={handleChange}
+                  label="Select Location"
+                  disabled={loadingLocations}
+                  error={!!locationError}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  {locations.map((location) => (
+                    <MenuItem key={location.id} value={location.id}>
+                      {location.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                {locationError && (
+                  <Typography variant="caption" color="error" sx={{ mt: 1 }}>
+                    {locationError}
+                  </Typography>
+                )}
+              </FormControl>
             </Box>
 
             <Divider sx={{ my: 2 }} />
 
             {/* Status */}
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Typography sx={{ width: '150px' }}>Status *</Typography>
-              <TextField
-                select
-                fullWidth
-                name="status"
-                value={formData.status}
-                onChange={handleChange}
-                size="small"
-              >
-                <MenuItem value={1}>Active</MenuItem>
-                <MenuItem value={0}>Inactive</MenuItem>
-              </TextField>
+              <Typography sx={{ width: '150px', flexShrink: 0 }}>Status *</Typography>
+              <FormControl fullWidth size="small">
+                <InputLabel id="status-select-label">Select Status</InputLabel>
+                <Select
+                  labelId="status-select-label"
+                  name="status"
+                  value={formData.status}
+                  onChange={handleChange}
+                  label="Select Status"
+                >
+                  <MenuItem value={1}>Active</MenuItem>
+                  <MenuItem value={0}>Inactive</MenuItem>
+                </Select>
+              </FormControl>
             </Box>
 
             {/* Buttons */}
@@ -735,7 +1062,6 @@ const UserForm = () => {
           </form>
         </Paper>
 
-        {/* Snackbar */}
         <Snackbar
           open={snackbar.open}
           autoHideDuration={6000}
@@ -751,11 +1077,12 @@ const UserForm = () => {
   );
 };
 
-// Loader function to fetch user by ID in edit mode
 export async function userLoader({ params }) {
+  console.log('Loading user data for ID:', params.id);
   if (!params.id) return null;
   try {
     const response = await httpClient.get(`/users/${params.id}`);
+    console.log('User loader response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Loader Error:', error);

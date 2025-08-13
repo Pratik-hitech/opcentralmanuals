@@ -45,8 +45,6 @@ import { httpClient } from "../../utils/httpClientSetup";
 export async function loader({ request }) {
   try {
     const response = await httpClient.get("users");
-    console.log("API Response:", response.data);
-
     return { users: response.data.data };
   } catch (error) {
     console.error("Loader Error:", error);
@@ -58,8 +56,8 @@ const ManageUsers = () => {
   const navigate = useNavigate();
   const { users: initialUsers } = useLoaderData();
 
-  const [users, setUsers] = useState(initialUsers);
-  const [filteredUsers, setFilteredUsers] = useState(initialUsers);
+  const [allUsers, setAllUsers] = useState(initialUsers);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState("active");
@@ -87,46 +85,35 @@ const ManageUsers = () => {
   // Helper function to display data or N/A if null/undefined
   const displayValue = (value) => value || "N/A";
 
-  useEffect(() => {
-    if (searchTerm.trim() === "") {
-      setFilteredUsers(users);
-    } else {
-      const filtered = users.filter(
-        (user) =>
-          displayValue(user.first_name)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          displayValue(user.last_name)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          displayValue(user.name)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          displayValue(user.user_name)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          displayValue(user.email)
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase()) ||
-          (user.location && 
-            displayValue(user.location.name)
-              ?.toLowerCase()
-              .includes(searchTerm.toLowerCase()))
-      );
-      setFilteredUsers(filtered);
-    }
-    setPage(0);
-  }, [searchTerm, users]);
+  // Filter users based on tab and search term
+ // Filter users based on tab and search term
+useEffect(() => {
+  let filtered = allUsers;
+  
+  // Filter by status first
+  filtered = filtered.filter(user => 
+    tab === "active" ? user.status === 1 : user.status === 0
+  );
+  
+  // Then filter by search term if exists
+  if (searchTerm.trim() !== "") {
+    filtered = filtered.filter(
+      (user) =>
+        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        user.location?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+  
+  setFilteredUsers(filtered);
+  setPage(0); // Reset to first page when filters change
+}, [allUsers, tab, searchTerm]);
 
   const handleTabChange = (event, newValue) => {
     setTab(newValue);
-    // Filter users based on status
-    if (newValue === "active") {
-      setFilteredUsers(users.filter(user => user.status === 1));
-    } else {
-      setFilteredUsers(users.filter(user => user.status === 0));
-    }
-    setPage(0);
   };
 
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
@@ -143,6 +130,7 @@ const ManageUsers = () => {
   };
 
   const handleChangePage = (_, newPage) => setPage(newPage);
+
   const handleChangeRowsPerPage = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
@@ -152,21 +140,15 @@ const ManageUsers = () => {
     setIsActionLoading(true);
     try {
       const newStatus = currentStatus === 1 ? 0 : 1;
-      const response = await httpClient.put(`/users/${userId}`, {
-        status: newStatus,
-      });
-
-      setUsers((prev) =>
-        prev.map((user) =>
+      await httpClient.put(`/users/${userId}`, { status: newStatus });
+      
+      // Update the allUsers state
+      setAllUsers(prevUsers => 
+        prevUsers.map(user => 
           user.id === userId ? { ...user, status: newStatus } : user
         )
       );
-      setFilteredUsers((prev) =>
-        prev.map((user) =>
-          user.id === userId ? { ...user, status: newStatus } : user
-        )
-      );
-
+      
       setSnackbar({
         open: true,
         message: `User ${newStatus === 1 ? "activated" : "deactivated"} successfully`,
@@ -180,6 +162,40 @@ const ManageUsers = () => {
       });
     } finally {
       setIsActionLoading(false);
+    }
+  };
+
+  const handleBulkStatusChange = async (activate) => {
+    setIsActionLoading(true);
+    try {
+      await Promise.all(
+        selected.map(id => 
+          httpClient.put(`/users/${id}`, { status: activate ? 1 : 0 })
+        )
+      );
+      
+      // Update all users
+      setAllUsers(prevUsers => 
+        prevUsers.map(user => 
+          selected.includes(user.id) ? { ...user, status: activate ? 1 : 0 } : user
+        )
+      );
+      
+      setSnackbar({
+        open: true,
+        message: `${selected.length} user(s) ${activate ? 'activated' : 'deactivated'} successfully`,
+        severity: "success",
+      });
+      setSelected([]);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || `Failed to ${activate ? 'activate' : 'deactivate'} users`,
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+      handleMenuClose(setBulkAnchorEl)();
     }
   };
 
@@ -239,10 +255,7 @@ const ManageUsers = () => {
           selected.map((id) => httpClient.delete(`/users/${id}`))
         );
 
-        setUsers((prev) => prev.filter((u) => !selected.includes(u.id)));
-        setFilteredUsers((prev) =>
-          prev.filter((u) => !selected.includes(u.id))
-        );
+        setAllUsers((prev) => prev.filter((u) => !selected.includes(u.id)));
         setSelected([]);
 
         setSnackbar({
@@ -258,8 +271,7 @@ const ManageUsers = () => {
           message: "User deleted successfully",
           severity: "success",
         });
-        setUsers((prev) => prev.filter((u) => u.id !== userToDelete));
-        setFilteredUsers((prev) => prev.filter((u) => u.id !== userToDelete));
+        setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete));
         setSelected((prev) => prev.filter((id) => id !== userToDelete));
       }
     } catch (error) {
@@ -491,38 +503,10 @@ const ManageUsers = () => {
           Delete Selected Users
         </MenuItem>
         <MenuItem>Change Roles</MenuItem>
-        <MenuItem
-          onClick={() => {
-            setUsers((prev) =>
-              prev.map((user) =>
-                selected.includes(user.id) ? { ...user, status: 1 } : user
-              )
-            );
-            setFilteredUsers((prev) =>
-              prev.map((user) =>
-                selected.includes(user.id) ? { ...user, status: 1 } : user
-              )
-            );
-            setBulkAnchorEl(null);
-          }}
-        >
+        <MenuItem onClick={() => handleBulkStatusChange(true)}>
           Activate Selected
         </MenuItem>
-        <MenuItem
-          onClick={() => {
-            setUsers((prev) =>
-              prev.map((user) =>
-                selected.includes(user.id) ? { ...user, status: 0 } : user
-              )
-            );
-            setFilteredUsers((prev) =>
-              prev.map((user) =>
-                selected.includes(user.id) ? { ...user, status: 0 } : user
-              )
-            );
-            setBulkAnchorEl(null);
-          }}
-        >
+        <MenuItem onClick={() => handleBulkStatusChange(false)}>
           Deactivate Selected
         </MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
