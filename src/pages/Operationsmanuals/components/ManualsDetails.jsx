@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Box,
   TextField,
@@ -7,21 +7,21 @@ import {
   Paper,
   InputAdornment,
   IconButton,
-  Container
-} from '@mui/material';
-import { CloudUpload, Delete } from '@mui/icons-material';
+  Container,
+} from "@mui/material";
+import { CloudUpload, Delete } from "@mui/icons-material";
 
 const ManualsDetails = () => {
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
+    title: "",
+    description: "",
     thumbnail: null,
-    thumbnailPreview: ''
+    thumbnailPreview: "",
   });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleFileChange = (e) => {
@@ -29,10 +29,10 @@ const ManualsDetails = () => {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData(prev => ({
+        setFormData((prev) => ({
           ...prev,
           thumbnail: file,
-          thumbnailPreview: reader.result
+          thumbnailPreview: reader.result,
         }));
       };
       reader.readAsDataURL(file);
@@ -40,50 +40,59 @@ const ManualsDetails = () => {
   };
 
   const handleRemoveThumbnail = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       thumbnail: null,
-      thumbnailPreview: ''
+      thumbnailPreview: "",
     }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const submitData = new FormData();
-    submitData.append('title', formData.title);
-    submitData.append('description', formData.description);
+    submitData.append("title", formData.title);
+    submitData.append("description", formData.description);
     if (formData.thumbnail) {
-      submitData.append('thumbnail', formData.thumbnail);
+      submitData.append("thumbnail", formData.thumbnail);
     }
-    console.log('Form data ready for API:', submitData);
+    console.log("Form data ready for API:", submitData);
   };
 
   return (
-    <Container maxWidth={false} sx={{ 
-      display: 'flex',
-      justifyContent: 'center',
-      alignItems: 'center',
-      minHeight: '100%',
-      py: 4
-    }}>
-      <Box sx={{ 
-        width: '65%',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 3
-      }}>
-        <Typography variant="h4" component="h1" sx={{ mb: 2, textAlign: 'center' }}>
+    <Container
+      maxWidth={false}
+      sx={{
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        minHeight: "100%",
+        py: 4,
+      }}
+    >
+      <Box
+        sx={{
+          width: "65%",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ mb: 2, textAlign: "center" }}
+        >
           Manual Details
         </Typography>
 
         <Paper elevation={3} sx={{ p: 4 }}>
-          <Box 
-            component="form" 
+          <Box
+            component="form"
             onSubmit={handleSubmit}
             sx={{
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 3
+              display: "flex",
+              flexDirection: "column",
+              gap: 3,
             }}
           >
             <TextField
@@ -108,24 +117,26 @@ const ManualsDetails = () => {
               variant="outlined"
             />
 
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               <Typography variant="subtitle1">Thumbnail Image</Typography>
-              
+
               {formData.thumbnailPreview ? (
-                <Box sx={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: 2,
-                  flexDirection: 'column'
-                }}>
+                <Box
+                  sx={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
+                    flexDirection: "column",
+                  }}
+                >
                   <Box
                     component="img"
                     src={formData.thumbnailPreview}
                     alt="Thumbnail preview"
-                    sx={{ 
-                      maxHeight: 150, 
-                      maxWidth: '100%',
-                      borderRadius: 1
+                    sx={{
+                      maxHeight: 150,
+                      maxWidth: "100%",
+                      borderRadius: 1,
                     }}
                   />
                   <Button
@@ -142,7 +153,7 @@ const ManualsDetails = () => {
                   component="label"
                   variant="outlined"
                   startIcon={<CloudUpload />}
-                  sx={{ alignSelf: 'flex-start' }}
+                  sx={{ alignSelf: "flex-start" }}
                 >
                   Upload Thumbnail
                   <input
@@ -162,11 +173,11 @@ const ManualsDetails = () => {
               type="submit"
               variant="contained"
               size="large"
-              sx={{ 
+              sx={{
                 mt: 2,
-                alignSelf: 'center',
+                alignSelf: "center",
                 px: 4,
-                py: 1.5
+                py: 1.5,
               }}
             >
               Save Details

@@ -24,7 +24,6 @@
 
 // const LogoCard = ({ image, title }) => {
 
-  
 //   return (
 //     <Box
 //       sx={{
@@ -241,7 +240,7 @@
 //             bgcolor: "#f5f5f5",
 //             boxShadow: 1,
 //             "&:hover": {
-             
+
 //             },
 //           }}
 //         >
@@ -253,7 +252,6 @@
 // };
 
 // export default OperationsManuals;
-
 
 import React from "react";
 import {
@@ -295,45 +293,27 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BlueWheelersLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
+import { httpClient } from "../../utils/httpClientSetup";
 
-// Mock API function - replace with actual API call
 const fetchManuals = async () => {
-  // Simulate API delay
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  return [
-    {
-      id: 1,
-      title: "Blue Wheelers",
-      thumbnail: BlueWheelersLogo,
-      policies: 12,
-      lastUpdated: "2023-05-15"
-    },
-    {
-      id: 2,
-      title: "Dash Dogwash",
-      thumbnail: "https://upload.wikimedia.org/wikipedia/commons/9/90/Dog_icon.png",
-      policies: 8,
-      lastUpdated: "2023-06-20"
-    },
-    {
-      id: 3,
-      title: "City Logistics",
-      thumbnail: "https://cdn-icons-png.flaticon.com/512/2777/2777154.png",
-      policies: 15,
-      lastUpdated: "2023-04-10"
-    },
-    {
-      id: 4,
-      title: "Fast Movers",
-      thumbnail: "https://cdn-icons-png.flaticon.com/512/2972/2972185.png",
-      policies: 5,
-      lastUpdated: "2023-07-01"
-    }
-  ];
+  return httpClient
+    .get("collections")
+    .then((response) => {
+      const manuals = response.data.data;
+      return manuals;
+    })
+    .catch((error) => {
+      const message =
+        error.response?.data?.message ||
+        "An unexpected error occured.Try again";
+      throw new Error(message);
+    });
 };
 
-const LogoCard = ({ image, title, policies, onDelete }) => {
+const LogoCard = ({
+  manual: { id, thumbnail: image, title, policies },
+  onDelete,
+}) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const open = Boolean(anchorEl);
@@ -371,7 +351,7 @@ const LogoCard = ({ image, title, policies, onDelete }) => {
     >
       <Box
         component="img"
-        src={image}
+        src={image || BlueWheelersLogo}
         alt={title}
         sx={{ width: "100%", display: "block" }}
       />
@@ -410,16 +390,16 @@ const LogoCard = ({ image, title, policies, onDelete }) => {
         }}
       >
         <Tooltip title="View">
-          <Link to={`./docs/${title.toLowerCase().replace(/\s+/g, '-')}`}>
+          <Link to={`./docs/${title.toLowerCase().replace(/\s+/g, "-")}`}>
             <IconButton size="small" color="primary" sx={{ bgcolor: "white" }}>
               <VisibilityIcon fontSize="small" />
             </IconButton>
           </Link>
         </Tooltip>
         <Tooltip title="More actions">
-          <IconButton 
-            size="small" 
-            color="secondary" 
+          <IconButton
+            size="small"
+            color="secondary"
             sx={{ bgcolor: "white" }}
             onClick={handleMenuClick}
           >
@@ -454,19 +434,19 @@ const LogoCard = ({ image, title, policies, onDelete }) => {
         anchorEl={anchorEl}
         open={open}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem 
+        <MenuItem
           component={Link}
-          to={`/manuals/edit/${title.toLowerCase().replace(/\s+/g, '-')}`}
+          to={`/manuals/edit/${id}`}
           onClick={handleMenuClose}
         >
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Edit
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: 'error.main' }} />
+          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
           Delete
         </MenuItem>
       </Menu>
@@ -479,16 +459,17 @@ const LogoCard = ({ image, title, policies, onDelete }) => {
         <DialogTitle>Delete Manual</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{title}" manual? This action cannot be undone.
+            Are you sure you want to delete "{title}" manual? This action cannot
+            be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={() => {
               onDelete();
               setDeleteConfirmOpen(false);
-            }} 
+            }}
             color="error"
             variant="contained"
           >
@@ -540,7 +521,7 @@ const OperationsManuals = () => {
   };
 
   const handleCloseSnackbar = () => {
-    setSnackbar(prev => ({ ...prev, open: false }));
+    setSnackbar((prev) => ({ ...prev, open: false }));
   };
 
   const handleMenuClick = (event) => {
@@ -572,13 +553,16 @@ const OperationsManuals = () => {
   const handleDeleteManual = (id) => {
     try {
       // Simulate API call
-      const manualToDelete = manuals.find(m => m.id === id);
-      
+      const manualToDelete = manuals.find((m) => m.id === id);
+
       // In a real app, you would call an API here
       // await deleteManualAPI(id);
-      
-      setManuals(manuals.filter(manual => manual.id !== id));
-      showSnackbar(`"${manualToDelete.title}" manual deleted successfully`, "success");
+
+      setManuals(manuals.filter((manual) => manual.id !== id));
+      showSnackbar(
+        `"${manualToDelete.title}" manual deleted successfully`,
+        "success"
+      );
     } catch (error) {
       console.error("Error deleting manual:", error);
       showSnackbar("Failed to delete manual", "error");
@@ -620,16 +604,25 @@ const OperationsManuals = () => {
             OPERATIONS MANUALS
           </Typography>
 
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            flexWrap="wrap"
+          >
             <Tooltip title={viewMode === "tiles" ? "Table view" : "Tile view"}>
-              <IconButton 
+              <IconButton
                 onClick={toggleViewMode}
-                sx={{ bgcolor: "#E0CD00", color: "white", "&:hover": { bgcolor: "#c7b800" } }}
+                sx={{
+                  bgcolor: "#E0CD00",
+                  color: "white",
+                  "&:hover": { bgcolor: "#c7b800" },
+                }}
               >
                 {viewMode === "tiles" ? <ViewListIcon /> : <AppsIcon />}
               </IconButton>
             </Tooltip>
-            
+
             <Button
               component={Link}
               to="/manuals/create"
@@ -643,11 +636,19 @@ const OperationsManuals = () => {
             >
               Create Manual
             </Button>
-            
-            <IconButton component={Link} to= "/file-manager" sx={{ bgcolor: "#E0CD00", color: "white", "&:hover": { bgcolor: "#c7b800" } }}>
+
+            <IconButton
+              component={Link}
+              to="/file-manager"
+              sx={{
+                bgcolor: "#E0CD00",
+                color: "white",
+                "&:hover": { bgcolor: "#c7b800" },
+              }}
+            >
               <FolderIcon />
             </IconButton>
-            
+
             <IconButton onClick={handleMenuClick}>
               <MoreVertIcon />
             </IconButton>
@@ -659,20 +660,32 @@ const OperationsManuals = () => {
               anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
               transformOrigin={{ vertical: "top", horizontal: "right" }}
             >
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/policies/all")}>
+              <MenuItem
+                onClick={() =>
+                  handleMenuItemClick("/operations/manuals/policies/all")
+                }
+              >
                 All Policies
               </MenuItem>
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
+              <MenuItem
+                onClick={() => handleMenuItemClick("/operations/manuals/")}
+              >
                 Manage Drafts
               </MenuItem>
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
+              <MenuItem
+                onClick={() => handleMenuItemClick("/operations/manuals/")}
+              >
                 Manage Tags
               </MenuItem>
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
+              <MenuItem
+                onClick={() => handleMenuItemClick("/operations/manuals/")}
+              >
                 Manage Order
               </MenuItem>
               <Divider sx={{ height: "1px", bgcolor: "rgba(0, 0, 0, 0.1)" }} />
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
+              <MenuItem
+                onClick={() => handleMenuItemClick("/operations/manuals/")}
+              >
                 Settings
               </MenuItem>
             </Menu>
@@ -693,11 +706,9 @@ const OperationsManuals = () => {
             }}
           >
             {manuals.map((manual) => (
-              <LogoCard 
+              <LogoCard
                 key={manual.id}
-                image={manual.thumbnail}
-                title={manual.title}
-                policies={manual.policies}
+                manual={manual}
                 onDelete={() => handleDeleteManual(manual.id)}
               />
             ))}
@@ -722,8 +733,8 @@ const OperationsManuals = () => {
                     .map((manual) => (
                       <TableRow key={manual.id}>
                         <TableCell>
-                          <Avatar 
-                            src={manual.thumbnail} 
+                          <Avatar
+                            src={manual.thumbnail}
                             alt={manual.title}
                             variant="rounded"
                             sx={{ width: 40, height: 40 }}
@@ -737,9 +748,9 @@ const OperationsManuals = () => {
                         <TableCell>{manual.policies}</TableCell>
                         <TableCell>{manual.lastUpdated}</TableCell>
                         <TableCell align="right">
-                          <TableActions 
-                            manual={manual} 
-                            onDelete={() => handleDeleteManual(manual.id)} 
+                          <TableActions
+                            manual={manual}
+                            onDelete={() => handleDeleteManual(manual.id)}
                           />
                         </TableCell>
                       </TableRow>
@@ -772,13 +783,13 @@ const OperationsManuals = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={handleCloseSnackbar}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
           onClose={handleCloseSnackbar}
           severity={snackbar.severity}
           variant="filled"
-          sx={{ width: '100%' }}
+          sx={{ width: "100%" }}
         >
           {snackbar.message}
         </Alert>
@@ -810,10 +821,10 @@ const TableActions = ({ manual, onDelete }) => {
     <>
       <Stack direction="row" spacing={1} justifyContent="flex-end">
         <Tooltip title="View">
-          <IconButton 
+          <IconButton
             size="small"
             component={Link}
-            to={`./docs/${manual.title.toLowerCase().replace(/\s+/g, '-')}`}
+            to={`./docs/${manual.title.toLowerCase().replace(/\s+/g, "-")}`}
           >
             <VisibilityIcon fontSize="small" />
           </IconButton>
@@ -830,19 +841,21 @@ const TableActions = ({ manual, onDelete }) => {
         anchorEl={anchorEl}
         open={open}
         onClose={handleMenuClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
       >
-        <MenuItem 
+        <MenuItem
           component={Link}
-          to={`/manuals/edit/${manual.title.toLowerCase().replace(/\s+/g, '-')}`}
+          to={`/manuals/edit/${manual.title
+            .toLowerCase()
+            .replace(/\s+/g, "-")}`}
           onClick={handleMenuClose}
         >
           <EditIcon fontSize="small" sx={{ mr: 1 }} />
           Edit
         </MenuItem>
         <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: 'error.main' }} />
+          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
           Delete
         </MenuItem>
       </Menu>
@@ -855,16 +868,17 @@ const TableActions = ({ manual, onDelete }) => {
         <DialogTitle>Delete Manual</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{manual.title}" manual? This action cannot be undone.
+            Are you sure you want to delete "{manual.title}" manual? This action
+            cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
-          <Button 
+          <Button
             onClick={() => {
               onDelete();
               setDeleteConfirmOpen(false);
-            }} 
+            }}
             color="error"
             variant="contained"
           >
