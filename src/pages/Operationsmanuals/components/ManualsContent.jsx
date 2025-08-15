@@ -421,9 +421,7 @@ const ManualsContent = () => {
         >
           Content
         </Typography>
-        <RichTextEditor value={content} onChange={setContent} />
-        <h2>Output</h2>
-        <div dangerouslySetInnerHTML={{ __html: content }} />
+        {/* <RichTextEditor value={content} onChange={setContent} /> */}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 9 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
