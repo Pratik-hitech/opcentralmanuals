@@ -20,6 +20,8 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import {
   Add,
@@ -33,6 +35,7 @@ import {
 } from "@mui/icons-material";
 import CreateSectionDialog from "./CreateSectionDialog";
 import { httpClient } from "../../../utils/httpClientSetup";
+import RichTextEditor from "../../../components/RichTextEditor";
 
 const ManualsContent = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -46,24 +49,41 @@ const ManualsContent = () => {
   const [currentItem, setCurrentItem] = useState(null);
   const [dialogMode, setDialogMode] = useState("create"); // 'create' or 'edit'
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Fetch navigations from API
+  const fetchNavigations = async () => {
+    try {
+      const response = await httpClient.get("/navigations?collection_id=1");
+      const data = response.data.data || []; // Handle array structure
+      setNavigations(data);
+      return data;
+    } catch (error) {
+      console.error("Error fetching navigations:", error);
+      setError("Failed to load navigations");
+      throw error;
+    }
+  };
 
   useEffect(() => {
-    const fetchNavigations = async () => {
+    const loadNavigations = async () => {
       try {
-        const response = await httpClient.get("/navigations?collection_id=1"); //  TODO: Replace with actual collection ID
-        const data = response.data.data;
-        setNavigations(data);
+        await fetchNavigations();
       } catch (error) {
-        console.error("Error fetching navigations:", error);
-        setError("Failed to load navigations");
+        console.error("Error loading navigations:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchNavigations();
+    loadNavigations();
   }, []);
 
+  // Handle Create button click
   const handleCreateClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -151,48 +171,97 @@ const ManualsContent = () => {
     }
   }, [navigations]);
 
+  // Handle Add icon click
   const handleAddClick = (event, item) => {
     event.stopPropagation();
     setCurrentItem(item);
     setAddMenuAnchorEl(event.currentTarget);
   };
 
+  // Handle More Vert icon click
   const handleMoreVertClick = (event, item) => {
     event.stopPropagation();
     setCurrentItem(item);
     setMoreMenuAnchorEl(event.currentTarget);
   };
 
+  // Handle Add Sub Section
   const handleAddSubSectionClick = () => {
     setAddMenuAnchorEl(null);
     setDialogMode("create");
     setIsModalOpen(true);
   };
 
+  // Handle Add Policy (placeholder)
   const handleAddPolicyClick = () => {
     setAddMenuAnchorEl(null);
     console.log("Add policy under item:", currentItem);
   };
 
+  // Handle Edit
   const handleEditClick = () => {
     setMoreMenuAnchorEl(null);
     setDialogMode("edit");
     setIsModalOpen(true);
   };
 
+  // Handle Delete
   const handleDeleteClick = () => {
     setMoreMenuAnchorEl(null);
     setDeleteDialogOpen(true);
   };
 
-  const handleConfirmDelete = () => {
-    console.log("Deleting item:", currentItem);
-    setDeleteDialogOpen(false);
-    // TODO: Implement actual delete logic
+  // Confirm Delete
+  const handleConfirmDelete = async () => {
+    try {
+      await httpClient.delete(`/navigations/${currentItem.id}`);
+      setSnackbar({
+        open: true,
+        message: "Item deleted successfully",
+        severity: "success",
+      });
+      await fetchNavigations(); // Refetch after delete
+    } catch (error) {
+      console.error("Error deleting item:", error);
+      setSnackbar({
+        open: true,
+        message: "Failed to delete item",
+        severity: "error",
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+    }
   };
 
+  // Cancel Delete
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
+  };
+
+  // Handle successful save/update
+  const handleSaveSuccess = async () => {
+    try {
+      await fetchNavigations(); // Refetch the latest data
+      setSnackbar({
+        open: true,
+        message: `Section ${
+          dialogMode === "edit" ? "updated" : "created"
+        } successfully`,
+        severity: "success",
+      });
+    } catch (error) {
+      console.error("Error refetching navigations:", error);
+      setSnackbar({
+        open: true,
+        message: "Section saved but failed to refresh list",
+        severity: "warning",
+      });
+    }
+  };
+
+  // Close snackbar
+  const handleSnackbarClose = () => {
+    setSnackbar({ ...snackbar, open: false });
   };
 
   // Render navigation items recursively
@@ -249,6 +318,7 @@ const ManualsContent = () => {
               </IconButton>
             )}
 
+            {/* Action Buttons */}
             <Box sx={{ display: "flex", gap: 1 }}>
               {/* Add Icon with Dropdown (only for sections/sub-sections) */}
               {!isPolicy && (
@@ -274,6 +344,7 @@ const ManualsContent = () => {
                 </Tooltip>
               )}
 
+              {/* Edit and Delete for Policies (as before) */}
               {isPolicy && (
                 <>
                   <Tooltip title="Edit">
@@ -322,6 +393,8 @@ const ManualsContent = () => {
   // Build the navigation tree
   const navigationTree = buildNavigationTree(navigations);
 
+  const [content, setContent] = useState("<p>Hello TinyMCE!</p>");
+
   return (
     <Container
       maxWidth={false}
@@ -348,6 +421,9 @@ const ManualsContent = () => {
         >
           Content
         </Typography>
+        <RichTextEditor value={content} onChange={setContent} />
+        <h2>Output</h2>
+        <div dangerouslySetInnerHTML={{ __html: content }} />
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 9 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
@@ -395,13 +471,16 @@ const ManualsContent = () => {
         </Grid>
       </Box>
 
+      {/* Section Creation Dialog */}
       <CreateSectionDialog
         open={isModalOpen}
         onClose={handleModalClose}
         mode={dialogMode}
         item={currentItem}
+        onSaveSuccess={handleSaveSuccess}
       />
 
+      {/* Add Menu */}
       <Menu
         anchorEl={addMenuAnchorEl}
         open={Boolean(addMenuAnchorEl)}
@@ -411,6 +490,7 @@ const ManualsContent = () => {
         <MenuItem onClick={handleAddPolicyClick}>Add Policy</MenuItem>
       </Menu>
 
+      {/* More Actions Menu */}
       <Menu
         anchorEl={moreMenuAnchorEl}
         open={Boolean(moreMenuAnchorEl)}
@@ -444,6 +524,22 @@ const ManualsContent = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* Snackbar for notifications */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={handleSnackbarClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleSnackbarClose}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Container>
   );
 };
