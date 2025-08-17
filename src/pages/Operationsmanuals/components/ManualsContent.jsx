@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -35,7 +36,6 @@ import {
 } from "@mui/icons-material";
 import CreateSectionDialog from "./CreateSectionDialog";
 import { httpClient } from "../../../utils/httpClientSetup";
-import RichTextEditor from "../../../components/RichTextEditor";
 
 const ManualsContent = () => {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -54,6 +54,9 @@ const ManualsContent = () => {
     message: "",
     severity: "success",
   });
+
+  const { id } = useParams(); // Extracts manual ID from route
+  const navigate = useNavigate();
 
   // Fetch navigations from API
   const fetchNavigations = async () => {
@@ -100,9 +103,8 @@ const ManualsContent = () => {
   };
 
   const handlePolicyClick = () => {
+    navigate(`/manuals/edit/${id}/policies/create/details`);
     handleMenuClose();
-    // Navigation will be implemented when page structure is decided
-    console.log("Navigate to policy page");
   };
 
   const handleModalClose = () => {
@@ -392,8 +394,6 @@ const ManualsContent = () => {
 
   // Build the navigation tree
   const navigationTree = buildNavigationTree(navigations);
-
-  const [content, setContent] = useState("<p>Hello TinyMCE!</p>");
 
   return (
     <Container
