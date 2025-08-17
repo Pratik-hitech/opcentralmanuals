@@ -390,7 +390,7 @@ const LogoCard = ({
         }}
       >
         <Tooltip title="View">
-          <Link to={`./docs/${title.toLowerCase().replace(/\s+/g, "-")}`}>
+          <Link to={`./policies/${title.toLowerCase().replace(/\s+/g, "-")}`}>
             <IconButton size="small" color="primary" sx={{ bgcolor: "white" }}>
               <VisibilityIcon fontSize="small" />
             </IconButton>
@@ -824,7 +824,7 @@ const TableActions = ({ manual, onDelete }) => {
           <IconButton
             size="small"
             component={Link}
-            to={`./docs/${manual.title.toLowerCase().replace(/\s+/g, "-")}`}
+            to={`./policies/${manual.title.toLowerCase().replace(/\s+/g, "-")}`}
           >
             <VisibilityIcon fontSize="small" />
           </IconButton>
