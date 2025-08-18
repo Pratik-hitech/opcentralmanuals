@@ -4,6 +4,7 @@ import { RouterProvider } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { router } from "./routes/router";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
+import { NotificationProvider } from "./context/notification-context/NotificationProvider";
 import CssBaseline from "@mui/material/CssBaseline";
 import "./index.css";
 
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
-        <RouterProvider router={router} />
+        <NotificationProvider>
+          <RouterProvider router={router} />
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>
