@@ -2,8 +2,10 @@ import { forwardRef } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 
 const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
+  const { value, onChange, ...rest } = props;
+
   const defaultInit = {
-    height: 400,
+    height: 350,
     menubar: false,
     statusbar: false,
 
@@ -53,7 +55,9 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
           else ref.current = editor;
         }
       }}
-      {...props}
+      value={value}
+      onEditorChange={(newValue, editor) => onChange(newValue)}
+      {...rest}
       init={{ ...defaultInit, ...props.init }}
     />
   );
