@@ -26,8 +26,16 @@ import {
   IconButton,
   CircularProgress,
   Tooltip,
+  Breadcrumbs,
+  List,
+  ListItem,
+  ListItemText,
+  Collapse,
 } from "@mui/material";
 import {
+  InfoOutlined as InfoIcon,
+  ExpandMore,
+  ExpandLess,
   Add as AddIcon,
   Close as CloseIcon,
   Edit as EditIcon,
@@ -142,7 +150,53 @@ const PolicyDetails = () => {
   const [embeddedPdf, setEmbeddedPdf] = useState(null);
   const [showPdfMediaViewer, setShowPdfMediaViewer] = useState(false);
 
+  const [collections, setCollections] = useState([]);
+  const [selectedCollection, setSelectedCollection] = useState(null);
+  const [navigationTree, setNavigationTree] = useState([]);
+  const [expandedItems, setExpandedItems] = useState({});
+  const [mappedMappings, setMappedMappings] = useState([]);
+
   const showNotification = useNotification();
+
+  useEffect(() => {
+    httpClient
+      .get("/collections")
+      .then((res) => {
+        if (res.data.success) {
+          setCollections(res.data.data);
+        }
+      })
+      .catch((err) => console.error("Error fetching collections:", err));
+  }, []);
+
+  useEffect(() => {
+    if (navigationTree.length > 0) {
+      const initialExpandedItems = {};
+      const traverseAndSetExpanded = (items) => {
+        items.forEach((item) => {
+          if (item.children && item.children.length > 0) {
+            initialExpandedItems[item.id] = true;
+          }
+          traverseAndSetExpanded(item.children);
+        });
+      };
+      traverseAndSetExpanded(navigationTree);
+      setExpandedItems(initialExpandedItems);
+    }
+  }, [navigationTree]);
+
+  const fetchNavigations = async (colId) => {
+    try {
+      const res = await httpClient.get(`/navigations?collection_id=${colId}`);
+      if (res.data.success) {
+        const data = res.data.data;
+        const tree = buildNavigationTree(data);
+        setNavigationTree(tree);
+      }
+    } catch (err) {
+      console.error("Error fetching navigations:", err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -344,6 +398,121 @@ const PolicyDetails = () => {
     setEmbeddedPdf(null);
   };
 
+  const buildNavigationTree = (items) => {
+    const itemMap = {};
+    items.forEach((item) => {
+      if (item.table === null) {
+        itemMap[item.id] = { ...item, children: [] };
+      }
+    });
+
+    const rootItems = [];
+    items.forEach((item) => {
+      if (item.table === null && item.parent_id === null) {
+        rootItems.push(itemMap[item.id]);
+      } else if (item.table === null && itemMap[item.parent_id]) {
+        itemMap[item.parent_id].children.push(itemMap[item.id]);
+      }
+    });
+
+    const sortItems = (items) => {
+      return items
+        .sort((a, b) => a.order - b.order)
+        .map((item) => ({
+          ...item,
+          children: sortItems(item.children),
+        }));
+    };
+
+    return sortItems(rootItems);
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedItems((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
+  };
+
+  const getPathToItem = (items, targetId, path = []) => {
+    for (let item of items) {
+      if (item.id === targetId) {
+        return [...path, item.title];
+      }
+      const childPath = getPathToItem(item.children, targetId, [
+        ...path,
+        item.title,
+      ]);
+      if (childPath) return childPath;
+    }
+    return null;
+  };
+
+  const addMapping = (item) => {
+    const pathTitles = getPathToItem(navigationTree, item.id);
+    if (pathTitles) {
+      const fullPath = [selectedCollection.title, ...pathTitles];
+      setMappedMappings((prev) => [...prev, { navId: item.id, fullPath }]);
+    }
+  };
+
+  const removeMapping = (navId) => {
+    setMappedMappings((prev) => prev.filter((m) => m.navId !== navId));
+  };
+
+  const isMapped = (id) => mappedMappings.some((m) => m.navId === id);
+
+  const renderMappingItem = (item, depth = 0) => {
+    const hasChildren = item.children && item.children.length > 0;
+    const isExpanded = expandedItems[item.id];
+
+    return (
+      <React.Fragment key={item.id}>
+        <Box sx={{ ml: depth * 3, mb: 0.5 }}>
+          <ListItem
+            sx={{
+              border: "1px solid #e0e0e0",
+              borderRadius: 1,
+              backgroundColor: depth === 0 ? "#f5f5f5" : "#fafafa",
+            }}
+          >
+            <ListItemText
+              primary={item.title}
+              primaryTypographyProps={{
+                fontWeight: depth === 0 ? "bold" : "normal",
+              }}
+            />
+            {hasChildren && (
+              <IconButton size="small" onClick={() => toggleExpand(item.id)}>
+                {isExpanded ? <ExpandLess /> : <ExpandMore />}
+              </IconButton>
+            )}
+            {!isMapped(item.id) && (
+              <Button
+                variant="outlined"
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={() => addMapping(item)}
+                sx={{ ml: 2 }}
+              >
+                Add
+              </Button>
+            )}
+          </ListItem>
+        </Box>
+        {hasChildren && (
+          <Collapse in={isExpanded} timeout="auto" unmountOnExit>
+            <List component="div" disablePadding>
+              {item.children.map((child) =>
+                renderMappingItem(child, depth + 1)
+              )}
+            </List>
+          </Collapse>
+        )}
+      </React.Fragment>
+    );
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -368,6 +537,10 @@ const PolicyDetails = () => {
       submitData.append("embedded_pdf_id", embeddedPdf.id); //TODO: Adjust key as needed
     }
 
+    mappedMappings.forEach((mapping, index) => {
+      submitData.append(`mapped_navigations[${index}]`, mapping.navId);
+    });
+
     try {
       const response = await httpClient.post("/policies", submitData); //TODO: Adjust endpoint
       console.log("Policy saved:", response.data);
@@ -383,6 +556,9 @@ const PolicyDetails = () => {
         setSelectedLinks([]);
         setEmbeddedPdf(null);
         setIsVideoEnabled(false);
+        setMappedMappings([]);
+        setSelectedCollection(null);
+        setNavigationTree([]);
       }
     } catch (err) {
       console.error("Error saving policy:", err);
@@ -717,6 +893,89 @@ const PolicyDetails = () => {
               )}
             </EmbedPdfContainer>
 
+            {/* Mappings Field */}
+            <FormGrid size={{ xs: 12 }}>
+              <Box sx={{ display: "flex", alignItems: "center" }}>
+                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
+                  Mappings
+                </FormLabel>
+                <Tooltip title="Select all of the manuals and sections where you want this policy to be displayed.">
+                  <IconButton size="small" sx={{ ml: 1, mb: 1 }}>
+                    <InfoIcon fontSize="inherit" />
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    Add to Manual/Section
+                  </Typography>
+                  <Autocomplete
+                    options={collections}
+                    getOptionLabel={(option) => option.title}
+                    value={selectedCollection}
+                    onChange={(event, newValue) => {
+                      setSelectedCollection(newValue);
+                      if (newValue) {
+                        fetchNavigations(newValue.id);
+                      } else {
+                        setNavigationTree([]);
+                      }
+                    }}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Select Manual"
+                        variant="outlined"
+                      />
+                    )}
+                    sx={{ width: "100%", mb: 2 }}
+                  />
+                  {navigationTree.length > 0 && (
+                    <Box>
+                      <Typography variant="body2" sx={{ mb: 1 }}>
+                        Select sections in {selectedCollection?.title}
+                      </Typography>
+                      <List sx={{ width: "100%" }}>
+                        {navigationTree.map((item) => renderMappingItem(item))}
+                      </List>
+                    </Box>
+                  )}
+                </Grid>
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                    Mapped Manual/Sections
+                  </Typography>
+                  {mappedMappings.length > 0 ? (
+                    mappedMappings.map((mapping) => (
+                      <Box
+                        key={mapping.navId}
+                        sx={{ display: "flex", alignItems: "center", my: 0.5 }}
+                      >
+                        <Breadcrumbs separator=" > " aria-label="breadcrumb">
+                          {mapping.fullPath.map((title, index) => (
+                            <Typography key={index} color="text.primary">
+                              {title}
+                            </Typography>
+                          ))}
+                        </Breadcrumbs>
+                        <IconButton
+                          size="small"
+                          onClick={() => removeMapping(mapping.navId)}
+                          sx={{ ml: 1 }}
+                        >
+                          <CloseIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    ))
+                  ) : (
+                    <Typography sx={{ color: "gray" }}>
+                      None mapped yet
+                    </Typography>
+                  )}
+                </Grid>
+              </Grid>
+            </FormGrid>
             {/* Media Folder Viewer Dialog (for Links) */}
             <Dialog
               fullScreen
