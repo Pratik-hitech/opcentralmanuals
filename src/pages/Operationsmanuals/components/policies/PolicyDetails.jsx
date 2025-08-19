@@ -107,7 +107,7 @@ const LinkActionsCell = styled(TableCell)(({ theme }) => ({
   textAlign: "right",
 }));
 
-const EmbedPdfContainer = styled(Box)(({ theme }) => ({
+const FormFieldContainer = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(2),
   border: `1px solid ${theme.palette.divider}`,
@@ -745,22 +745,13 @@ const PolicyDetails = () => {
               onVideoAdd={handleVideoAdd}
             />
 
-            <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+            <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <Button
-                  aria-controls={openDropdown ? "create-links-menu" : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={openDropdown ? "true" : undefined}
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={handleClickCreateLinks}
-                  sx={{ borderRadius: 2, mr: 1 }}
-                >
-                  Create Links
-                </Button>
+                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
+                  Links
+                </FormLabel>
                 <Tooltip
-                  title="Link additional resources to this policy."
+                  title="Link additional resources to this policy"
                   placement="top-start"
                   arrow
                 >
@@ -773,19 +764,34 @@ const PolicyDetails = () => {
                   />
                 </Tooltip>
               </Box>
-              <Menu
-                id="create-links-menu"
-                anchorEl={anchorEl}
-                open={openDropdown}
-                onClose={handleCloseDropdown}
-                MenuListProps={{
-                  "aria-labelledby": "create-links-button",
-                }}
-              >
-                <MenuItem onClick={handleSelectFileLink}>File</MenuItem>
-                <MenuItem onClick={handleSelectPolicyLink}>Policy</MenuItem>
-              </Menu>
-            </Box>
+              <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+                <Button
+                  aria-controls={openDropdown ? "create-links-menu" : undefined}
+                  aria-haspopup="true"
+                  aria-expanded={openDropdown ? "true" : undefined}
+                  variant="outlined"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={handleClickCreateLinks}
+                  sx={{ borderRadius: 2, mr: 1 }}
+                >
+                  Create Links
+                </Button>
+
+                <Menu
+                  id="create-links-menu"
+                  anchorEl={anchorEl}
+                  open={openDropdown}
+                  onClose={handleCloseDropdown}
+                  MenuListProps={{
+                    "aria-labelledby": "create-links-button",
+                  }}
+                >
+                  <MenuItem onClick={handleSelectFileLink}>File</MenuItem>
+                  <MenuItem onClick={handleSelectPolicyLink}>Policy</MenuItem>
+                </Menu>
+              </Box>
+            </FormFieldContainer>
 
             {/* Selected Links Table/List */}
             {selectedLinks.length > 0 && (
@@ -839,7 +845,7 @@ const PolicyDetails = () => {
               </LinkTableContainer>
             )}
 
-            <EmbedPdfContainer>
+            <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
                   Embed PDF
@@ -891,7 +897,7 @@ const PolicyDetails = () => {
                   </Button>
                 </Box>
               )}
-            </EmbedPdfContainer>
+            </FormFieldContainer>
 
             {/* Mappings Field */}
             <FormGrid size={{ xs: 12 }}>
@@ -899,7 +905,10 @@ const PolicyDetails = () => {
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
                   Mappings
                 </FormLabel>
-                <Tooltip title="Select all of the manuals and sections where you want this policy to be displayed.">
+                <Tooltip
+                  title="Select all of the manuals and sections where you want this policy to be displayed."
+                  placement="top-start"
+                >
                   <IconButton size="small" sx={{ ml: 1, mb: 1 }}>
                     <InfoIcon fontSize="inherit" />
                   </IconButton>
