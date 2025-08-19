@@ -1100,19 +1100,8 @@ const PolicyDetails = () => {
                 size="large"
                 disabled={loading} // Disable while submitting
                 sx={{
-                  background:
-                    "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
-                  borderRadius: 2,
-                  px: 4,
-                  py: 1.5,
                   fontWeight: 600,
                   textTransform: "none",
-                  boxShadow: "0 4px 20px rgba(102, 126, 234, 0.3)",
-                  "&:hover": {
-                    background:
-                      "linear-gradient(45deg, #5a6fd8 30%, #6b46a3 90%)",
-                    boxShadow: "0 6px 25px rgba(102, 126, 234, 0.4)",
-                  },
                 }}
               >
                 {loading ? (
