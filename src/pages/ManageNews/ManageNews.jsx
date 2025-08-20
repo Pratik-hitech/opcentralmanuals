@@ -1774,13 +1774,14 @@ const ManageArticles = () => {
       {/* Snackbar Notification */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={2000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
+          variant = "filled"
           sx={{ width: "100%" }}
         >
           {snackbar.message}
