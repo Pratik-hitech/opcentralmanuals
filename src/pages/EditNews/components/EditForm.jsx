@@ -1732,16 +1732,16 @@ const NewsArticleForm = () => {
       //   } 
       // };
 
-      //   const config = { 
-      //   headers: { 
-      //     "Content-Type": "multipart/form-data",
-      //   } 
-      // };
+        const config = { 
+        headers: { 
+          "Content-Type": "multipart/form-data",
+        } 
+      };
 
       const endpoint = isEditMode ? `news/${id}` : "news";
       const method = isEditMode ? "put" : "post";
 
-      const response = await httpClient[method](endpoint, formDataObj);
+      const response = await httpClient[method](endpoint, formDataObj,config);
 
       if (response.data.success) {
         showSnackbar(
