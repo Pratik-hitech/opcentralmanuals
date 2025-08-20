@@ -7,6 +7,8 @@ import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import "./index.css";
 import { PermissionProvider } from "./context/PermissionsContext";
+import ErrorBoundary from "./components/ErrorHandlers/ErrorBoundary"
+import PermissionDenied from "./components/PermissionDenied/PermissionDenied";
 
 const theme = createTheme({
   typography: {
@@ -19,7 +21,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <CssBaseline />
       <AuthProvider>
         <PermissionProvider>
+          
         <RouterProvider router={router} />
+        
         </PermissionProvider>
       </AuthProvider>
     </ThemeProvider>

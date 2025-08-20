@@ -45,6 +45,8 @@ import Branding from "../pages/GeneralSettings/components/Branding";
 import EditRoles from "../pages/GeneralSettings/components/EditRoles";
 import ViewPolicy from "../pages/Operationsmanuals/components/ViewPolicy";
 import ProtectedRoute from "./ProtectedRoutes";
+import ErrorPage from "../components/ErrorHandlers/ErrorPage";
+import PermissionDenied from "../components/PermissionDenied/PermissionDenied";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -81,6 +83,7 @@ export const router = createBrowserRouter([
 <PrivateLayout />
     </PrivateRoute>
   ),
+   errorElement: <PermissionDenied />,
   children:[
     {index:true, element :<DashboardNews />,
       loader : dashboardNewsLoader
@@ -94,6 +97,7 @@ export const router = createBrowserRouter([
       <PrivateLayout />
     </PrivateRoute>
   ),
+  errorElement: <PermissionDenied />,
   children:[
     {index : true, element : <MediaFolderViewer />}
   ]
@@ -113,9 +117,12 @@ export const router = createBrowserRouter([
   path: "/operations/manuals",
   element: (
     <PrivateRoute>
+    
       <PrivateLayout />
+      
     </PrivateRoute>
   ),
+  errorElement: <PermissionDenied />,
   children: [
     { index: true, element: <OperationsManuals /> },
     { 
@@ -135,6 +142,7 @@ export const router = createBrowserRouter([
         <PrivateLayout />
       </PrivateRoute>
     ),
+    errorElement: <PermissionDenied />,
     children: [
       {
         path: "",
@@ -196,6 +204,7 @@ export const router = createBrowserRouter([
         <PrivateLayout />
       </PrivateRoute>
     ),
+    errorElement: <PermissionDenied />,
     
     children: [{ index: true, element: <ManageNews /> ,
       loader: manageArticlesLoader, 
@@ -237,6 +246,7 @@ export const router = createBrowserRouter([
       <PrivateLayout />
     </PrivateRoute>
   ),
+  errorElement: <PermissionDenied />,
   children: [
 //     {
 //   index: true,
@@ -287,6 +297,7 @@ export const router = createBrowserRouter([
         <PrivateLayout />
       </PrivateRoute>
     ),
+     errorElement: <PermissionDenied />,
     
     children: [{ index: true, element: <ManageUsers /> ,
       loader: manageUsersLoader, 
@@ -351,6 +362,7 @@ export const router = createBrowserRouter([
       <PrivateLayout />
     </PrivateRoute>
   ),
+   errorElement: <PermissionDenied />,
   children: [
     {
       index: true,
@@ -430,6 +442,7 @@ export const router = createBrowserRouter([
        
       </PrivateRoute>
     ),
+     errorElement: <PermissionDenied />,
     children: [
       { index: true, element: <ManageLocation /> },
       {
@@ -447,9 +460,9 @@ export const router = createBrowserRouter([
   element:(
      <PrivateRoute>
        
-<ProtectedRoute>
+
         <PrivateLayout />
-       </ProtectedRoute>
+       
       </PrivateRoute>
   ),
   children:[

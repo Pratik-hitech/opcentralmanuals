@@ -2045,7 +2045,6 @@ const NewsArticleForm = () => {
   const [error, setError] = useState(null);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [videoModalOpen, setVideoModalOpen] = useState(false);
-  const [isArchived, setIsArchived] = useState(false);
   const [isScheduled, setIsScheduled] = useState(false);
 
   // Fetch categories
@@ -2109,11 +2108,8 @@ const NewsArticleForm = () => {
               }))
             : [];
 
-          // Initialize archived and scheduled states
-          const isArticleArchived = data.status === "archived";
+          // Initialize scheduled state
           const hasSchedule = Boolean(data.schedule);
-          
-          setIsArchived(isArticleArchived);
           setIsScheduled(hasSchedule);
 
           setFormData({
@@ -2219,36 +2215,15 @@ const NewsArticleForm = () => {
     }));
   };
 
-  // Handle archived status change
-  const handleArchivedChange = (e) => {
-    const isArchived = e.target.checked;
-    setIsArchived(isArchived);
-    
-    if (isArchived) {
-      // If setting to archived, clear any schedule
-      setIsScheduled(false);
-      setFormData(prev => ({ 
-        ...prev, 
-        status: "archived",
-        schedule: ""
-      }));
-    } else {
-      // If unarchiving, set back to draft
-      setFormData(prev => ({ ...prev, status: "draft" }));
-    }
-  };
-
   // Handle scheduled status change
   const handleScheduledChange = (e) => {
     const isScheduled = e.target.checked;
     setIsScheduled(isScheduled);
     
     if (isScheduled) {
-      // If scheduling, set status to draft and clear archived status
-      setIsArchived(false);
+      // If scheduling, set a default date
       setFormData(prev => ({ 
         ...prev, 
-        status: "draft",
         schedule: prev.schedule || formatDateForInput(new Date())
       }));
     } else {
@@ -2279,11 +2254,9 @@ const NewsArticleForm = () => {
       formDataObj.append("pinned", formData.pinned ? 1 : 0);
       formDataObj.append("featured", formData.featured ? 1 : 0);
       
-      // Set status based on archived state or schedule
-      if (isArchived) {
-        formDataObj.append("status", "archived");
-      } else if (isScheduled) {
-        formDataObj.append("status", "draft");
+      // Set status based on schedule
+      if (isScheduled) {
+        formDataObj.append("schedule_status", "archived");
         formDataObj.append("schedule", formattedSchedule);
       } else {
         formDataObj.append("status", formData.status);
@@ -2344,10 +2317,8 @@ const NewsArticleForm = () => {
 
       if (response.data.success) {
         let message = "";
-        if (isArchived) {
-          message = "Article archived";
-        } else if (isScheduled) {
-          message = "Article scheduled";
+        if (isScheduled) {
+          message = "Article scheduled with archived status";
         } else {
           message = isEditMode ? "Article updated" : "Article published";
         }
@@ -2545,22 +2516,15 @@ const NewsArticleForm = () => {
           sx={{ mb: 3, display: 'block' }} 
         />
 
-        {/* Archived Status Switch */}
-        <FormControlLabel 
-          control={<Switch checked={isArchived} onChange={handleArchivedChange} />} 
-          label="Archived Article" 
-          sx={{ mb: 2, display: 'block' }} 
-        />
-
         {/* Schedule Switch */}
         <FormControlLabel 
-          control={<Switch checked={isScheduled} onChange={handleScheduledChange} disabled={isArchived} />} 
-          label="Schedule Article" 
+          control={<Switch checked={isScheduled} onChange={handleScheduledChange} />} 
+          label="Auto archive" 
           sx={{ mb: 1, display: 'block' }} 
         />
         
         {/* Schedule Date Input - Only show when schedule switch is on */}
-        <Collapse in={isScheduled && !isArchived}>
+        <Collapse in={isScheduled}>
           <TextField
             fullWidth 
             label="Schedule Date & Time" 
@@ -2572,8 +2536,8 @@ const NewsArticleForm = () => {
           />
         </Collapse>
 
-        {/* Status - Only show when not archived and not scheduled */}
-        <Collapse in={!isArchived && !isScheduled}>
+        {/* Status - Only show when not scheduled */}
+        <Collapse in={!isScheduled}>
           <FormControl fullWidth sx={{ mb: 3 }}>
             <InputLabel>Status</InputLabel>
             <Select
@@ -2583,14 +2547,14 @@ const NewsArticleForm = () => {
             >
               <MenuItem value="draft">Draft</MenuItem>
               <MenuItem value="published">Published</MenuItem>
+              <MenuItem value="archived">Archived</MenuItem>
             </Select>
           </FormControl>
         </Collapse>
 
         {/* Submit Button */}
         <Button type="submit" variant="contained" color="primary" fullWidth size="large" disabled={isLoading} startIcon={isLoading ? <CircularProgress size={20} /> : null}>
-          {isArchived ? "Archive Article" : 
-           isScheduled ? "Schedule Article" : 
+          {isScheduled ? "Update Article" : 
            isEditMode ? "Update Article" : "Publish Article"}
         </Button>
       </Paper>
@@ -2605,5 +2569,3 @@ const NewsArticleForm = () => {
 };
 
 export default NewsArticleForm;
-
-
