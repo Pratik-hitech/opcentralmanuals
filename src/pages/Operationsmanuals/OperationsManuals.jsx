@@ -295,7 +295,7 @@ import { Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import BlueWheelersLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
-
+import TagsManager from "./components/TagsManager";
 // Mock API function - replace with actual API call
 const fetchManuals = async () => {
   // Simulate API delay
@@ -337,6 +337,7 @@ const LogoCard = ({ image, title, policies, onDelete }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const open = Boolean(anchorEl);
+
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -508,6 +509,7 @@ const OperationsManuals = () => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [tagsModalOpen, setTagsModalOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -666,9 +668,12 @@ const OperationsManuals = () => {
               <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
                 Manage Drafts
               </MenuItem>
-              <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
-                Manage Tags
-              </MenuItem>
+             <MenuItem onClick={() => {
+  handleClose();
+  setTagsModalOpen(true);
+}}>
+  Manage Tags
+</MenuItem>
               <MenuItem onClick={() => handleMenuItemClick("/operations/manuals/")}>
                 Manage Order
               </MenuItem>
@@ -767,7 +772,10 @@ const OperationsManuals = () => {
           </Typography>
         </Box>
       </Paper>
-
+<TagsManager 
+  open={tagsModalOpen} 
+  onClose={() => setTagsModalOpen(false)} 
+/>
       {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
@@ -783,7 +791,9 @@ const OperationsManuals = () => {
         >
           {snackbar.message}
         </Alert>
+        
       </Snackbar>
+      
     </Box>
   );
 };
@@ -873,6 +883,7 @@ const TableActions = ({ manual, onDelete }) => {
           </Button>
         </DialogActions>
       </Dialog>
+      
     </>
   );
 };

@@ -19,7 +19,10 @@ import { Visibility, VisibilityOff } from "@mui/icons-material";
 
 export default function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login,user,token } = useAuth();
+
+  console.log("auth storing token test", token)
+  console.log("auth storing user data ",user)
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -57,7 +60,7 @@ const togglePasswordVisibility = () => setShowPassword((show) => !show);
     try {
       const res = await loginUser(email, password);
       console.log("Login success:", res);
-      login(res.token);
+      login(res.token,res.user);
       setSnackbar({
         open: true,
         message: "Logged in successfully!",
@@ -65,7 +68,7 @@ const togglePasswordVisibility = () => setShowPassword((show) => !show);
       });
       setTimeout(() => {
         navigate("/dashboard");
-      }, 2000);
+      }, 1000);
     } catch (error) {
       console.error("Login error:", error);
       setSnackbar({
@@ -149,10 +152,10 @@ const togglePasswordVisibility = () => setShowPassword((show) => !show);
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={2000}
+        autoHideDuration={3000}
         onClose={handleClose}
         TransitionComponent={Fade}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={handleClose}

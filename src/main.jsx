@@ -6,6 +6,7 @@ import { router } from "./routes/router";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
 import "./index.css";
+import { PermissionProvider } from "./context/PermissionsContext";
 
 const theme = createTheme({
   typography: {
@@ -17,7 +18,9 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <AuthProvider>
+        <PermissionProvider>
         <RouterProvider router={router} />
+        </PermissionProvider>
       </AuthProvider>
     </ThemeProvider>
   </React.StrictMode>

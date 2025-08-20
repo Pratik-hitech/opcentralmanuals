@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import { Link } from 'react-router-dom';
+// import Link from "react-router-dom";
 import {
   Box,
   Table,
@@ -27,6 +29,7 @@ import {
   Chip,
   Tabs,
   Tab,
+  
 } from "@mui/material";
 import {
   MoreVert,
@@ -37,11 +40,16 @@ import {
   FileCopy,
   Archive,
   Delete,
+  Unarchive,
+  Publish,
+  Drafts,
 } from "@mui/icons-material";
+
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { httpClient } from "../../../utils/httpClientSetup";
 import { format } from "date-fns";
+// import { Link } from "react-router-dom";
 
 const AllPolicies = () => {
   // State declarations
@@ -67,26 +75,30 @@ const AllPolicies = () => {
     message: "",
     severity: "success",
   });
-  const [tabValue, setTabValue] = useState("active");
+  const [tabValue, setTabValue] = useState("details");
+  const [totalCount, setTotalCount] = useState(0);
 
-  // Fetch policies
+  // Fetch policies based on current tab
   const fetchPolicies = async () => {
     setIsLoading(true);
     try {
-      const response = await httpClient.get("https://6894256bbe3700414e121f1d.mockapi.io/policies/policies");
+      let endpoint = 'policies?';
+      if (tabValue === "details") {
+        endpoint += 'status=published|draft';
+      } else {
+        endpoint += 'status=archived';
+      }
+      endpoint += `&page=${page + 1}&per_page=${rowsPerPage}`;
+
+      const response = await httpClient.get(endpoint);
       
-      if (response.data) {
-        setPolicies(response.data);
-        
-        // Filter based on current tab
-        const filtered = response.data.filter(policy => 
-          tabValue === "active" ? !policy.archived : policy.archived
-        );
-        
-        setFilteredPolicies(filtered);
+      if (response.data.success) {
+        setPolicies(response.data.data);
+        setFilteredPolicies(response.data.data);
+        setTotalCount(response.data.pagination.total);
         setSelected([]);
       } else {
-        setError("Failed to fetch policies");
+        setError(response.data.message || "Failed to fetch policies");
       }
     } catch (error) {
       setError(error.message || "Failed to load policies");
@@ -97,34 +109,27 @@ const AllPolicies = () => {
 
   useEffect(() => {
     fetchPolicies();
-  }, [tabValue]);
+  }, [tabValue, page, rowsPerPage]);
 
   // Filter policies based on search term
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      const filtered = policies.filter(policy => 
-        tabValue === "active" ? !policy.archived : policy.archived
-      );
-      setFilteredPolicies(filtered);
+      setFilteredPolicies(policies);
     } else {
       const filtered = policies.filter(
-        (policy) => (
-          (tabValue === "active" ? !policy.archived : policy.archived) &&
-          (
-            policy.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            policy.manuals?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            policy.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-        )
+        (policy) =>
+          policy.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          policy.version?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          policy.updated_by?.toLowerCase().includes(searchTerm.toLowerCase())
       );
       setFilteredPolicies(filtered);
     }
-    setPage(0);
-  }, [searchTerm, policies, tabValue]);
+  }, [searchTerm, policies]);
 
   // Handle tab change
   const handleTabChange = (event, newValue) => {
     setTabValue(newValue);
+    setPage(0);
   };
 
   // Helper functions
@@ -151,11 +156,11 @@ const AllPolicies = () => {
   const handleArchivePolicy = async (policyId) => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`, { 
-        archived: true 
+      const response = await httpClient.put(`policies/${policyId}/status`, { 
+        status: "archived" 
       });
       
-      if (response.data) {
+      if (response.data.success) {
         setSnackbar({
           open: true,
           message: "Policy archived successfully",
@@ -175,18 +180,18 @@ const AllPolicies = () => {
     }
   };
 
-  // Unarchive a policy
-  const handleUnarchivePolicy = async (policyId) => {
+  // Publish a policy
+  const handlePublishPolicy = async (policyId) => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`, { 
-        archived: false 
+      const response = await httpClient.put(`policies/${policyId}/status`, { 
+        status: "published" 
       });
       
-      if (response.data) {
+      if (response.data.success) {
         setSnackbar({
           open: true,
-          message: "Policy unarchived successfully",
+          message: "Policy published successfully",
           severity: "success",
         });
         fetchPolicies();
@@ -194,7 +199,61 @@ const AllPolicies = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error.message || "Failed to unarchive policy",
+        message: error.message || "Failed to publish policy",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Set as draft
+  const handleDraftPolicy = async (policyId) => {
+    setIsActionLoading(true);
+    try {
+      const response = await httpClient.put(`policies/${policyId}/status`, { 
+        status: "draft" 
+      });
+      
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: "Policy set to draft successfully",
+          severity: "success",
+        });
+        fetchPolicies();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to set policy as draft",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Unarchive a policy
+  const handleUnarchivePolicy = async (policyId) => {
+    setIsActionLoading(true);
+    try {
+      const response = await httpClient.put(`policies/${policyId}/status`, { 
+        status: "draft" 
+      });
+      
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: "Policy restored successfully",
+          severity: "success",
+        });
+        fetchPolicies();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to restore policy",
         severity: "error",
       });
     } finally {
@@ -208,13 +267,13 @@ const AllPolicies = () => {
     try {
       const responses = await Promise.all(
         selected.map(id =>
-          httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`, { 
-            archived: true 
+          httpClient.put(`policies/${id}/status`, { 
+            status: "archived" 
           })
         )
       );
 
-      const successfulArchives = responses.filter(response => response.data);
+      const successfulArchives = responses.filter(response => response.data.success);
       
       if (successfulArchives.length > 0) {
         setSnackbar({
@@ -236,24 +295,24 @@ const AllPolicies = () => {
     }
   };
 
-  // Bulk unarchive
-  const handleBulkUnarchive = async () => {
+  // Bulk publish
+  const handleBulkPublish = async () => {
     setIsActionLoading(true);
     try {
       const responses = await Promise.all(
         selected.map(id =>
-          httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`, { 
-            archived: false 
+          httpClient.put(`policies/${id}/status`, { 
+            status: "published" 
           })
         )
       );
 
-      const successfulUnarchives = responses.filter(response => response.data);
+      const successfulPublishes = responses.filter(response => response.data.success);
       
-      if (successfulUnarchives.length > 0) {
+      if (successfulPublishes.length > 0) {
         setSnackbar({
           open: true,
-          message: `Successfully unarchived ${successfulUnarchives.length} policy(s)`,
+          message: `Successfully published ${successfulPublishes.length} policy(s)`,
           severity: "success",
         });
         fetchPolicies();
@@ -261,7 +320,40 @@ const AllPolicies = () => {
     } catch (error) {
       setSnackbar({
         open: true,
-        message: error.message || "Failed to unarchive policies",
+        message: error.message || "Failed to publish policies",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  // Bulk unarchive
+  const handleBulkUnarchive = async () => {
+    setIsActionLoading(true);
+    try {
+      const responses = await Promise.all(
+        selected.map(id =>
+          httpClient.put(`policies/${id}/status`, { 
+            status: "draft" 
+          })
+        )
+      );
+
+      const successfulUnarchives = responses.filter(response => response.data.success);
+      
+      if (successfulUnarchives.length > 0) {
+        setSnackbar({
+          open: true,
+          message: `Successfully restored ${successfulUnarchives.length} policy(s)`,
+          severity: "success",
+        });
+        fetchPolicies();
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to restore policies",
         severity: "error",
       });
     } finally {
@@ -275,11 +367,11 @@ const AllPolicies = () => {
     try {
       const policyToClone = policies.find(p => p.id === policyId);
       const response = await httpClient.post(
-        "https://6894256bbe3700414e121f1d.mockapi.io/policies/policies",
-        { ...policyToClone, title: `${policyToClone.title} (Copy)` }
+        "policies",
+        { ...policyToClone, name: `${policyToClone.name} (Copy)` }
       );
       
-      if (response.data) {
+      if (response.data.success) {
         setSnackbar({
           open: true,
           message: "Policy cloned successfully",
@@ -310,10 +402,10 @@ const AllPolicies = () => {
     setIsActionLoading(true);
     try {
       const response = await httpClient.delete(
-        `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyToDelete}`
+        `policies/${policyToDelete}`
       );
       
-      if (response.data) {
+      if (response.data.success) {
         setSnackbar({
           open: true,
           message: "Policy deleted successfully",
@@ -338,12 +430,12 @@ const AllPolicies = () => {
   const exportData = (type) => {
     const data = filteredPolicies.map((policy) => ({
       "Policy Name": policy.title,
-      Manuals: policy.manuals,
-      "Public URL": policy.publicURL,
-      Version: policy.version,
-      "Updated On": formatDate(policy.updatedOn),
-      "Updated By": policy.updatedBy,
-      Status: policy.archived ? "Archived" : "Active",
+      "Manuals": policy.manuals?.join(", ") || "-",
+      "Public URL": policy.public_url || "-",
+      "Version": policy.version,
+      "Updated On": formatDate(policy.updated_at),
+      "Updated By": policy.updated_by || "-",
+      "Status": policy.status.charAt(0).toUpperCase() + policy.status.slice(1),
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -374,12 +466,22 @@ const AllPolicies = () => {
   };
 
   // Status chip component
-  const StatusChip = ({ archived }) => {
+  const StatusChip = ({ status }) => {
+    const statusMap = {
+      published: { label: "Published", color: "success", icon: <Publish fontSize="small" /> },
+      draft: { label: "Draft", color: "warning", icon: <Drafts fontSize="small" /> },
+      archived: { label: "Archived", color: "default", icon: <Archive fontSize="small" /> },
+    };
+
+    const statusInfo = statusMap[status] || { label: status, color: "default" };
+
     return (
       <Chip
-        label={archived ? "Archived" : "Active"}
-        color={archived ? "default" : "success"}
+        icon={statusInfo.icon}
+        label={statusInfo.label}
+        color={statusInfo.color}
         size="small"
+        variant="outlined"
       />
     );
   };
@@ -395,7 +497,7 @@ const AllPolicies = () => {
         <TableCell><Skeleton variant="text" width={80} /></TableCell>
         <TableCell><Skeleton variant="text" width={120} /></TableCell>
         <TableCell><Skeleton variant="text" width={120} /></TableCell>
-        <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
+        <TableCell><Skeleton variant="text" width={100} /></TableCell>
         <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
       </TableRow>
     ));
@@ -447,12 +549,6 @@ const AllPolicies = () => {
           >
             <Download />
           </IconButton>
-          <IconButton 
-            onClick={handleMenuOpen(setAnchorEl)}
-            disabled={isActionLoading}
-          >
-            <MoreVert />
-          </IconButton>
         </Box>
       </Box>
 
@@ -465,16 +561,16 @@ const AllPolicies = () => {
           indicatorColor="primary"
         >
           <Tab 
-            label="Active" 
-            value="active" 
+            label="Details"
+            value="details" 
             disabled={isActionLoading}
             sx={{
-              fontWeight: tabValue === 'active' ? 'bold' : 'normal',
+              fontWeight: tabValue === 'details' ? 'bold' : 'normal',
               minWidth: 100,
             }}
           />
           <Tab 
-            label="Archived" 
+            label="Archived"
             value="archived" 
             disabled={isActionLoading}
             sx={{
@@ -496,7 +592,7 @@ const AllPolicies = () => {
       <Table size="small">
         <TableHead>
           <TableRow>
-            <TableCell>
+            <TableCell padding="checkbox">
               <Checkbox
                 onChange={handleSelectAll}
                 checked={
@@ -512,79 +608,77 @@ const AllPolicies = () => {
             <TableCell>Version</TableCell>
             <TableCell>Updated On</TableCell>
             <TableCell>Updated By</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Actions</TableCell>
+            <TableCell align="right">Actions</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {isLoading ? (
             renderSkeletonRows()
           ) : filteredPolicies.length > 0 ? (
-            filteredPolicies
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((policy) => (
-                <TableRow key={policy.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.includes(policy.id)}
-                      onChange={() => handleSelect(policy.id)}
-                      disabled={isActionLoading}
-                    />
-                  </TableCell>
-                  <TableCell>{policy.title}</TableCell>
-                  <TableCell>{policy.manuals}</TableCell>
-                  <TableCell>
-                    <a href={policy.publicURL} target="_blank" rel="noopener noreferrer">
+            filteredPolicies.map((policy) => (
+              <TableRow key={policy.id} hover>
+                <TableCell padding="checkbox">
+                  <Checkbox
+                    checked={selected.includes(policy.id)}
+                    onChange={() => handleSelect(policy.id)}
+                    disabled={isActionLoading}
+                  />
+                </TableCell>
+                <TableCell>{policy.title}</TableCell>
+                <TableCell>{policy.manuals?.join(", ") || "-"}</TableCell>
+                <TableCell>
+                  {policy.public_url ? (
+                    <Link href={policy.public_url} target="_blank" rel="noopener">
                       View
-                    </a>
-                  </TableCell>
-                  <TableCell>v{policy.version}</TableCell>
-                  <TableCell>{formatDate(policy.updatedOn)}</TableCell>
-                  <TableCell>{policy.updatedBy}</TableCell>
-                  <TableCell>
-                    <StatusChip archived={policy.archived} />
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Tooltip title="View" placement="top">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() => window.open(policy.publicURL, '_blank')}
-                          disabled={isActionLoading}
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <IconButton
+                    </Link>
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+                <TableCell>{policy.version}</TableCell>
+                <TableCell>{formatDate(policy.updated_at)}</TableCell>
+                <TableCell>{policy.updated_by || "-"}</TableCell>
+                <TableCell align="right">
+                  <Box display="flex" justifyContent="flex-end" gap={1}>
+                    <Tooltip title="View">
+                      <IconButton component = {Link} to = {`/operations/manuals/policies/${policy.id}`}
                         size="small"
-                        onClick={(e) => {
-                          setActiveRowId(policy.id);
-                          handleMenuOpen(setRowMenuAnchorEl)(e);
-                        }}
+                        color="primary"
                         disabled={isActionLoading}
                       >
-                        <MoreVert fontSize="small" />
+                        <Visibility fontSize="small" />
                       </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </Tooltip>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        setActiveRowId(policy.id);
+                        handleMenuOpen(setRowMenuAnchorEl)(e);
+                      }}
+                      disabled={isActionLoading}
+                    >
+                      <MoreVert fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))
           ) : (
             <TableRow>
-              <TableCell colSpan={9} align="center">
-                No {tabValue === "active" ? "active" : "archived"} policies found
+              <TableCell colSpan={8} align="center">
+                No {tabValue === "details" ? "active" : "archived"} policies found
               </TableCell>
             </TableRow>
           )}
         </TableBody>
+      
       </Table>
 
       {/* Pagination */}
       <TablePagination
         rowsPerPageOptions={[5, 10, 25]}
         component="div"
-        count={filteredPolicies.length}
+        count={totalCount}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -598,10 +692,13 @@ const AllPolicies = () => {
         open={Boolean(bulkAnchorEl)}
         onClose={handleMenuClose(setBulkAnchorEl)}
       >
-        {tabValue === "active" ? (
-          <MenuItem onClick={() => setOpenArchiveModal(true)}>Archive</MenuItem>
+        {tabValue === "details" ? (
+          <>
+            <MenuItem onClick={handleBulkPublish}>Publish</MenuItem>
+            <MenuItem onClick={handleBulkArchive}>Archive</MenuItem>
+          </>
         ) : (
-          <MenuItem onClick={handleBulkUnarchive}>Unarchive</MenuItem>
+          <MenuItem onClick={handleBulkUnarchive}>Restore</MenuItem>
         )}
         <MenuItem onClick={() => {
           setOpenDeleteModal(true);
@@ -609,17 +706,6 @@ const AllPolicies = () => {
         }}>Delete</MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
-      </Menu>
-
-      {/* Settings Menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose(setAnchorEl)}
-      >
-        <MenuItem>Manage Policy Categories</MenuItem>
-        <MenuItem onClick={() => exportData("csv")}>Export All as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export All as Excel</MenuItem>
       </Menu>
 
       {/* Download Menu */}
@@ -650,7 +736,43 @@ const AllPolicies = () => {
         >
           <FileCopy fontSize="small" sx={{ mr: 1 }} /> Clone
         </MenuItem>
-        {policies.find(p => p.id === activeRowId)?.archived ? (
+        
+        {tabValue === "details" ? (
+          <>
+            {policies.find(p => p.id === activeRowId)?.status === "draft" && (
+              <MenuItem 
+                onClick={() => {
+                  handlePublishPolicy(activeRowId);
+                  handleMenuClose(setRowMenuAnchorEl)();
+                }}
+                disabled={isActionLoading}
+              >
+                <Publish fontSize="small" sx={{ mr: 1 }} /> Publish
+              </MenuItem>
+            )}
+            {policies.find(p => p.id === activeRowId)?.status === "published" && (
+              <MenuItem 
+                onClick={() => {
+                  handleDraftPolicy(activeRowId);
+                  handleMenuClose(setRowMenuAnchorEl)();
+                }}
+                disabled={isActionLoading}
+              >
+                <Drafts fontSize="small" sx={{ mr: 1 }} /> Set as Draft
+              </MenuItem>
+            )}
+            <MenuItem 
+              onClick={() => {
+                setPolicyToDelete(activeRowId);
+                setOpenArchiveModal(true);
+                handleMenuClose(setRowMenuAnchorEl)();
+              }}
+              disabled={isActionLoading}
+            >
+              <Archive fontSize="small" sx={{ mr: 1 }} /> Archive
+            </MenuItem>
+          </>
+        ) : (
           <MenuItem 
             onClick={() => {
               handleUnarchivePolicy(activeRowId);
@@ -658,18 +780,7 @@ const AllPolicies = () => {
             }}
             disabled={isActionLoading}
           >
-            <Archive fontSize="small" sx={{ mr: 1 }} /> Unarchive
-          </MenuItem>
-        ) : (
-          <MenuItem 
-            onClick={() => {
-              setPolicyToDelete(activeRowId);
-              setOpenArchiveModal(true);
-              handleMenuClose(setRowMenuAnchorEl)();
-            }}
-            disabled={isActionLoading}
-          >
-            <Archive fontSize="small" sx={{ mr: 1 }} /> Archive
+            <Unarchive fontSize="small" sx={{ mr: 1 }} /> Restore
           </MenuItem>
         )}
         <MenuItem 
@@ -677,12 +788,6 @@ const AllPolicies = () => {
           disabled={isActionLoading}
         >
           <Delete fontSize="small" sx={{ mr: 1, color: 'error.main' }} /> Delete
-        </MenuItem>
-        <MenuItem 
-          onClick={() => exportData("csv")}
-          disabled={isActionLoading}
-        >
-          Export
         </MenuItem>
       </Menu>
 

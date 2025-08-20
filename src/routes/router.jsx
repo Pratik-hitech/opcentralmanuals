@@ -43,6 +43,8 @@ import Security from "../pages/GeneralSettings/components/Security";
 import System from "../pages/GeneralSettings/components/System";
 import Branding from "../pages/GeneralSettings/components/Branding";
 import EditRoles from "../pages/GeneralSettings/components/EditRoles";
+import ViewPolicy from "../pages/Operationsmanuals/components/ViewPolicy";
+import ProtectedRoute from "./ProtectedRoutes";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -108,16 +110,24 @@ export const router = createBrowserRouter([
     ],
   },
   {
-    path: "/operations/manuals",
-    element: (
-      <PrivateRoute>
-        <PrivateLayout />
-      </PrivateRoute>
-    ),
-    children: [{ index: true, element: <OperationsManuals /> },
-      {path: "policies/all", element :<AllPolicies />}
-    ],
-  },
+  path: "/operations/manuals",
+  element: (
+    <PrivateRoute>
+      <PrivateLayout />
+    </PrivateRoute>
+  ),
+  children: [
+    { index: true, element: <OperationsManuals /> },
+    { 
+      path: "policies/all", 
+      element: <AllPolicies />,
+    },
+    {
+      path: "policies/:id",  // This should probably be at the same level as "all"
+      element: <ViewPolicy />
+    }
+  ],
+},
   {
     path: "/operations/manuals/docs",
     element: (
@@ -437,9 +447,9 @@ export const router = createBrowserRouter([
   element:(
      <PrivateRoute>
        
-
+<ProtectedRoute>
         <PrivateLayout />
-       
+       </ProtectedRoute>
       </PrivateRoute>
   ),
   children:[
@@ -459,6 +469,10 @@ export const router = createBrowserRouter([
             },
             {
               path : "edit/:id",
+              element : <EditRoles />
+            },
+            {
+              path : "create",
               element : <EditRoles />
             }
           ]

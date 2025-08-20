@@ -27,6 +27,19 @@ import {
 import { httpClient } from '../../../utils/httpClientSetup';
 import usePlacesAutocomplete, { getGeocode, getLatLng } from 'use-places-autocomplete';
 
+
+
+const australianStates = [
+  { value: 'ACT', label: 'Australian Capital Territory' },
+  { value: 'NSW', label: 'New South Wales' },
+  { value: 'NT', label: 'Northern Territory' },
+  { value: 'QLD', label: 'Queensland' },
+  { value: 'SA', label: 'South Australia' },
+  { value: 'TAS', label: 'Tasmania' },
+  { value: 'VIC', label: 'Victoria' },
+  { value: 'WA', label: 'Western Australia' }
+];
+
 const LocationForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -474,21 +487,27 @@ const LocationForm = () => {
               </Box>
               
               <Box display="flex" gap={2}>
-                <Box flex={1}>
-                  <Typography variant="body2" color="textSecondary" mb={0.5}>
-                    State *
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    name="state"
-                    value={formData.state}
-                    onChange={handleChange}
-                    error={!!errors.state}
-                    helperText={errors.state}
-                    size="small"
-                    placeholder="State"
-                  />
-                </Box>
+  <Box flex={1}>
+    <Typography variant="body2" color="textSecondary" mb={0.5}>
+      State *
+    </Typography>
+    <TextField
+      select
+      fullWidth
+      name="state"
+      value={formData.state}
+      onChange={handleChange}
+      error={!!errors.state}
+      helperText={errors.state}
+      size="small"
+    >
+      {australianStates.map((state) => (
+        <MenuItem key={state.value} value={state.value}>
+          {state.label}
+        </MenuItem>
+      ))}
+    </TextField>
+  </Box>
                 <Box flex={1}>
                   <Typography variant="body2" color="textSecondary" mb={0.5}>
                     Postcode *
@@ -563,12 +582,13 @@ const LocationForm = () => {
         open={snackbar.open}
         autoHideDuration={6000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
           sx={{ width: '100%' }}
+          variant="filled"
         >
           {snackbar.message}
         </Alert>
