@@ -442,7 +442,7 @@ export const router = createBrowserRouter([
        
       </PrivateRoute>
     ),
-     errorElement: <PermissionDenied />,
+    //  errorElement: <PermissionDenied />,
     children: [
       { index: true, element: <ManageLocation /> },
       {
