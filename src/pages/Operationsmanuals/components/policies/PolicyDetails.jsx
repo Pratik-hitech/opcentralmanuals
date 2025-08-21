@@ -47,6 +47,7 @@ import { httpClient } from "../../../../utils/httpClientSetup";
 import { useNotification } from "../../../../hooks/useNotification";
 import AddVideo from "./AddVideo";
 import MediaFolderViewer from "../../../FileManager/FileManager";
+import { useParams } from "react-router-dom";
 
 const FormGrid = styled(Grid)(() => ({
   display: "flex",
@@ -176,6 +177,8 @@ const PolicyDetails = () => {
   const [previewVideo, setPreviewVideo] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
+
+  const { id } = useParams(); // Extracts manual ID from route
 
   const showNotification = useNotification();
 
@@ -380,7 +383,7 @@ const PolicyDetails = () => {
               ...prevLinks,
               { type: "policy", data: policyToAdd },
             ]);
-            showNotification("success", "Policy linked successfully.");
+            // showNotification("success", "Policy linked successfully.");
           }
         }
       }
@@ -601,6 +604,8 @@ const PolicyDetails = () => {
     mappedMappings.forEach((mapping, index) => {
       submitData.append(`navigations[${index}]`, mapping.navId);
     });
+
+    submitData.append("collection_id", id);
 
     try {
       setLoading(true);
