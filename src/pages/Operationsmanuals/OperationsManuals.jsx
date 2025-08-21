@@ -846,9 +846,7 @@ const TableActions = ({ manual, onDelete }) => {
       >
         <MenuItem
           component={Link}
-          to={`/manuals/edit/${manual.title
-            .toLowerCase()
-            .replace(/\s+/g, "-")}`}
+          to={`/manuals/edit/${manual.id}`}
           onClick={handleMenuClose}
         >
           <EditIcon fontSize="small" sx={{ mr: 1 }} />

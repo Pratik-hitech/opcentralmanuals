@@ -1,23 +1,64 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box,
   TextField,
   Typography,
   Button,
   Paper,
-  InputAdornment,
-  IconButton,
   Container,
+  CircularProgress,
 } from "@mui/material";
 import { CloudUpload, Delete } from "@mui/icons-material";
+import { httpClient } from "../../../utils/httpClientSetup";
+import { useNotification } from "../../../hooks/useNotification";
 
 const ManualsDetails = () => {
+  const { id } = useParams(); // Get the manual ID from URL params
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     thumbnail: null,
     thumbnailPreview: "",
   });
+
+  const showNotification = useNotification();
+
+  // Fetch manual data when component mounts (if in edit mode)
+  useEffect(() => {
+    if (id) {
+      setIsEditing(true);
+      fetchManualData();
+    }
+  }, [id]);
+
+  const fetchManualData = async () => {
+    try {
+      setFetching(true);
+      const response = await httpClient.get(`/collections/${id}`);
+
+      if (response.data.success) {
+        const manual = response.data.data;
+        setFormData({
+          title: manual.title,
+          description: manual.description || "",
+          thumbnail: null,
+          thumbnailPreview: manual.thumbnail || "",
+        });
+      }
+    } catch (err) {
+      console.error("Error fetching manual:", err);
+      const errorMessage =
+        err.response?.data?.message || "Failed to fetch manual";
+      showNotification("error", errorMessage);
+    } finally {
+      setFetching(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -47,16 +88,73 @@ const ManualsDetails = () => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+
     const submitData = new FormData();
     submitData.append("title", formData.title);
     submitData.append("description", formData.description);
     if (formData.thumbnail) {
-      submitData.append("thumbnail", formData.thumbnail);
+      submitData.append("image", formData.thumbnail);
     }
-    console.log("Form data ready for API:", submitData);
+
+    try {
+      setLoading(true);
+
+      let response;
+      if (isEditing) {
+        // Use PUT or PATCH for editing
+        response = await httpClient.put(`/collections/${id}`, submitData);
+      } else {
+        // Use POST for creating new
+        response = await httpClient.post("/collections", submitData);
+      }
+
+      const { data } = response;
+      if (data.success) {
+        showNotification(
+          "success",
+          data.message ||
+            `Manual ${isEditing ? "updated" : "saved"} successfully`
+        );
+
+        if (!isEditing) {
+          // Reset form only for new entries
+          setFormData({
+            title: "",
+            description: "",
+            thumbnail: null,
+            thumbnailPreview: "",
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Error saving manual:", err);
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        `Failed to ${isEditing ? "update" : "save"} manual`;
+      showNotification("error", errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (fetching) {
+    return (
+      <Container
+        maxWidth={false}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <CircularProgress />
+      </Container>
+    );
+  }
 
   return (
     <Container
@@ -82,7 +180,7 @@ const ManualsDetails = () => {
           component="h1"
           sx={{ mb: 2, textAlign: "center" }}
         >
-          Manual Details
+          {isEditing ? "Edit Manual" : "Create Manual"}
         </Typography>
 
         <Paper elevation={3} sx={{ p: 4 }}>
@@ -176,11 +274,20 @@ const ManualsDetails = () => {
               sx={{
                 mt: 2,
                 alignSelf: "center",
-                px: 4,
-                py: 1.5,
               }}
             >
-              Save Details
+              {loading ? (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <CircularProgress size={24} color="inherit" />
+                  <Typography variant="body2">
+                    {isEditing ? "Updating..." : "Saving..."}
+                  </Typography>
+                </Box>
+              ) : isEditing ? (
+                "Update Manual"
+              ) : (
+                "Save Manual"
+              )}
             </Button>
           </Box>
         </Paper>

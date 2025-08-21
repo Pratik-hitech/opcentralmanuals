@@ -18,6 +18,7 @@ const CreateSectionDialog = ({
   open,
   onClose,
   mode = "create",
+  id,
   item = null,
   onSaveSuccess,
 }) => {
@@ -41,15 +42,16 @@ const CreateSectionDialog = ({
       return;
     }
 
-    setLoading(true);
     setError("");
 
+    const payload = {
+      title: sectionTitle.trim(),
+      collection_id: id, // TODO: Make this dynamic later
+      order: "1", // TODO: Implement proper ordering logic
+    };
+
     try {
-      const payload = {
-        title: sectionTitle.trim(),
-        collection_id: 1, // TODO: Make this dynamic later
-        order: "1", // TODO: Implement proper ordering logic
-      };
+      setLoading(true);
 
       // Add parent_id only if creating a sub-section
       if (mode === "create" && item) {
@@ -57,8 +59,6 @@ const CreateSectionDialog = ({
       } else if (mode === "edit" && item.parent_id) {
         payload.parent_id = item.parent_id;
       }
-
-      console.log("Payload:", payload);
 
       if (mode === "edit") {
         // Update existing section

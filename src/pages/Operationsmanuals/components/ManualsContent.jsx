@@ -56,12 +56,13 @@ const ManualsContent = () => {
   });
 
   const { id } = useParams(); // Extracts manual ID from route
+
   const navigate = useNavigate();
 
   // Fetch navigations from API
   const fetchNavigations = async () => {
     try {
-      const response = await httpClient.get("/navigations?collection_id=1");
+      const response = await httpClient.get(`/navigations?collection_id=${id}`);
       const data = response.data.data || []; // Handle array structure
       setNavigations(data);
       return data;
@@ -474,6 +475,7 @@ const ManualsContent = () => {
         open={isModalOpen}
         onClose={handleModalClose}
         mode={dialogMode}
+        id={id}
         item={currentItem}
         onSaveSuccess={handleSaveSuccess}
       />
