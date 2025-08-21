@@ -125,6 +125,21 @@ const SelectedPdfBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
 
+// Helper function to extract YouTube video ID
+const getYoutubeVideoId = (url) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
+
+// Helper function to extract Vimeo video ID
+const getVimeoVideoId = (url) => {
+  const regExp =
+    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
+  const match = url.match(regExp);
+  return match ? match[1] : null;
+};
+
 const PolicyDetails = () => {
   const [formData, setFormData] = useState({
     title: "",
@@ -137,6 +152,8 @@ const PolicyDetails = () => {
 
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
+
+  const [videos, setVideos] = useState([]);
 
   const [selectedLinks, setSelectedLinks] = useState([]);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
@@ -155,6 +172,10 @@ const PolicyDetails = () => {
   const [navigationTree, setNavigationTree] = useState([]);
   const [expandedItems, setExpandedItems] = useState({});
   const [mappedMappings, setMappedMappings] = useState([]);
+
+  const [previewVideo, setPreviewVideo] = useState(null);
+  const [showVideoPreview, setShowVideoPreview] = useState(false);
+  const [editingVideo, setEditingVideo] = useState(null);
 
   const showNotification = useNotification();
 
@@ -223,7 +244,24 @@ const PolicyDetails = () => {
     setTags(tags.filter((tag) => tag !== tagToDelete));
   };
   const handleVideoAdd = (videoData) => {
-    console.log("Video added:", videoData);
+    setVideos((prevVideos) => [...prevVideos, videoData]);
+  };
+
+  const handleVideoEdit = (index, updatedVideoData) => {
+    setVideos((prevVideos) => {
+      const updatedVideos = [...prevVideos];
+      updatedVideos[index] = updatedVideoData;
+      return updatedVideos;
+    });
+  };
+
+  const handleVideoRemove = (index) => {
+    setVideos((prevVideos) => prevVideos.filter((_, i) => i !== index));
+  };
+
+  const handleVideoPreview = (index) => {
+    setPreviewVideo(videos[index]);
+    setShowVideoPreview(true);
   };
 
   const handleClickCreateLinks = (event) => {
@@ -514,8 +552,8 @@ const PolicyDetails = () => {
   };
 
   const handleSubmit = async (e) => {
+    console.log("on submit");
     e.preventDefault();
-    setLoading(true);
     const submitData = new FormData();
     submitData.append("title", formData.title);
     submitData.append("content", formData.content);
@@ -523,26 +561,51 @@ const PolicyDetails = () => {
       submitData.append(`tags[${index}]`, tag);
     });
 
-    // Append linked files and policies
+    // Append linked files and policies with new format
     selectedLinks.forEach((link, index) => {
       if (link.type === "file") {
-        // If you need to send file IDs or names
-        submitData.append(`linked_files[${index}]`, link.data.id); // Or link.data.name
+        submitData.append(`links[${index}][type]`, "file");
+        submitData.append(`links[${index}][type_id]`, link.data.id);
       } else if (link.type === "policy") {
-        submitData.append(`linked_policies[${index}]`, link.data.id);
+        submitData.append(`links[${index}][type]`, "policy");
+        submitData.append(`links[${index}][type_id]`, link.data.id);
+      }
+    });
+
+    // Append video details in the required format
+    videos.forEach((video, index) => {
+      submitData.append(`videos[${index}][type]`, video.type);
+      submitData.append(`videos[${index}][title]`, video.title);
+
+      if (video.type === "upload" && video.file) {
+        submitData.append(`videos[${index}][file]`, video.file);
+      } else if (
+        (video.type === "youtube" || video.type === "vimeo") &&
+        video.reference_url
+      ) {
+        submitData.append(
+          `videos[${index}][reference_url]`,
+          video.reference_url
+        );
       }
     });
 
     if (embeddedPdf) {
-      submitData.append("embedded_pdf_id", embeddedPdf.id); //TODO: Adjust key as needed
+      submitData.append("embedded_pdf_id", embeddedPdf.id);
+    }
+
+    for (const [key, value] of Object.entries(submitData)) {
+      console.log(key, value);
     }
 
     mappedMappings.forEach((mapping, index) => {
-      submitData.append(`mapped_navigations[${index}]`, mapping.navId);
+      submitData.append(`navigations[${index}]`, mapping.navId);
     });
 
     try {
-      const response = await httpClient.post("/policies", submitData); //TODO: Adjust endpoint
+      setLoading(true);
+
+      const response = await httpClient.post("/policies", submitData);
       console.log("Policy saved:", response.data);
       const { data } = response;
       if (data.success) {
@@ -559,6 +622,7 @@ const PolicyDetails = () => {
         setMappedMappings([]);
         setSelectedCollection(null);
         setNavigationTree([]);
+        setVideos([]); // Reset videos
       }
     } catch (err) {
       console.error("Error saving policy:", err);
@@ -656,20 +720,11 @@ const PolicyDetails = () => {
               >
                 Body Content
               </FormLabel>
-              <Paper
-                sx={{
-                  border: "1px solid #d1d5db",
-                  borderRadius: 2,
-                  minHeight: 200,
-                  p: 3,
-                  backgroundColor: "#f9fafb",
-                }}
-              >
-                <RichTextEditor
-                  value={formData.content}
-                  onChange={handleContentChange}
-                />
-              </Paper>
+
+              <RichTextEditor
+                value={formData.content}
+                onChange={handleContentChange}
+              />
             </FormGrid>
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
@@ -743,6 +798,10 @@ const PolicyDetails = () => {
               isEnabled={isVideoEnabled}
               onToggle={setIsVideoEnabled}
               onVideoAdd={handleVideoAdd}
+              onVideoEdit={handleVideoEdit}
+              onVideoRemove={handleVideoRemove}
+              onVideoPreview={handleVideoPreview}
+              videos={videos}
             />
 
             <FormFieldContainer>
@@ -1123,6 +1182,105 @@ const PolicyDetails = () => {
           </Box>
         </Paper>
       </Box>
+      {/* Video Preview Dialog */}
+      <Dialog
+        open={showVideoPreview}
+        onClose={() => setShowVideoPreview(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Video Preview
+          <IconButton
+            aria-label="close"
+            onClick={() => setShowVideoPreview(false)}
+            sx={{
+              position: "absolute",
+              right: 8,
+              top: 8,
+              color: (theme) => theme.palette.grey[500],
+            }}
+          >
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent>
+          {previewVideo && (
+            <Box sx={{ textAlign: "center" }}>
+              <Typography variant="h6" sx={{ mb: 2 }}>
+                {previewVideo.title}
+              </Typography>
+              {previewVideo.type === "upload" ? (
+                previewVideo.file ? (
+                  <video
+                    src={URL.createObjectURL(previewVideo.file)}
+                    controls
+                    style={{ width: "100%", maxHeight: "400px" }}
+                  />
+                ) : (
+                  <Typography>No video file available</Typography>
+                )
+              ) : previewVideo.type === "youtube" ? (
+                previewVideo.reference_url ? (
+                  (() => {
+                    const videoId = getYoutubeVideoId(
+                      previewVideo.reference_url
+                    );
+                    return videoId ? (
+                      <iframe
+                        src={`https://www.youtube.com/embed/${videoId}`}
+                        title={previewVideo.title}
+                        allowFullScreen
+                        style={{
+                          width: "100%",
+                          height: "400px",
+                          border: "none",
+                        }}
+                      />
+                    ) : (
+                      <Typography>Invalid YouTube URL</Typography>
+                    );
+                  })()
+                ) : (
+                  <Typography>No YouTube URL provided</Typography>
+                )
+              ) : previewVideo.type === "vimeo" ? (
+                previewVideo.reference_url ? (
+                  (() => {
+                    const videoId = getVimeoVideoId(previewVideo.reference_url);
+                    return videoId ? (
+                      <iframe
+                        src={`https://player.vimeo.com/video/${videoId}`}
+                        title={previewVideo.title}
+                        allowFullScreen
+                        style={{
+                          width: "100%",
+                          height: "400px",
+                          border: "none",
+                        }}
+                      />
+                    ) : (
+                      <Typography>Invalid Vimeo URL</Typography>
+                    );
+                  })()
+                ) : (
+                  <Typography>No Vimeo URL provided</Typography>
+                )
+              ) : (
+                <Typography>Unsupported video type</Typography>
+              )}
+              {previewVideo.description && (
+                <Typography variant="body2" sx={{ mt: 2, textAlign: "left" }}>
+                  {previewVideo.description}
+                </Typography>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowVideoPreview(false)}>Close</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 };

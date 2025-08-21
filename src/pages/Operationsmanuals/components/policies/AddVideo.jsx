@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -17,6 +17,13 @@ import {
   CardContent,
   Divider,
   IconButton,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
 } from "@mui/material";
 import {
   CloudUpload,
@@ -25,10 +32,12 @@ import {
   YouTube,
   Movie,
   PlayCircleOutline,
+  Edit as EditIcon,
+  Delete as DeleteIcon,
+  Visibility as VisibilityIcon,
 } from "@mui/icons-material";
 
 const VideoCard = styled(Card)(({ theme }) => ({
-  //   background: "linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%)",
   borderRadius: 16,
   boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
   border: "1px solid #e1e5e9",
@@ -82,8 +91,49 @@ const StyledDialog = styled(Dialog)(({ theme }) => ({
   },
 }));
 
+const VideoTableContainer = styled(Paper)(({ theme }) => ({
+  marginTop: theme.spacing(2),
+  overflowX: "auto",
+}));
+
+const VideoTableRow = styled(TableRow)(({ theme }) => ({
+  "&:nth-of-type(odd)": {
+    backgroundColor: theme.palette.action.hover,
+  },
+  "&:last-child td, &:last-child th": {
+    border: 0,
+  },
+}));
+
+const VideoActionsCell = styled(TableCell)(({ theme }) => ({
+  textAlign: "right",
+}));
+
+// Helper function to extract YouTube video ID
+const getYoutubeVideoId = (url) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
+
+// Helper function to extract Vimeo video ID
+const getVimeoVideoId = (url) => {
+  const regExp =
+    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
+  const match = url.match(regExp);
+  return match ? match[1] : null;
+};
+
 // Add Video Component
-const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
+const AddVideo = ({
+  isEnabled,
+  onToggle,
+  onVideoAdd,
+  videos,
+  onVideoEdit,
+  onVideoRemove,
+  onVideoPreview,
+}) => {
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
   const [selectedVideoType, setSelectedVideoType] = useState("upload");
   const [videoData, setVideoData] = useState({
@@ -92,6 +142,24 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
     title: "",
     description: "",
   });
+  const [editingVideoIndex, setEditingVideoIndex] = useState(null);
+
+  // Create a stable object URL for the uploaded file using useMemo
+  const videoObjectUrl = useMemo(() => {
+    if (videoData.file && selectedVideoType === "upload") {
+      return URL.createObjectURL(videoData.file);
+    }
+    return null;
+  }, [videoData.file, selectedVideoType]);
+
+  // Cleanup object URL when component unmounts or file changes
+  useEffect(() => {
+    return () => {
+      if (videoObjectUrl) {
+        URL.revokeObjectURL(videoObjectUrl);
+      }
+    };
+  }, [videoObjectUrl]);
 
   const handleOpenVideoModal = () => {
     setIsVideoModalOpen(true);
@@ -105,6 +173,7 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
       title: "",
       description: "",
     });
+    setEditingVideoIndex(null);
   };
 
   const handleVideoTypeChange = (event, newType) => {
@@ -115,9 +184,41 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
     setVideoData({ ...videoData, [field]: value });
   };
 
+  const handleEditVideo = (index) => {
+    const videoToEdit = videos[index];
+    setEditingVideoIndex(index);
+    setSelectedVideoType(videoToEdit.type);
+    setVideoData({
+      file: videoToEdit.file || null,
+      url: videoToEdit.reference_url || "",
+      title: videoToEdit.title || "",
+      description: videoToEdit.description || "",
+    });
+    setIsVideoModalOpen(true);
+  };
+
   const handleSubmitVideo = () => {
-    console.log("Submitting video:", videoData);
-    onVideoAdd?.(videoData);
+    // Format video data according to the required structure
+    const formattedVideoData = {
+      type: selectedVideoType,
+      title: videoData.title,
+      description: videoData.description,
+    };
+
+    if (selectedVideoType === "upload" && videoData.file) {
+      formattedVideoData.file = videoData.file;
+    } else if (
+      (selectedVideoType === "youtube" || selectedVideoType === "vimeo") &&
+      videoData.url
+    ) {
+      formattedVideoData.reference_url = videoData.url;
+    }
+
+    if (editingVideoIndex !== null) {
+      onVideoEdit?.(editingVideoIndex, formattedVideoData);
+    } else {
+      onVideoAdd?.(formattedVideoData);
+    }
     handleCloseVideoModal();
   };
 
@@ -135,17 +236,6 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
               }}
             >
               <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                <Box
-                  sx={{
-                    p: 1.5,
-                    background:
-                      "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
-                    borderRadius: 2,
-                    color: "white",
-                  }}
-                >
-                  <PlayCircleOutline sx={{ fontSize: 28 }} />
-                </Box>
                 <Box>
                   <Typography
                     variant="h6"
@@ -179,36 +269,67 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
 
             {isEnabled && (
               <Box sx={{ textAlign: "center" }}>
-                {/* <Chip
-                  label="No videos added yet"
-                  variant="outlined"
-                  sx={{
-                    mb: 2,
-                    mr: 2,
-                    color: "#718096",
-                    borderColor: "#e2e8f0",
-                  }}
-                /> */}
                 <Button
-                  variant="contained"
+                  variant="outlined"
                   onClick={handleOpenVideoModal}
                   startIcon={<CloudUpload />}
                   sx={{
-                    // background:
-                    //   "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
-                    borderRadius: 2,
                     textTransform: "none",
-                    px: 3,
-                    py: 1.5,
                     fontWeight: 600,
-                    boxShadow: "0 4px 20px rgba(102, 126, 234, 0.3)",
-                    "&:hover": {
-                      boxShadow: "0 6px 25px rgba(102, 126, 234, 0.4)",
-                    },
                   }}
                 >
                   Add Video
                 </Button>
+
+                {/* Video List */}
+                {videos.length > 0 && (
+                  <VideoTableContainer>
+                    <TableContainer>
+                      <Table size="small" aria-label="videos table">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>Title</TableCell>
+                            <TableCell align="right">Actions</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {videos.map((video, index) => (
+                            <VideoTableRow key={index}>
+                              <TableCell component="th" scope="row">
+                                {video.title}
+                              </TableCell>
+                              <VideoActionsCell>
+                                <IconButton
+                                  aria-label="preview"
+                                  size="small"
+                                  onClick={() => onVideoPreview?.(index)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <VisibilityIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  aria-label="edit"
+                                  size="small"
+                                  onClick={() => handleEditVideo(index)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                                <IconButton
+                                  aria-label="remove"
+                                  size="small"
+                                  onClick={() => onVideoRemove?.(index)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </VideoActionsCell>
+                            </VideoTableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </VideoTableContainer>
+                )}
               </Box>
             )}
           </CardContent>
@@ -234,7 +355,7 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
           <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
             <VideoLibrary sx={{ fontSize: 28, color: "#667eea" }} />
             <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              Add Video
+              {editingVideoIndex !== null ? "Edit Video" : "Add Video"}
             </Typography>
           </Box>
           <IconButton onClick={handleCloseVideoModal} sx={{ color: "#4a5568" }}>
@@ -290,54 +411,120 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
           {/* Video Input Area */}
           <Box sx={{ mb: 3 }}>
             {selectedVideoType === "upload" ? (
-              <UploadArea
-                onClick={() => document.getElementById("video-upload").click()}
-              >
-                <input
-                  id="video-upload"
-                  type="file"
-                  accept="video/*"
-                  style={{ display: "none" }}
-                  onChange={(e) =>
-                    handleVideoDataChange("file", e.target.files[0])
+              <>
+                <UploadArea
+                  onClick={() =>
+                    document.getElementById("video-upload").click()
                   }
-                />
-                <CloudUpload sx={{ fontSize: 48, mb: 2, color: "#9ca3af" }} />
-                <Typography variant="h6" sx={{ mb: 1, color: "#4a5568" }}>
-                  {videoData.file
-                    ? videoData.file.name
-                    : "Drop your video here or click to browse"}
-                </Typography>
-                <Typography variant="body2" sx={{ color: "#718096" }}>
-                  Supports MP4, AVI, MOV and other video formats
-                </Typography>
-              </UploadArea>
+                >
+                  <input
+                    id="video-upload"
+                    type="file"
+                    accept="video/*"
+                    style={{ display: "none" }}
+                    onChange={(e) =>
+                      handleVideoDataChange("file", e.target.files[0])
+                    }
+                  />
+                  <CloudUpload sx={{ fontSize: 48, mb: 2, color: "#9ca3af" }} />
+                  <Typography variant="h6" sx={{ mb: 1, color: "#4a5568" }}>
+                    {videoData.file
+                      ? videoData.file.name
+                      : "Drop your video here or click to browse"}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: "#718096" }}>
+                    Supports MP4, AVI, MOV and other video formats
+                  </Typography>
+                </UploadArea>
+                {/* Preview for uploaded video */}
+                {videoObjectUrl && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Preview:
+                    </Typography>
+                    <video
+                      src={videoObjectUrl}
+                      controls
+                      style={{ width: "100%", maxHeight: "400px" }}
+                    />
+                  </Box>
+                )}
+              </>
             ) : (
-              <TextField
-                label={`${
-                  selectedVideoType === "youtube" ? "YouTube" : "Vimeo"
-                } URL`}
-                value={videoData.url}
-                onChange={(e) => handleVideoDataChange("url", e.target.value)}
-                fullWidth
-                placeholder={`Paste your ${
-                  selectedVideoType === "youtube" ? "YouTube" : "Vimeo"
-                } link here`}
-                sx={{
-                  "& .MuiOutlinedInput-root": {
-                    borderRadius: 2,
-                    "& fieldset": {
-                      borderColor: "#d1d5db",
+              <>
+                <TextField
+                  label={`${
+                    selectedVideoType === "youtube" ? "YouTube" : "Vimeo"
+                  } URL`}
+                  value={videoData.url}
+                  onChange={(e) => handleVideoDataChange("url", e.target.value)}
+                  fullWidth
+                  placeholder={`Paste your ${
+                    selectedVideoType === "youtube" ? "YouTube" : "Vimeo"
+                  } link here`}
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      borderRadius: 2,
+                      "& fieldset": {
+                        borderColor: "#d1d5db",
+                      },
+                      "&:hover fieldset": {
+                        borderColor: "#9ca3af",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#667eea",
+                      },
                     },
-                    "&:hover fieldset": {
-                      borderColor: "#9ca3af",
-                    },
-                    "&.Mui-focused fieldset": {
-                      borderColor: "#667eea",
-                    },
-                  },
-                }}
-              />
+                  }}
+                />
+                {/* Preview for YouTube/Vimeo video */}
+                {videoData.url && (
+                  <Box sx={{ mt: 2 }}>
+                    <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                      Preview:
+                    </Typography>
+                    {selectedVideoType === "youtube"
+                      ? (() => {
+                          const videoId = getYoutubeVideoId(videoData.url);
+                          return videoId ? (
+                            <iframe
+                              src={`https://www.youtube.com/embed/${videoId}`}
+                              title="YouTube video preview"
+                              allowFullScreen
+                              style={{
+                                width: "100%",
+                                height: "400px",
+                                border: "none",
+                              }}
+                            />
+                          ) : (
+                            <Typography color="error">
+                              Invalid YouTube URL
+                            </Typography>
+                          );
+                        })()
+                      : (() => {
+                          const videoId = getVimeoVideoId(videoData.url);
+                          return videoId ? (
+                            <iframe
+                              src={`https://player.vimeo.com/video/${videoId}`}
+                              title="Vimeo video preview"
+                              allowFullScreen
+                              style={{
+                                width: "100%",
+                                height: "400px",
+                                border: "none",
+                              }}
+                            />
+                          ) : (
+                            <Typography color="error">
+                              Invalid Vimeo URL
+                            </Typography>
+                          );
+                        })()}
+                  </Box>
+                )}
+              </>
             )}
           </Box>
 
@@ -348,6 +535,7 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
               value={videoData.title}
               onChange={(e) => handleVideoDataChange("title", e.target.value)}
               fullWidth
+              required
               sx={{
                 "& .MuiOutlinedInput-root": {
                   borderRadius: 2,
@@ -417,18 +605,21 @@ const AddVideo = ({ isEnabled, onToggle, onVideoAdd }) => {
           <Button
             onClick={handleSubmitVideo}
             variant="contained"
+            disabled={
+              !videoData.title ||
+              (selectedVideoType === "upload" && !videoData.file) ||
+              ((selectedVideoType === "youtube" ||
+                selectedVideoType === "vimeo") &&
+                !videoData.url)
+            }
             sx={{
-              //   background: "linear-gradient(45deg, #667eea 30%, #764ba2 90%)",
               borderRadius: 2,
               px: 3,
               fontWeight: 600,
               textTransform: "none",
-              "&:hover": {
-                background: "linear-gradient(45deg, #5a6fd8 30%, #6b46a3 90%)",
-              },
             }}
           >
-            Add Video
+            {editingVideoIndex !== null ? "Update Video" : "Add Video"}
           </Button>
         </DialogActions>
       </StyledDialog>
