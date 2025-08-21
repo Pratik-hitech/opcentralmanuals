@@ -113,9 +113,9 @@ const DashboardNews = () => {
                             }
                           }}
                         >
-                          {/* <MenuItem onClick={handleMenuClose}>Share</MenuItem>
-                          <MenuItem onClick={handleMenuClose}>Save to favorites</MenuItem>
-                          <MenuItem onClick={handleMenuClose}>Report issue</MenuItem> */}
+                          <MenuItem onClick={handleMenuClose}>Edit</MenuItem>
+                          <MenuItem onClick={handleMenuClose}>Delete</MenuItem>
+                          {/* <MenuItem onClick={handleMenuClose}>Report issue</MenuItem> */}
                         </Menu>
                     </Box>
                 </Box>

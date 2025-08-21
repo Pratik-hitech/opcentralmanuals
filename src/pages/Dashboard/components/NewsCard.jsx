@@ -1,3 +1,4 @@
+// src/components/NewsCard.js
 import { useState, useTransition } from "react";
 import {
   Box,
@@ -7,11 +8,11 @@ import {
   IconButton,
   Menu,
   MenuItem,
-  CircularProgress,
-  Chip
+CircularProgress,
+  Skeleton
 } from "@mui/material";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function NewsCard({ newsData }) {
   const [anchorEl, setAnchorEl] = useState(null);
@@ -19,29 +20,6 @@ export default function NewsCard({ newsData }) {
   const [prefetching, setPrefetching] = useState(null);
   const navigate = useNavigate();
   const open = Boolean(anchorEl);
-
-  // Check if newsData exists and has items
-  if (!newsData || !Array.isArray(newsData) || newsData.length === 0) {
-    return (
-      <Box
-        sx={{
-          alignItems: "flex-start",
-          bgcolor: "inherit",
-          padding: "1rem",
-          borderRadius: 2,
-          boxShadow: 1,
-          maxWidth: "100%",
-          mx: "auto",
-        }}
-      >
-        <Typography variant="h6">No news available</Typography>
-      </Box>
-    );
-  }
-
-  // Separate featured news from regular news
-  const featuredNews = newsData.find(item => item.featured === 1);
-  const regularNews = newsData.filter(item => item !== featuredNews);
 
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -148,93 +126,7 @@ export default function NewsCard({ newsData }) {
 
       <Divider sx={{ mb: 2 }} />
 
-      {/* Featured News Banner */}
-      {featuredNews && (
-        <Box
-          sx={{
-            mb: 3,
-            p: 0,
-            backgroundColor: "#fff",
-            borderRadius: 1,
-            boxShadow: 3,
-            position: "relative",
-            overflow: "hidden"
-          }}
-          onMouseEnter={() => prefetchData(featuredNews.id)}
-        >
-          {/* Featured Tag */}
-          <Chip 
-            label="FEATURED" 
-            sx={{ 
-              position: "absolute", 
-              top: 16, 
-              left: 16, 
-              backgroundColor: "primary.main", 
-              color: "white",
-              fontWeight: "bold",
-              zIndex: 2
-            }} 
-          />
-          
-          {/* Featured Image - Only show if featured_image exists */}
-          {featuredNews.featured_image && (
-            <Box 
-              component="img"
-              src={featuredNews.featured_image}
-              alt={featuredNews.title}
-              sx={{
-                width: "100%",
-                height: 200,
-                objectFit: "cover",
-                display: "block"
-              }}
-            />
-          )}
-          
-          <Box sx={{ p: 2 }}>
-            <Typography variant="h5" sx={{ fontWeight: "bold", mb: 1 }}>
-              {featuredNews.title}
-            </Typography>
-            <Typography variant="body1" sx={{ mb: 1 }}>
-              {featuredNews.content}
-            </Typography>
-            <Typography variant="caption" display="block" sx={{ mb: 2 }}>
-              {new Date(featuredNews.created_at).toLocaleDateString()}
-            </Typography>
-            <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-              <Button
-                onClick={() => handleReadMore(featuredNews.id)}
-                variant="contained"
-                sx={{
-                  bgcolor: "#D8D80E",
-                  textTransform: "none",
-                  position: "relative"
-                }}
-                disabled={isPending}
-              >
-                {prefetching === featuredNews.id ? (
-                  <>
-                    Read More
-                    <CircularProgress 
-                      size={20} 
-                      sx={{ 
-                        position: 'absolute',
-                        right: 8,
-                        color: 'inherit'
-                      }} 
-                    />
-                  </>
-                ) : (
-                  "Read More"
-                )}
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      )}
-
-      {/* Regular News Items */}
-      {regularNews.map((newsItem) => (
+      {newsData.map((newsItem) => (
         <Box
           key={newsItem.id}
           sx={{

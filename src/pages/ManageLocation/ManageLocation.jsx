@@ -1380,6 +1380,7 @@ const ManageLocations = () => {
 
   // Data state
   const [locations, setLocations] = useState([]);
+  const [locationTypes, setLocationTypes] = useState({}); // Store type ID to name mapping
   const [totalCount, setTotalCount] = useState(0);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -1410,6 +1411,24 @@ const ManageLocations = () => {
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
   const handleMenuClose = (setter) => () => setter(null);
 
+  // Fetch location types mapping
+  const fetchLocationTypes = async () => {
+    try {
+      const response = await httpClient.get("location/types");
+      if (response.data?.success) {
+        // Create a mapping of ID to type name
+        const typesMap = {};
+        response.data.data.forEach(type => {
+          typesMap[type.id] = type.name;
+        });
+        setLocationTypes(typesMap);
+      }
+    } catch (err) {
+      console.error("Failed to fetch location types:", err);
+      // We'll continue even if this fails - we'll just show IDs instead of names
+    }
+  };
+
   const fetchLocations = async () => {
     setIsLoading(true);
     setError(null);
@@ -1420,7 +1439,7 @@ const ManageLocations = () => {
           status: statusValue,
           per_page: rowsPerPage,
           page: page + 1, // Backend pagination usually starts at 1
-          search: searchTerm || undefined
+          q: searchTerm || undefined
         }
       });
 
@@ -1442,8 +1461,17 @@ const ManageLocations = () => {
   };
 
   useEffect(() => {
+    fetchLocationTypes(); // Fetch location types on component mount
+  }, []);
+
+  useEffect(() => {
     fetchLocations();
   }, [tab, page, rowsPerPage, searchTerm]);
+
+  // Function to get location type name by ID
+  const getLocationTypeName = (typeId) => {
+    return locationTypes[typeId] || typeId; // Return name if available, otherwise return the ID
+  };
 
   const handleSelectAll = (e) => {
     setSelected(e.target.checked ? locations.map((a) => a.id) : []);
@@ -1588,7 +1616,7 @@ const ManageLocations = () => {
   const exportData = (type) => {
     const data = locations.map((location) => ({
       Name: location.name,
-      Type: location.type,
+      Type: getLocationTypeName(location.type), // Use the type name instead of ID
       "Street Number": location.street_number,
       "Street Name": location.street_name,
       Suburb: location.suburb,
@@ -1775,7 +1803,7 @@ const ManageLocations = () => {
                   <TableCell>{location.name}</TableCell>
                   {!isMobile && (
                     <>
-                      <TableCell>{location.type}</TableCell>
+                      <TableCell>{getLocationTypeName(location.type)}</TableCell>
                       <TableCell>{location.suburb}</TableCell>
                       <TableCell>{location.state}</TableCell>
                     </>
@@ -1952,13 +1980,14 @@ const ManageLocations = () => {
 
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={6000}
+        autoHideDuration={3000}
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: "top", horizontal: "right" }}
       >
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
+          variant= 'filled'
           sx={{ width: "100%" }}
         >
           {snackbar.message}
