@@ -73,16 +73,18 @@ const AllPolicies = () => {
   const fetchPolicies = async () => {
     setIsLoading(true);
     try {
-      const response = await httpClient.get("https://6894256bbe3700414e121f1d.mockapi.io/policies/policies");
-      
-      if (response.data) {
-        setPolicies(response.data);
-        
+      const response = await httpClient.get("policies");
+
+      const { data } = response;
+
+      if (data.success) {
+        setPolicies(data.data);
+
         // Filter based on current tab
-        const filtered = response.data.filter(policy => 
+        const filtered = data.data.filter((policy) =>
           tabValue === "active" ? !policy.archived : policy.archived
         );
-        
+
         setFilteredPolicies(filtered);
         setSelected([]);
       } else {
@@ -102,20 +104,17 @@ const AllPolicies = () => {
   // Filter policies based on search term
   useEffect(() => {
     if (searchTerm.trim() === "") {
-      const filtered = policies.filter(policy => 
+      const filtered = policies.filter((policy) =>
         tabValue === "active" ? !policy.archived : policy.archived
       );
       setFilteredPolicies(filtered);
     } else {
       const filtered = policies.filter(
-        (policy) => (
+        (policy) =>
           (tabValue === "active" ? !policy.archived : policy.archived) &&
-          (
-            policy.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (policy.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             policy.manuals?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            policy.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase())
-          )
-        )
+            policy.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase()))
       );
       setFilteredPolicies(filtered);
     }
@@ -151,10 +150,13 @@ const AllPolicies = () => {
   const handleArchivePolicy = async (policyId) => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`, { 
-        archived: true 
-      });
-      
+      const response = await httpClient.put(
+        `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`,
+        {
+          archived: true,
+        }
+      );
+
       if (response.data) {
         setSnackbar({
           open: true,
@@ -179,10 +181,13 @@ const AllPolicies = () => {
   const handleUnarchivePolicy = async (policyId) => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`, { 
-        archived: false 
-      });
-      
+      const response = await httpClient.put(
+        `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyId}`,
+        {
+          archived: false,
+        }
+      );
+
       if (response.data) {
         setSnackbar({
           open: true,
@@ -207,15 +212,18 @@ const AllPolicies = () => {
     setIsActionLoading(true);
     try {
       const responses = await Promise.all(
-        selected.map(id =>
-          httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`, { 
-            archived: true 
-          })
+        selected.map((id) =>
+          httpClient.put(
+            `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`,
+            {
+              archived: true,
+            }
+          )
         )
       );
 
-      const successfulArchives = responses.filter(response => response.data);
-      
+      const successfulArchives = responses.filter((response) => response.data);
+
       if (successfulArchives.length > 0) {
         setSnackbar({
           open: true,
@@ -241,15 +249,20 @@ const AllPolicies = () => {
     setIsActionLoading(true);
     try {
       const responses = await Promise.all(
-        selected.map(id =>
-          httpClient.put(`https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`, { 
-            archived: false 
-          })
+        selected.map((id) =>
+          httpClient.put(
+            `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${id}`,
+            {
+              archived: false,
+            }
+          )
         )
       );
 
-      const successfulUnarchives = responses.filter(response => response.data);
-      
+      const successfulUnarchives = responses.filter(
+        (response) => response.data
+      );
+
       if (successfulUnarchives.length > 0) {
         setSnackbar({
           open: true,
@@ -273,12 +286,12 @@ const AllPolicies = () => {
   const handleClonePolicy = async (policyId) => {
     setIsActionLoading(true);
     try {
-      const policyToClone = policies.find(p => p.id === policyId);
+      const policyToClone = policies && policies.find((p) => p.id === policyId);
       const response = await httpClient.post(
         "https://6894256bbe3700414e121f1d.mockapi.io/policies/policies",
         { ...policyToClone, title: `${policyToClone.title} (Copy)` }
       );
-      
+
       if (response.data) {
         setSnackbar({
           open: true,
@@ -312,7 +325,7 @@ const AllPolicies = () => {
       const response = await httpClient.delete(
         `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyToDelete}`
       );
-      
+
       if (response.data) {
         setSnackbar({
           open: true,
@@ -341,7 +354,7 @@ const AllPolicies = () => {
       Manuals: policy.manuals,
       "Public URL": policy.publicURL,
       Version: policy.version,
-      "Updated On": formatDate(policy.updatedOn),
+      "Updated On": formatDate(policy.updated_at),
       "Updated By": policy.updatedBy,
       Status: policy.archived ? "Archived" : "Active",
     }));
@@ -386,25 +399,50 @@ const AllPolicies = () => {
 
   // Skeleton loader
   const renderSkeletonRows = () => {
-    return Array(rowsPerPage).fill(0).map((_, index) => (
-      <TableRow key={`skeleton-${index}`}>
-        <TableCell><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
-        <TableCell><Skeleton variant="text" width={200} /></TableCell>
-        <TableCell><Skeleton variant="text" width={150} /></TableCell>
-        <TableCell><Skeleton variant="text" width={150} /></TableCell>
-        <TableCell><Skeleton variant="text" width={80} /></TableCell>
-        <TableCell><Skeleton variant="text" width={120} /></TableCell>
-        <TableCell><Skeleton variant="text" width={120} /></TableCell>
-        <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
-        <TableCell><Skeleton variant="circular" width={32} height={32} /></TableCell>
-      </TableRow>
-    ));
+    return Array(rowsPerPage)
+      .fill(0)
+      .map((_, index) => (
+        <TableRow key={`skeleton-${index}`}>
+          <TableCell>
+            <Skeleton variant="rectangular" width={20} height={20} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={200} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={150} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={150} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={80} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={120} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={120} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="circular" width={32} height={32} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="circular" width={32} height={32} />
+          </TableCell>
+        </TableRow>
+      ));
   };
 
   return (
     <Box p={2}>
       {/* Header with controls */}
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb={2}
+      >
         <Box display="flex" gap={1}>
           {selected.length > 0 && (
             <Button
@@ -417,8 +455,8 @@ const AllPolicies = () => {
               Bulk Actions
             </Button>
           )}
-          <Button 
-            variant="contained" 
+          <Button
+            variant="contained"
             color="primary"
             disabled={isActionLoading}
           >
@@ -441,13 +479,13 @@ const AllPolicies = () => {
               ),
             }}
           />
-          <IconButton 
+          <IconButton
             onClick={handleMenuOpen(setDownloadAnchorEl)}
             disabled={isActionLoading}
           >
             <Download />
           </IconButton>
-          <IconButton 
+          <IconButton
             onClick={handleMenuOpen(setAnchorEl)}
             disabled={isActionLoading}
           >
@@ -457,28 +495,28 @@ const AllPolicies = () => {
       </Box>
 
       {/* Tabs */}
-      <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
-        <Tabs 
-          value={tabValue} 
+      <Box sx={{ borderBottom: 1, borderColor: "divider", mb: 2 }}>
+        <Tabs
+          value={tabValue}
           onChange={handleTabChange}
           textColor="primary"
           indicatorColor="primary"
         >
-          <Tab 
-            label="Active" 
-            value="active" 
+          <Tab
+            label="Active"
+            value="active"
             disabled={isActionLoading}
             sx={{
-              fontWeight: tabValue === 'active' ? 'bold' : 'normal',
+              fontWeight: tabValue === "active" ? "bold" : "normal",
               minWidth: 100,
             }}
           />
-          <Tab 
-            label="Archived" 
-            value="archived" 
+          <Tab
+            label="Archived"
+            value="archived"
             disabled={isActionLoading}
             sx={{
-              fontWeight: tabValue === 'archived' ? 'bold' : 'normal',
+              fontWeight: tabValue === "archived" ? "bold" : "normal",
               minWidth: 100,
             }}
           />
@@ -534,12 +572,16 @@ const AllPolicies = () => {
                   <TableCell>{policy.title}</TableCell>
                   <TableCell>{policy.manuals}</TableCell>
                   <TableCell>
-                    <a href={policy.publicURL} target="_blank" rel="noopener noreferrer">
+                    <a
+                      href={policy.publicURL}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
                       View
                     </a>
                   </TableCell>
                   <TableCell>v{policy.version}</TableCell>
-                  <TableCell>{formatDate(policy.updatedOn)}</TableCell>
+                  <TableCell>{formatDate(policy.updated_at)}</TableCell>
                   <TableCell>{policy.updatedBy}</TableCell>
                   <TableCell>
                     <StatusChip archived={policy.archived} />
@@ -550,7 +592,9 @@ const AllPolicies = () => {
                         <IconButton
                           size="small"
                           color="primary"
-                          onClick={() => window.open(policy.publicURL, '_blank')}
+                          onClick={() =>
+                            window.open(policy.publicURL, "_blank")
+                          }
                           disabled={isActionLoading}
                         >
                           <Visibility fontSize="small" />
@@ -573,7 +617,8 @@ const AllPolicies = () => {
           ) : (
             <TableRow>
               <TableCell colSpan={9} align="center">
-                No {tabValue === "active" ? "active" : "archived"} policies found
+                No {tabValue === "active" ? "active" : "archived"} policies
+                found
               </TableCell>
             </TableRow>
           )}
@@ -603,10 +648,14 @@ const AllPolicies = () => {
         ) : (
           <MenuItem onClick={handleBulkUnarchive}>Unarchive</MenuItem>
         )}
-        <MenuItem onClick={() => {
-          setOpenDeleteModal(true);
-          handleMenuClose(setBulkAnchorEl)();
-        }}>Delete</MenuItem>
+        <MenuItem
+          onClick={() => {
+            setOpenDeleteModal(true);
+            handleMenuClose(setBulkAnchorEl)();
+          }}
+        >
+          Delete
+        </MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
       </Menu>
@@ -619,7 +668,9 @@ const AllPolicies = () => {
       >
         <MenuItem>Manage Policy Categories</MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export All as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export All as Excel</MenuItem>
+        <MenuItem onClick={() => exportData("xlsx")}>
+          Export All as Excel
+        </MenuItem>
       </Menu>
 
       {/* Download Menu */}
@@ -638,20 +689,20 @@ const AllPolicies = () => {
         open={Boolean(rowMenuAnchorEl)}
         onClose={handleMenuClose(setRowMenuAnchorEl)}
       >
-        <MenuItem 
+        <MenuItem
           onClick={handleMenuClose(setRowMenuAnchorEl)}
           disabled={isActionLoading}
         >
           <Edit fontSize="small" sx={{ mr: 1 }} /> Edit
         </MenuItem>
-        <MenuItem 
+        <MenuItem
           onClick={() => handleClonePolicy(activeRowId)}
           disabled={isActionLoading}
         >
           <FileCopy fontSize="small" sx={{ mr: 1 }} /> Clone
         </MenuItem>
-        {policies.find(p => p.id === activeRowId)?.archived ? (
-          <MenuItem 
+        {policies && policies.find((p) => p.id === activeRowId)?.archived ? (
+          <MenuItem
             onClick={() => {
               handleUnarchivePolicy(activeRowId);
               handleMenuClose(setRowMenuAnchorEl)();
@@ -661,7 +712,7 @@ const AllPolicies = () => {
             <Archive fontSize="small" sx={{ mr: 1 }} /> Unarchive
           </MenuItem>
         ) : (
-          <MenuItem 
+          <MenuItem
             onClick={() => {
               setPolicyToDelete(activeRowId);
               setOpenArchiveModal(true);
@@ -672,16 +723,13 @@ const AllPolicies = () => {
             <Archive fontSize="small" sx={{ mr: 1 }} /> Archive
           </MenuItem>
         )}
-        <MenuItem 
+        <MenuItem
           onClick={() => handleDeleteClick(activeRowId)}
           disabled={isActionLoading}
         >
-          <Delete fontSize="small" sx={{ mr: 1, color: 'error.main' }} /> Delete
+          <Delete fontSize="small" sx={{ mr: 1, color: "error.main" }} /> Delete
         </MenuItem>
-        <MenuItem 
-          onClick={() => exportData("csv")}
-          disabled={isActionLoading}
-        >
+        <MenuItem onClick={() => exportData("csv")} disabled={isActionLoading}>
           Export
         </MenuItem>
       </Menu>
@@ -702,8 +750,8 @@ const AllPolicies = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setOpenArchiveModal(false)} 
+          <Button
+            onClick={() => setOpenArchiveModal(false)}
             color="primary"
             disabled={isActionLoading}
           >
@@ -727,10 +775,7 @@ const AllPolicies = () => {
       </Dialog>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
-        open={openDeleteModal}
-        onClose={() => setOpenDeleteModal(false)}
-      >
+      <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
         <DialogTitle>
           {selected.length > 1 ? "Delete Policies" : "Delete Policy"}
         </DialogTitle>
@@ -742,8 +787,8 @@ const AllPolicies = () => {
           </DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button 
-            onClick={() => setOpenDeleteModal(false)} 
+          <Button
+            onClick={() => setOpenDeleteModal(false)}
             color="primary"
             disabled={isActionLoading}
           >
