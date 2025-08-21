@@ -45,6 +45,7 @@ import AllPolicies from "../pages/Operationsmanuals/components/AllPolicies";
 import MediaFolderViewer from "../pages/FileManager/FileManager";
 import CreatePolicies from "../pages/Operationsmanuals/components/policies/CreatePolicies";
 import PolicyDetails from "../pages/Operationsmanuals/components/policies/PolicyDetails";
+import PolicyPermissions from "../pages/Operationsmanuals/components/policies/Permissions";
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
@@ -243,16 +244,12 @@ export const router = createBrowserRouter([
             element: <PolicyDetails />,
           },
           {
-            path: "edit/:policyId/details",
-            element: <ManualsDetails />,
-          },
-          {
             path: "edit/:policyId/permissions",
-            element: <ManualsPermissions />,
+            element: <PolicyPermissions />,
           },
           {
             path: "edit/:policyId/verification",
-            element: <div>Verification Component</div>, // Replace with actual component
+            element: <div>Verification Component</div>,
           },
         ],
       },

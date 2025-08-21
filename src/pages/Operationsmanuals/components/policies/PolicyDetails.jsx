@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Box,
   Typography,
@@ -41,13 +42,13 @@ import {
   Edit as EditIcon,
 } from "@mui/icons-material";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutline";
+import ArrowBack from "@mui/icons-material/ArrowBack";
 import Grid from "@mui/material/Grid";
 import RichTextEditor from "../../../../components/RichTextEditor";
 import { httpClient } from "../../../../utils/httpClientSetup";
 import { useNotification } from "../../../../hooks/useNotification";
-import AddVideo from "./AddVideo";
 import MediaFolderViewer from "../../../FileManager/FileManager";
-import { useParams } from "react-router-dom";
+import AddVideo from "./AddVideo";
 
 const FormGrid = styled(Grid)(() => ({
   display: "flex",
@@ -178,8 +179,10 @@ const PolicyDetails = () => {
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
 
-  const { id } = useParams(); // Extracts manual ID from route
-
+  const [searchParams] = useSearchParams();
+  const navigationId = searchParams.get("navigationId");
+  const { id } = useParams();
+  const navigate = useNavigate();
   const showNotification = useNotification();
 
   useEffect(() => {
@@ -192,6 +195,38 @@ const PolicyDetails = () => {
       })
       .catch((err) => console.error("Error fetching collections:", err));
   }, []);
+
+  useEffect(() => {
+    if (navigationId) {
+      autoMapNavigation(navigationId);
+    }
+  }, [navigationId]);
+
+  const autoMapNavigation = async (navId) => {
+    try {
+      const navRes = await httpClient.get(`/navigations/${navId}`);
+      if (navRes.data.success) {
+        const navItem = navRes.data.data;
+        const collectionRes = await httpClient.get(
+          `/collections/${navItem.collection_id}`
+        );
+        if (collectionRes.data.success) {
+          const collection = collectionRes.data.data;
+          setSelectedCollection(collection);
+          const tree = await fetchNavigations(collection.id);
+          if (tree) {
+            const pathTitles = getPathToItem(tree, navItem.id);
+            if (pathTitles) {
+              const fullPath = [collection.title, ...pathTitles];
+              setMappedMappings([{ navId: navItem.id, fullPath }]);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error auto-mapping navigation:", err);
+    }
+  };
 
   useEffect(() => {
     if (navigationTree.length > 0) {
@@ -216,10 +251,12 @@ const PolicyDetails = () => {
         const data = res.data.data;
         const tree = buildNavigationTree(data);
         setNavigationTree(tree);
+        return tree;
       }
     } catch (err) {
       console.error("Error fetching navigations:", err);
     }
+    return null;
   };
 
   const handleChange = (e) => {
@@ -659,13 +696,35 @@ const PolicyDetails = () => {
           gap: 3,
         }}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 2, textAlign: "center", color: "#2d3748", fontWeight: 700 }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          Policy Details
-        </Typography>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              mb: 2,
+              textAlign: "center",
+              color: "#2d3748",
+              fontWeight: 700,
+            }}
+          >
+            Policy Details
+          </Typography>
+          <Button
+            variant="contained"
+            color="primary"
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </Button>
+        </Box>
+
         <Paper
           elevation={3}
           sx={{

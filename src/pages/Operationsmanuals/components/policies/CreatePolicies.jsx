@@ -70,9 +70,9 @@ const CreatePolicies = () => {
             />
             <EqualWidthTab
               label="Permissions"
-              value="permission"
+              value="permissions"
               component={Link}
-              to="permission"
+              to="permissions"
             />
             <EqualWidthTab
               label="Verification"

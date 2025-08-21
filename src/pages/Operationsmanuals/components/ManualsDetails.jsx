@@ -103,10 +103,8 @@ const ManualsDetails = () => {
 
       let response;
       if (isEditing) {
-        // Use PUT or PATCH for editing
         response = await httpClient.put(`/collections/${id}`, submitData);
       } else {
-        // Use POST for creating new
         response = await httpClient.post("/collections", submitData);
       }
 
@@ -127,6 +125,8 @@ const ManualsDetails = () => {
             thumbnailPreview: "",
           });
         }
+      } else {
+        showNotification("error", data.message || "Error saving manual");
       }
     } catch (err) {
       console.error("Error saving manual:", err);

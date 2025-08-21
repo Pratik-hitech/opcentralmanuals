@@ -104,8 +104,8 @@ const ManualsContent = () => {
   };
 
   const handlePolicyClick = () => {
-    navigate(`/manuals/edit/${id}/policies/create/details`);
     handleMenuClose();
+    navigate(`/manuals/edit/${id}/policies/create/details`);
   };
 
   const handleModalClose = () => {
@@ -195,10 +195,11 @@ const ManualsContent = () => {
     setIsModalOpen(true);
   };
 
-  // Handle Add Policy (placeholder)
   const handleAddPolicyClick = () => {
     setAddMenuAnchorEl(null);
-    console.log("Add policy under item:", currentItem);
+    navigate(
+      `/manuals/edit/${id}/policies/create/details?navigationId=${currentItem.id}`
+    );
   };
 
   // Handle Edit
