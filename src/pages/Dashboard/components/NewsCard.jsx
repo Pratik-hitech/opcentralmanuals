@@ -118,9 +118,9 @@ export default function NewsCard({ newsData }) {
           <MenuItem onClick={() => handleMenuItemClick("/manage/news")}>
             Manage Articles
           </MenuItem>
-          <MenuItem onClick={() => handleMenuItemClick("/admin/news/delete")}>
+          {/* <MenuItem onClick={() => handleMenuItemClick("/admin/news/delete")}>
             View all articles
-          </MenuItem>
+          </MenuItem> */}
         </Menu>
       </div>
 
