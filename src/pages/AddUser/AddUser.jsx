@@ -11,22 +11,18 @@ import {
   IconButton,
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
-import { useSearchParams } from "react-router-dom";
-import { httpClient } from "../../utils/httpClientSetup"
+import { useParams } from "react-router-dom";
+import { httpClient } from "../../utils/httpClientSetup";
 import CompanyLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
 
 const AddUser = () => {
+  const { id: userId } = useParams(); // get id from URL
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
-
-  const [searchParams] = useSearchParams();
-//   const userId = searchParams.get("id");
- const userId = 2;
-  const hash = searchParams.get("hash");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -38,7 +34,7 @@ const AddUser = () => {
     }
 
     try {
-      const response = await httpClient.put(`users/${userId}`, { password, hash });
+      const response = await httpClient.put(`users/${userId}`, { password });
       console.log("API Response:", response);
 
       setSnackbar({
@@ -68,7 +64,6 @@ const AddUser = () => {
         p: 2,
       }}
     >
-      {/* Outer container */}
       <Paper
         elevation={8}
         sx={{
@@ -120,52 +115,52 @@ const AddUser = () => {
           </Typography>
 
           <Box component="form" onSubmit={handleSubmit} sx={{ width: "100%", maxWidth: 400 }}>
-           <TextField
-  label="Password"
-  type={showPassword ? "text" : "password"}
-  fullWidth
-  margin="normal"
-  value={password}
-  onChange={(e) => setPassword(e.target.value)}
-  required
-  onCopy={(e) => e.preventDefault()}
-  onPaste={(e) => e.preventDefault()}
-  onCut={(e) => e.preventDefault()}
-  InputProps={{
-    endAdornment: (
-      <InputAdornment position="end">
-        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
-          {showPassword ? <VisibilityOff /> : <Visibility />}
-        </IconButton>
-      </InputAdornment>
-    ),
-  }}
-/>
+            <TextField
+              label="Password"
+              type={showPassword ? "text" : "password"}
+              fullWidth
+              margin="normal"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              onCopy={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
-<TextField
-  label="Confirm Password"
-  type={showConfirmPassword ? "text" : "password"}
-  fullWidth
-  margin="normal"
-  value={confirmPassword}
-  onChange={(e) => setConfirmPassword(e.target.value)}
-  required
-  onCopy={(e) => e.preventDefault()}
-  onPaste={(e) => e.preventDefault()}
-  onCut={(e) => e.preventDefault()}
-  InputProps={{
-    endAdornment: (
-      <InputAdornment position="end">
-        <IconButton
-          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-          edge="end"
-        >
-          {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
-        </IconButton>
-      </InputAdornment>
-    ),
-  }}
-/>
+            <TextField
+              label="Confirm Password"
+              type={showConfirmPassword ? "text" : "password"}
+              fullWidth
+              margin="normal"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              onCopy={(e) => e.preventDefault()}
+              onPaste={(e) => e.preventDefault()}
+              onCut={(e) => e.preventDefault()}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      edge="end"
+                    >
+                      {showConfirmPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
 
             {errorMessage && (
               <Typography color="error" sx={{ mt: 1, mb: 1 }}>
