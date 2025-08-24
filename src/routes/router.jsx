@@ -47,6 +47,8 @@ import ViewPolicy from "../pages/Operationsmanuals/components/ViewPolicy";
 import ProtectedRoute from "./ProtectedRoutes";
 import ErrorPage from "../components/ErrorHandlers/ErrorPage";
 import PermissionDenied from "../components/PermissionDenied/PermissionDenied";
+import AddUser from "../pages/AddUser/AddUser";
+import VerifyUserPage from "../pages/VerifyUser/VerifyUser";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -59,6 +61,14 @@ export const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+ {
+    path: "/verify",
+    element: <VerifyUserPage />,
+  },
+  {
+    path : "/create-password/:id ",
+    element : <AddUser />
   },
   {
     path: "/dashboard",
@@ -442,7 +452,7 @@ export const router = createBrowserRouter([
        
       </PrivateRoute>
     ),
-    //  errorElement: <PermissionDenied />,
+     errorElement: <PermissionDenied />,
     children: [
       { index: true, element: <ManageLocation /> },
       {
@@ -465,6 +475,7 @@ export const router = createBrowserRouter([
        
       </PrivateRoute>
   ),
+  errorElement: <PermissionDenied overlay/>,
   children:[
     {
       path:"" , element : <GeneralSettings />,
