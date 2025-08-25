@@ -46,6 +46,7 @@ import MediaFolderViewer from "../pages/FileManager/FileManager";
 import CreatePolicies from "../pages/Operationsmanuals/components/policies/CreatePolicies";
 import PolicyDetails from "../pages/Operationsmanuals/components/policies/PolicyDetails";
 import PolicyPermissions from "../pages/Operationsmanuals/components/policies/Permissions";
+import OperationsManual from "../pages/Operationsmanuals/components/manual/OperationsManual";
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
@@ -109,6 +110,18 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <OperationsManuals /> },
       { path: "policies/all", element: <AllPolicies /> },
+    ],
+  },
+  {
+    path: "/operations/manual/:id",
+    element: (
+      <PrivateRoute>
+        <PrivateLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      { index: true, element: <OperationsManual /> },
+      { path: "policy/:policyId", element: <OperationsManual /> },
     ],
   },
   {
@@ -241,6 +254,10 @@ export const router = createBrowserRouter([
         children: [
           {
             path: "create/details",
+            element: <PolicyDetails />,
+          },
+          {
+            path: "edit/:policyId/details",
             element: <PolicyDetails />,
           },
           {

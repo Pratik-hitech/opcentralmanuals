@@ -363,8 +363,6 @@ const ManualsContent = () => {
 
   const navigationTree = buildNavigationTree(navigations);
 
-  console.log(navigationTree, "navigationTree content");
-
   return (
     <Container
       maxWidth={false}
