@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   Box,
   TextField,
@@ -9,7 +9,7 @@ import {
   Container,
   CircularProgress,
 } from "@mui/material";
-import { CloudUpload, Delete } from "@mui/icons-material";
+import { ArrowBack, CloudUpload, Delete } from "@mui/icons-material";
 import { httpClient } from "../../../utils/httpClientSetup";
 import { useNotification } from "../../../hooks/useNotification";
 
@@ -26,6 +26,7 @@ const ManualsDetails = () => {
     thumbnailPreview: "",
   });
 
+  const navigate = useNavigate();
   const showNotification = useNotification();
 
   // Fetch manual data when component mounts (if in edit mode)
@@ -175,13 +176,29 @@ const ManualsDetails = () => {
           gap: 3,
         }}
       >
-        <Typography
-          variant="h4"
-          component="h1"
-          sx={{ mb: 2, textAlign: "center" }}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
         >
-          {isEditing ? "Edit Manual" : "Create Manual"}
-        </Typography>
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{ mb: 2, textAlign: "center" }}
+          >
+            {isEditing ? "Edit Manual" : "Create Manual"}
+          </Typography>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<ArrowBack />}
+            onClick={() => navigate(-1)}
+          >
+            Back
+          </Button>
+        </Box>
 
         <Paper elevation={3} sx={{ p: 4 }}>
           <Box
