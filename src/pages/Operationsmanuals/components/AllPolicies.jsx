@@ -42,6 +42,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { httpClient } from "../../../utils/httpClientSetup";
 import { format } from "date-fns";
+import { useNavigate } from "react-router-dom";
 
 const AllPolicies = () => {
   // State declarations
@@ -68,6 +69,8 @@ const AllPolicies = () => {
     severity: "success",
   });
   const [tabValue, setTabValue] = useState("active");
+
+  const navigate = useNavigate();
 
   // Fetch policies
   const fetchPolicies = async () => {
@@ -144,6 +147,12 @@ const AllPolicies = () => {
   const handleChangeRowsPerPage = (e) => {
     setRowsPerPage(parseInt(e.target.value, 10));
     setPage(0);
+  };
+
+  const handleEditClick = (id) => {
+    setRowMenuAnchorEl(null);
+
+    navigate(`/manuals/edit/${id}/policies/edit/${id}/details`);
   };
 
   // Archive a policy
@@ -690,7 +699,7 @@ const AllPolicies = () => {
         onClose={handleMenuClose(setRowMenuAnchorEl)}
       >
         <MenuItem
-          onClick={handleMenuClose(setRowMenuAnchorEl)}
+          onClick={() => handleEditClick(activeRowId)}
           disabled={isActionLoading}
         >
           <Edit fontSize="small" sx={{ mr: 1 }} /> Edit
