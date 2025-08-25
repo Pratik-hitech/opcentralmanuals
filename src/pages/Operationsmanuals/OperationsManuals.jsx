@@ -60,6 +60,7 @@ const LogoCard = ({
   manual: { id, thumbnail: image, title, policies },
   onDelete,
   onManualView,
+  navigate,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -145,9 +146,16 @@ const LogoCard = ({
             size="small"
             color="primary"
             sx={{ bgcolor: "white" }}
-            component={Link}
-            to={`/operations/manual/${id}`}
-            onClick={handleViewClick}
+            onClick={(e) => {
+              e.preventDefault();
+              handleViewClick();
+              // Navigate to the manual page after a short delay to show loading state
+              setTimeout(() => {
+                navigate(`/operations/manual/${id}`, {
+                  state: { manualName: title },
+                });
+              }, 100);
+            }}
           >
             <VisibilityIcon fontSize="small" />
           </IconButton>
@@ -336,17 +344,13 @@ const OperationsManuals = () => {
     }, 1000);
   };
 
-  if (loading || manualLoading) {
+  if (loading) {
     return (
       <Box sx={{ p: 3, textAlign: "center" }}>
-        {manualLoading ? (
-          <>
-            <CircularProgress />
-            <Typography mt={2}>Loading {loadingManualName}...</Typography>
-          </>
-        ) : (
-          <Typography>Loading manuals...</Typography>
-        )}
+        <>
+          <CircularProgress />
+          <Typography mt={2}>Loading manuals...</Typography>
+        </>
       </Box>
     );
   }
@@ -485,6 +489,7 @@ const OperationsManuals = () => {
                 manual={manual}
                 onDelete={() => handleDeleteManual(manual.id)}
                 onManualView={handleManualView}
+                navigate={navigate}
               />
             ))}
           </Box>
@@ -527,6 +532,7 @@ const OperationsManuals = () => {
                             manual={manual}
                             onDelete={() => handleDeleteManual(manual.id)}
                             onManualView={handleManualView}
+                            navigate={navigate}
                           />
                         </TableCell>
                       </TableRow>
@@ -575,7 +581,7 @@ const OperationsManuals = () => {
 };
 
 // Separate component for table row actions
-const TableActions = ({ manual, onDelete, onManualView }) => {
+const TableActions = ({ manual, onDelete, onManualView, navigate }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const open = Boolean(anchorEl);
@@ -603,9 +609,16 @@ const TableActions = ({ manual, onDelete, onManualView }) => {
         <Tooltip title="View">
           <IconButton
             size="small"
-            component={Link}
-            to={`/operations/manual/${manual.id}`}
-            onClick={handleViewClick}
+            onClick={(e) => {
+              e.preventDefault();
+              handleViewClick();
+              // Navigate to the manual page after a short delay to show loading state
+              setTimeout(() => {
+                navigate(`/operations/manual/${manual.id}`, {
+                  state: { manualName: manual.title },
+                });
+              }, 100);
+            }}
           >
             <VisibilityIcon fontSize="small" />
           </IconButton>

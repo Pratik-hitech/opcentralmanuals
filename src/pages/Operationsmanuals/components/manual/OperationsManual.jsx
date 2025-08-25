@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Box,
   Grid,
@@ -31,6 +31,8 @@ import { httpClient } from "../../../../utils/httpClientSetup";
 const OperationsManual = () => {
   const { id, policyId } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const passedManualName = location.state?.manualName;
   const [manual, setManual] = useState(null);
   const [navigationTree, setNavigationTree] = useState([]);
   const [expandedItems, setExpandedItems] = useState({});
@@ -439,7 +441,10 @@ const OperationsManual = () => {
   if (loading) {
     return (
       <Box sx={{ p: 3, textAlign: "center" }}>
-        <Typography>Loading manual...</Typography>
+        <CircularProgress />
+        <Typography mt={2}>
+          Loading {passedManualName || "manual"}...
+        </Typography>
       </Box>
     );
   }
@@ -710,9 +715,11 @@ const OperationsManual = () => {
                     <Typography variant="h4" gutterBottom>
                       {manual.title}
                     </Typography>
-                    <Typography variant="body1" sx={{ mb: 3 }}>
-                      Please select a policy from the table of contents.
-                    </Typography>
+                    {navigationTree.length > 0 && (
+                      <Typography variant="body1" sx={{ mb: 3 }}>
+                        Please select a policy from the table of contents.
+                      </Typography>
+                    )}
                     {manual.thumbnail && (
                       <Box sx={{ textAlign: "center", my: 3 }}>
                         <img
