@@ -29,40 +29,84 @@
 
 
 // utils/httpClient.js
+// import axios from "axios";
+// import GlobalURL from "./global"; // Assumes GlobalURL[0].url is correct
+
+// // Determine environment
+// const baseURL = window.location.hostname === "localhost"
+//   ? GlobalURL[0].url  // local API URL
+//   : GlobalURL[0].url; // prod API URL (you can change this logic if needed)
+
+// // Create Axios instance
+// const httpClient = axios.create({
+//   baseURL,
+// });
+
+// // Add request interceptor to set Authorization header dynamically
+// httpClient.interceptors.request.use((config) => {
+//   const token = localStorage.getItem("token");
+
+//   if (token) {
+//     config.headers.Authorization = `Bearer ${token}`;
+//   }
+
+//   return config;
+// }, (error) => {
+//   return Promise.reject(error);
+// });
+
+// // (Optional) Add response interceptor to handle token expiration
+// httpClient.interceptors.response.use(
+//   (response) => response,
+//   (error) => {
+//     if (error.response?.status === 401) {
+//       // Token is invalid or expired
+//       localStorage.removeItem("token");
+//       window.location.href = "/login"; // Redirect to login page
+//     }
+//     return Promise.reject(error);
+//   }
+// );
+
+// export { httpClient };
+
+
 import axios from "axios";
 import GlobalURL from "./global"; // Assumes GlobalURL[0].url is correct
 
-// Determine environment
 const baseURL = window.location.hostname === "localhost"
-  ? GlobalURL[0].url  // local API URL
-  : GlobalURL[0].url; // prod API URL (you can change this logic if needed)
+  ? GlobalURL[0].url
+  : GlobalURL[0].url; 
 
-// Create Axios instance
-const httpClient = axios.create({
-  baseURL,
-});
+const httpClient = axios.create({ baseURL });
 
 // Add request interceptor to set Authorization header dynamically
-httpClient.interceptors.request.use((config) => {
-  const token = localStorage.getItem("token");
+httpClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
-
-// (Optional) Add response interceptor to handle token expiration
+// Remove window.location.href to prevent reload
+// Instead, return the error and handle 401 in the component
 httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Token is invalid or expired
+      // Optionally clear token locally
       localStorage.removeItem("token");
-      window.location.href = "/login"; // Redirect to login page
+      localStorage.removeItem("user");
+      // Return a custom error to handle in component
+      return Promise.reject({
+        ...error,
+        message: "Unauthorized. Please login again.",
+        status: 401
+      });
     }
     return Promise.reject(error);
   }

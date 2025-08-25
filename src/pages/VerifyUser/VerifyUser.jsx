@@ -1,52 +1,88 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { Box, Paper, Typography, CircularProgress, Snackbar, Alert, Button } from "@mui/material";
-import { httpClient } from "../../utils/httpClientSetup";
+import {
+  Box,
+  Paper,
+  Typography,
+  CircularProgress,
+  Snackbar,
+  Alert,
+  Button,
+} from "@mui/material";
+// import { httpClient } from "../../utils/httpClientSetup";
+import { publicClient } from "../../utils/publicClient";
 
 const VerifyUserPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const userId = searchParams.get("id");
-  const token = searchParams.get("token"); // or hash
+  const token = searchParams.get("token");
 
   const [loading, setLoading] = useState(true);
   const [verified, setVerified] = useState(false);
-  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
 
   useEffect(() => {
     const verifyUser = async () => {
       try {
-        const response = await httpClient.post(`users/verify`, {
+        const { data } = await publicClient.post(`users/verify`, {
           id: userId,
           token: token,
-        });
+        },
+        // {
+        //     headers:{
+        //         Authorization: ""
+        //     }
+        // }
+    
+    );
 
-        if (response.success) {
+        if (data.success) {
           setVerified(true);
-          setSnackbar({ open: true, message: "User verified successfully!", severity: "success" });
+          setSnackbar({
+            open: true,
+            message: data.message || "User verified successfully!",
+            severity: "success",
+          });
         } else {
           setVerified(false);
-          setSnackbar({ open: true, message: response.message || "Verification failed!", severity: "error" });
+          setSnackbar({
+            open: true,
+            message: data.message || "Verification failed!",
+            severity: "error",
+          });
         }
       } catch (error) {
-        console.error(error);
+        console.error("Verification error:", error);
         setVerified(false);
-        setSnackbar({ open: true, message: "Verification failed! Try again.", severity: "error" });
+        setSnackbar({
+          open: true,
+          message: "Verification failed! Please try again.",
+          severity: "error",
+        });
       } finally {
-        setLoading(false);
+        setLoading(false); 
       }
     };
 
     if (userId && token) {
       verifyUser();
     } else {
-      setSnackbar({ open: true, message: "Invalid verification link!", severity: "error" });
+      setSnackbar({
+        open: true,
+        message: "Invalid verification link!",
+        severity: "error",
+      });
       setLoading(false);
     }
   }, [userId, token]);
 
   const handleCreatePassword = () => {
-    navigate(`/create-password/${userId}`);
+    navigate(`/create-password/${userId}?token=${token}`,{ replace: true });
   };
 
   return (
@@ -74,10 +110,22 @@ const VerifyUserPage = () => {
           <CircularProgress />
         ) : (
           <>
-            <Typography variant="h5" fontWeight="bold" color={verified ? "success.main" : "error"} gutterBottom>
-              {verified ? "Your email has been verified!" : "Verification failed!"}
+            <Typography
+              variant="h5"
+              fontWeight="bold"
+              color={verified ? "success.main" : "error"}
+              gutterBottom
+            >
+              {verified
+                ? "Your email has been verified!"
+                : "Verification failed!"}
             </Typography>
-            <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 3 }}
+            >
               {verified
                 ? "You can now proceed to set your password or login."
                 : "The verification link is invalid or has expired."}
@@ -88,7 +136,14 @@ const VerifyUserPage = () => {
                 variant="contained"
                 color="primary"
                 onClick={handleCreatePassword}
-                sx={{ mt: 2, px: 4, py: 1.2, fontSize: "1rem", fontWeight: "bold", borderRadius: 3 }}
+                sx={{
+                  mt: 2,
+                  px: 4,
+                  py: 1.2,
+                  fontSize: "1rem",
+                  fontWeight: "bold",
+                  borderRadius: 3,
+                }}
               >
                 Create Password
               </Button>
