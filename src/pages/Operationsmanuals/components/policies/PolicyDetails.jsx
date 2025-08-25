@@ -41,7 +41,6 @@ import {
   Close as CloseIcon,
   Edit as EditIcon,
 } from "@mui/icons-material";
-import InfoOutlinedIcon from "@mui/icons-material/InfoOutline";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import Grid from "@mui/material/Grid";
 import RichTextEditor from "../../../../components/RichTextEditor";
@@ -79,36 +78,29 @@ const TagInput = styled("input")(({ theme }) => ({
     color: "#9ca3af",
   },
 }));
-
 const LinkTableContainer = styled(Paper)(({ theme }) => ({
   marginTop: theme.spacing(2),
   overflowX: "auto",
 }));
-
 const LinkTableRow = styled(TableRow)(({ theme }) => ({
   "&:nth-of-type(odd)": {
     backgroundColor: theme.palette.action.hover,
   },
-
   "&:last-child td, &:last-child th": {
     border: 0,
   },
 }));
-
 const LinkTypeCell = styled(TableCell)(({ theme }) => ({
   fontWeight: 500,
   width: "15%",
 }));
-
 const LinkNameCell = styled(TableCell)(({ theme }) => ({
   width: "60%",
 }));
-
 const LinkActionsCell = styled(TableCell)(({ theme }) => ({
   width: "25%",
   textAlign: "right",
 }));
-
 const FormFieldContainer = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(2),
   padding: theme.spacing(2),
@@ -116,7 +108,6 @@ const FormFieldContainer = styled(Box)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
   backgroundColor: theme.palette.background.paper,
 }));
-
 const SelectedPdfBox = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -127,14 +118,12 @@ const SelectedPdfBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
 
-// Helper function to extract YouTube video ID
 const getYoutubeVideoId = (url) => {
   const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
   const match = url.match(regExp);
   return match && match[2].length === 11 ? match[2] : null;
 };
 
-// Helper function to extract Vimeo video ID
 const getVimeoVideoId = (url) => {
   const regExp =
     /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
@@ -151,39 +140,34 @@ const PolicyDetails = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
-
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
-
   const [videos, setVideos] = useState([]);
-
   const [selectedLinks, setSelectedLinks] = useState([]);
   const [showMediaViewer, setShowMediaViewer] = useState(false);
-
   const [showPolicyDialog, setPolicyDialogOpen] = useState(false);
   const [policies, setPolicies] = useState([]);
   const [loadingPolicies, setLoadingPolicies] = useState(false);
   const [selectedPolicyId, setSelectedPolicyId] = useState(null);
   const [policyLinkToEditIndex, setPolicyLinkToEditIndex] = useState(null);
-
   const [embeddedPdf, setEmbeddedPdf] = useState(null);
   const [showPdfMediaViewer, setShowPdfMediaViewer] = useState(false);
-
   const [collections, setCollections] = useState([]);
   const [selectedCollection, setSelectedCollection] = useState(null);
   const [navigationTree, setNavigationTree] = useState([]);
   const [expandedItems, setExpandedItems] = useState({});
   const [mappedMappings, setMappedMappings] = useState([]);
-
   const [previewVideo, setPreviewVideo] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
-  const { id } = useParams();
+  const { id, policyId } = useParams();
   const navigate = useNavigate();
   const showNotification = useNotification();
+
+  const isEdit = !!policyId;
 
   useEffect(() => {
     httpClient
@@ -201,6 +185,52 @@ const PolicyDetails = () => {
       autoMapNavigation(navigationId);
     }
   }, [navigationId]);
+
+  useEffect(() => {
+    if (policyId) {
+      setLoading(true);
+      httpClient
+        .get(`/policies/${policyId}`)
+        .then(async (res) => {
+          if (res.data.success) {
+            const data = res.data.data;
+            setFormData({ title: data.title, content: data.content });
+            setTags(data.tags.map((t) => t.title));
+            setVideos(data.videos || []);
+            setSelectedLinks(data.links || []);
+            setEmbeddedPdf(data.embedded_pdf || null);
+
+            const mappings = [];
+            const navigationPromises = data.navigations.map(async (nav) => {
+              const colRes = await httpClient.get(
+                `/collections/${nav.collection_id}`
+              );
+              if (colRes.data.success) {
+                const col = colRes.data.data;
+                const treeRes = await httpClient.get(
+                  `/navigations?collection_id=${nav.collection_id}`
+                );
+                const treeData = treeRes.data.data || [];
+                const tree = buildNavigationTree(treeData);
+                const pathTitles = getPathToItem(tree, nav.id);
+                if (pathTitles) {
+                  const fullPath = [col.title, ...pathTitles];
+                  return { navId: nav.id, fullPath };
+                }
+              }
+              return null;
+            });
+            const resolvedMappings = await Promise.all(navigationPromises);
+            setMappedMappings(resolvedMappings.filter((m) => m !== null));
+          }
+          setLoading(false);
+        })
+        .catch((err) => {
+          showNotification("error", "Failed to fetch policy details");
+          setLoading(false);
+        });
+    }
+  }, [policyId]);
 
   const autoMapNavigation = async (navId) => {
     try {
@@ -263,12 +293,15 @@ const PolicyDetails = () => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
+
   const handleContentChange = (content) => {
     setFormData((prev) => ({ ...prev, content }));
   };
+
   const handleTagInputChange = (e) => {
     setTagInput(e.target.value);
   };
+
   const handleTagInputKeyDown = (e) => {
     if (e.key === "Enter" && tagInput.trim()) {
       e.preventDefault();
@@ -280,9 +313,11 @@ const PolicyDetails = () => {
       setTags(tags.slice(0, -1));
     }
   };
+
   const handleDeleteTag = (tagToDelete) => {
     setTags(tags.filter((tag) => tag !== tagToDelete));
   };
+
   const handleVideoAdd = (videoData) => {
     setVideos((prevVideos) => [...prevVideos, videoData]);
   };
@@ -320,17 +355,16 @@ const PolicyDetails = () => {
   const handleSelectPolicyLink = () => {
     handleCloseDropdown();
     fetchPolicies();
-    setPolicyLinkToEditIndex(null); // Indicate we are adding a new policy link
+    setPolicyLinkToEditIndex(null);
     setSelectedPolicyId(null);
     setPolicyDialogOpen(true);
   };
 
   const fetchPolicies = async () => {
-    if (policies.length > 0) return; // Don't fetch if already loaded
+    if (policies.length > 0) return;
     setLoadingPolicies(true);
     try {
       const response = await httpClient.get("/policies");
-      console.log("Fetched policies:", response.data);
       const { data } = response;
       if (data.success) {
         setPolicies(data.data || []);
@@ -352,7 +386,6 @@ const PolicyDetails = () => {
   const handleMediaViewerClose = (selectedFiles = []) => {
     setShowMediaViewer(false);
     if (selectedFiles.length > 0) {
-      // Check for duplicates before adding
       const newFileLinks = selectedFiles.map((file) => ({
         type: "file",
         data: file,
@@ -365,11 +398,9 @@ const PolicyDetails = () => {
               existingLink.data.id === newLink.data.id
           )
       );
-
       if (uniqueNewLinks.length !== newFileLinks.length) {
         showNotification("warning", "Some selected files are already linked.");
       }
-
       if (uniqueNewLinks.length > 0) {
         setSelectedLinks((prevLinks) => [...prevLinks, ...uniqueNewLinks]);
         showNotification(
@@ -383,11 +414,10 @@ const PolicyDetails = () => {
   const handlePolicyDialogClose = () => {
     setPolicyDialogOpen(false);
     setSelectedPolicyId(null);
-    setPolicyLinkToEditIndex(null); // Reset edit index
+    setPolicyLinkToEditIndex(null);
   };
 
   const handlePolicySelectChange = (event, newValue) => {
-    // newValue is the selected policy object or null
     setSelectedPolicyId(newValue ? newValue.id : null);
   };
 
@@ -399,14 +429,12 @@ const PolicyDetails = () => {
           (link, index) =>
             link.type === "policy" &&
             link.data.id === policyToAdd.id &&
-            index !== policyLinkToEditIndex // Allow editing the same policy
+            index !== policyLinkToEditIndex
         );
-
         if (isDuplicate) {
           showNotification("warning", "This policy is already linked.");
         } else {
           if (policyLinkToEditIndex !== null) {
-            // Editing existing policy link
             const updatedLinks = [...selectedLinks];
             updatedLinks[policyLinkToEditIndex] = {
               type: "policy",
@@ -415,12 +443,10 @@ const PolicyDetails = () => {
             setSelectedLinks(updatedLinks);
             showNotification("success", "Policy link updated.");
           } else {
-            // Adding new policy link
             setSelectedLinks((prevLinks) => [
               ...prevLinks,
               { type: "policy", data: policyToAdd },
             ]);
-            // showNotification("success", "Policy linked successfully.");
           }
         }
       }
@@ -451,14 +477,11 @@ const PolicyDetails = () => {
   const handlePdfMediaViewerClose = (selectedPdfFiles = []) => {
     setShowPdfMediaViewer(false);
     if (selectedPdfFiles.length > 0) {
-      // Only take the first selected PDF (enforce single selection)
       const selectedPdf = selectedPdfFiles[0];
-      // Optional: Check if it's actually a PDF (based on type or name)
       if (
         selectedPdf.type === "application/pdf" ||
         selectedPdf.name.toLowerCase().endsWith(".pdf")
       ) {
-        // Check if the same PDF is already embedded (optional)
         if (embeddedPdf && embeddedPdf.id === selectedPdf.id) {
           showNotification("info", "This PDF is already embedded.");
         } else {
@@ -469,7 +492,6 @@ const PolicyDetails = () => {
         showNotification("error", "Please select a PDF file.");
       }
     }
-    // Note: If user cancels, selectedPdfFiles will be empty, and embeddedPdf remains unchanged.
   };
 
   const handleRemoveEmbeddedPdf = () => {
@@ -483,7 +505,6 @@ const PolicyDetails = () => {
         itemMap[item.id] = { ...item, children: [] };
       }
     });
-
     const rootItems = [];
     items.forEach((item) => {
       if (item.table === null && item.parent_id === null) {
@@ -492,7 +513,6 @@ const PolicyDetails = () => {
         itemMap[item.parent_id].children.push(itemMap[item.id]);
       }
     });
-
     const sortItems = (items) => {
       return items
         .sort((a, b) => a.order - b.order)
@@ -501,7 +521,6 @@ const PolicyDetails = () => {
           children: sortItems(item.children),
         }));
     };
-
     return sortItems(rootItems);
   };
 
@@ -592,7 +611,6 @@ const PolicyDetails = () => {
   };
 
   const handleSubmit = async (e) => {
-    console.log("on submit");
     e.preventDefault();
     const submitData = new FormData();
     submitData.append("title", formData.title);
@@ -600,23 +618,18 @@ const PolicyDetails = () => {
     tags.forEach((tag, index) => {
       submitData.append(`tags[${index}]`, tag);
     });
-
-    // Append linked files and policies with new format
     selectedLinks.forEach((link, index) => {
       if (link.type === "file") {
         submitData.append(`links[${index}][type]`, "file");
         submitData.append(`links[${index}][type_id]`, link.data.id);
       } else if (link.type === "policy") {
         submitData.append(`links[${index}][type]`, "policy");
-        submitData.append(`links[${index}][type_id]`, link.data.id);
+        submitData.append(`links[${index}][type_id]`, link.data?.id);
       }
     });
-
-    // Append video details in the required format
     videos.forEach((video, index) => {
       submitData.append(`videos[${index}][type]`, video.type);
       submitData.append(`videos[${index}][title]`, video.title);
-
       if (video.type === "upload" && video.file) {
         submitData.append(`videos[${index}][file]`, video.file);
       } else if (
@@ -629,15 +642,9 @@ const PolicyDetails = () => {
         );
       }
     });
-
     if (embeddedPdf) {
       submitData.append("embedded_pdf_id", embeddedPdf.id);
     }
-
-    for (const [key, value] of Object.entries(submitData)) {
-      console.log(key, value);
-    }
-
     mappedMappings.forEach((mapping, index) => {
       submitData.append(`navigations[${index}]`, mapping.navId);
     });
@@ -646,25 +653,30 @@ const PolicyDetails = () => {
 
     try {
       setLoading(true);
+      let response;
+      if (isEdit) {
+        response = await httpClient.post(`/policies/${policyId}`, submitData);
+      } else {
+        response = await httpClient.post("/policies", submitData);
+      }
 
-      const response = await httpClient.post("/policies", submitData);
-      console.log("Policy saved:", response.data);
-      const { data } = response;
-      if (data.success) {
+      if (response.data.success) {
         showNotification(
           "success",
-          data.message || "Policy saved successfully"
+          response.data.message ||
+            `Policy ${isEdit ? "updated" : "saved"} successfully`
         );
-        // Optionally reset form
-        setFormData({ title: "", content: "<p>Hello Blue Wheelers!</p>" });
-        setTags([]);
-        setSelectedLinks([]);
-        setEmbeddedPdf(null);
-        setIsVideoEnabled(false);
-        setMappedMappings([]);
-        setSelectedCollection(null);
-        setNavigationTree([]);
-        setVideos([]); // Reset videos
+        if (!isEdit) {
+          setFormData({ title: "", content: "<p>Hello Blue Wheelers!</p>" });
+          setTags([]);
+          setSelectedLinks([]);
+          setEmbeddedPdf(null);
+          setIsVideoEnabled(false);
+          setMappedMappings([]);
+          setSelectedCollection(null);
+          setNavigationTree([]);
+          setVideos([]);
+        }
       }
     } catch (err) {
       console.error("Error saving policy:", err);
@@ -689,12 +701,7 @@ const PolicyDetails = () => {
       }}
     >
       <Box
-        sx={{
-          width: "65%",
-          display: "flex",
-          flexDirection: "column",
-          gap: 3,
-        }}
+        sx={{ width: "65%", display: "flex", flexDirection: "column", gap: 3 }}
       >
         <Box
           sx={{
@@ -716,7 +723,7 @@ const PolicyDetails = () => {
             Policy Details
           </Typography>
           <Button
-            variant="contained"
+            variant="outlined"
             color="primary"
             startIcon={<ArrowBack />}
             onClick={() => navigate(-1)}
@@ -724,7 +731,6 @@ const PolicyDetails = () => {
             Back
           </Button>
         </Box>
-
         <Paper
           elevation={3}
           sx={{
@@ -737,13 +743,8 @@ const PolicyDetails = () => {
           <Box
             component="form"
             onSubmit={handleSubmit}
-            sx={{
-              display: "flex",
-              flexDirection: "column",
-              gap: 3,
-            }}
+            sx={{ display: "flex", flexDirection: "column", gap: 3 }}
           >
-            {/* Title Field */}
             <FormGrid size={{ xs: 12, md: 6 }}>
               <FormLabel
                 htmlFor="title"
@@ -775,7 +776,6 @@ const PolicyDetails = () => {
                 }}
               />
             </FormGrid>
-            {/* Body Content Field */}
             <FormGrid size={{ xs: 12, md: 6 }}>
               <FormLabel
                 htmlFor="content"
@@ -784,7 +784,6 @@ const PolicyDetails = () => {
               >
                 Body Content
               </FormLabel>
-
               <RichTextEditor
                 value={formData.content}
                 onChange={handleContentChange}
@@ -792,14 +791,7 @@ const PolicyDetails = () => {
             </FormGrid>
             <Box>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <FormLabel
-                  sx={{
-                    color: "#4a5568",
-                    fontWeight: 500,
-                    display: "block",
-                    mr: 1,
-                  }}
-                >
+                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
                   Tags
                 </FormLabel>
                 <Tooltip
@@ -807,7 +799,7 @@ const PolicyDetails = () => {
                   placement="top-start"
                   arrow
                 >
-                  <InfoOutlinedIcon
+                  <InfoIcon
                     sx={{
                       color: "action.active",
                       fontSize: 18,
@@ -830,9 +822,7 @@ const PolicyDetails = () => {
                       color: "#667eea",
                       "& .MuiChip-deleteIcon": {
                         color: "#667eea",
-                        "&:hover": {
-                          color: "#5a6fd8",
-                        },
+                        "&:hover": { color: "#5a6fd8" },
                       },
                     }}
                   />
@@ -857,7 +847,6 @@ const PolicyDetails = () => {
                 the last tag.
               </Typography>
             </Box>
-            {/* Video Component */}
             <AddVideo
               isEnabled={isVideoEnabled}
               onToggle={setIsVideoEnabled}
@@ -867,7 +856,6 @@ const PolicyDetails = () => {
               onVideoPreview={handleVideoPreview}
               videos={videos}
             />
-
             <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
@@ -878,7 +866,7 @@ const PolicyDetails = () => {
                   placement="top-start"
                   arrow
                 >
-                  <InfoOutlinedIcon
+                  <InfoIcon
                     sx={{
                       color: "action.active",
                       fontSize: 18,
@@ -900,23 +888,18 @@ const PolicyDetails = () => {
                 >
                   Create Links
                 </Button>
-
                 <Menu
                   id="create-links-menu"
                   anchorEl={anchorEl}
                   open={openDropdown}
                   onClose={handleCloseDropdown}
-                  MenuListProps={{
-                    "aria-labelledby": "create-links-button",
-                  }}
+                  MenuListProps={{ "aria-labelledby": "create-links-button" }}
                 >
                   <MenuItem onClick={handleSelectFileLink}>File</MenuItem>
                   <MenuItem onClick={handleSelectPolicyLink}>Policy</MenuItem>
                 </Menu>
               </Box>
             </FormFieldContainer>
-
-            {/* Selected Links Table/List */}
             {selectedLinks.length > 0 && (
               <LinkTableContainer>
                 <TableContainer>
@@ -931,15 +914,15 @@ const PolicyDetails = () => {
                     <TableBody>
                       {selectedLinks.map((link, index) => (
                         <LinkTableRow
-                          key={`${link.type}-${link.data.id || index}`}
+                          key={`${link.type}-${link.data?.id || index}`}
                         >
                           <LinkTypeCell component="th" scope="row">
                             {link.type === "file" ? "File" : "Policy"}
                           </LinkTypeCell>
                           <LinkNameCell>
                             {link.type === "file"
-                              ? link.data.name
-                              : link.data.title}
+                              ? link.data?.name
+                              : link.data?.title}
                           </LinkNameCell>
                           <LinkActionsCell>
                             {link.type === "policy" && (
@@ -967,18 +950,17 @@ const PolicyDetails = () => {
                 </TableContainer>
               </LinkTableContainer>
             )}
-
             <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
                   Embed PDF
                 </FormLabel>
                 <Tooltip
-                  title={`Embedding a PDF will display the PDF to the user on screen, it will not be able to be downloaded. Only 1 PDF can be embedded. Choose "Links" instead if you want the PDF to be downloadable or multiple files.`}
+                  title="Embedding a PDF will display the PDF to the user on screen, it will not be able to be downloaded. Only 1 PDF can be embedded. Choose 'Links' instead if you want the PDF to be downloadable or multiple files."
                   placement="top-start"
                   arrow
                 >
-                  <InfoOutlinedIcon
+                  <InfoIcon
                     sx={{
                       color: "action.active",
                       fontSize: 18,
@@ -987,7 +969,6 @@ const PolicyDetails = () => {
                   />
                 </Tooltip>
               </Box>
-
               {embeddedPdf ? (
                 <SelectedPdfBox>
                   <Typography
@@ -1021,8 +1002,6 @@ const PolicyDetails = () => {
                 </Box>
               )}
             </FormFieldContainer>
-
-            {/* Mappings Field */}
             <FormGrid size={{ xs: 12 }}>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
@@ -1108,7 +1087,6 @@ const PolicyDetails = () => {
                 </Grid>
               </Grid>
             </FormGrid>
-            {/* Media Folder Viewer Dialog (for Links) */}
             <Dialog
               fullScreen
               open={showMediaViewer}
@@ -1137,12 +1115,10 @@ const PolicyDetails = () => {
                     handleMediaViewerClose(selectedFiles)
                   }
                   onCloseRequest={() => handleMediaViewerClose([])}
-                  fileTypeFilter={null} // Show all files for general linking
+                  fileTypeFilter={null}
                 />
               </DialogContent>
             </Dialog>
-
-            {/* Media Folder Viewer Dialog (for Embed PDF - PDF only) */}
             <Dialog
               fullScreen
               open={showPdfMediaViewer}
@@ -1175,8 +1151,6 @@ const PolicyDetails = () => {
                 />
               </DialogContent>
             </Dialog>
-
-            {/* Policy Selection Dialog */}
             <Dialog
               open={showPolicyDialog}
               onClose={handlePolicyDialogClose}
@@ -1224,29 +1198,25 @@ const PolicyDetails = () => {
                 </Button>
               </DialogActions>
             </Dialog>
-
             <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
-              <Button
-                type="submit"
-                variant="contained"
-                size="large"
-                disabled={loading} // Disable while submitting
-                sx={{
-                  fontWeight: 600,
-                  textTransform: "none",
-                }}
-              >
+              <Button type="submit" variant="contained" disabled={loading}>
                 {loading ? (
-                  <CircularProgress size={24} color="inherit" />
+                  <Box sx={{ display: "flex", alignItems: "center" }}>
+                    <CircularProgress size={18} color="inherit" />
+                    <Typography variant="body2" sx={{ ml: 1 }}>
+                      {isEdit ? "Updating" : "Saving"}
+                    </Typography>
+                  </Box>
+                ) : isEdit ? (
+                  "Update"
                 ) : (
-                  "Save Details"
+                  "Save"
                 )}
               </Button>
             </Box>
           </Box>
         </Paper>
       </Box>
-      {/* Video Preview Dialog */}
       <Dialog
         open={showVideoPreview}
         onClose={() => setShowVideoPreview(false)}

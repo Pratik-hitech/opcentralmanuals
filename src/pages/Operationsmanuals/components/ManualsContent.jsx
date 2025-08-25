@@ -47,7 +47,7 @@ const ManualsContent = () => {
   const [addMenuAnchorEl, setAddMenuAnchorEl] = useState(null);
   const [moreMenuAnchorEl, setMoreMenuAnchorEl] = useState(null);
   const [currentItem, setCurrentItem] = useState(null);
-  const [dialogMode, setDialogMode] = useState("create"); // 'create' or 'edit'
+  const [dialogMode, setDialogMode] = useState("create");
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -55,15 +55,13 @@ const ManualsContent = () => {
     severity: "success",
   });
 
-  const { id } = useParams(); // Extracts manual ID from route
-
+  const { id } = useParams();
   const navigate = useNavigate();
 
-  // Fetch navigations from API
   const fetchNavigations = async () => {
     try {
       const response = await httpClient.get(`/navigations?collection_id=${id}`);
-      const data = response.data.data || []; // Handle array structure
+      const data = response.data.data || [];
       setNavigations(data);
       return data;
     } catch (error) {
@@ -83,11 +81,9 @@ const ManualsContent = () => {
         setLoading(false);
       }
     };
-
     loadNavigations();
   }, []);
 
-  // Handle Create button click
   const handleCreateClick = (event) => {
     setAnchorEl(event.currentTarget);
   };
@@ -119,29 +115,23 @@ const ManualsContent = () => {
     }));
   };
 
-  // Build hierarchical navigation structure
   const buildNavigationTree = (items) => {
-    // Create a map of all items by their ID
     const itemMap = {};
     items &&
       items.forEach((item) => {
         itemMap[item.id] = { ...item, children: [] };
       });
 
-    // Build the tree structure
     const rootItems = [];
     items &&
       items.forEach((item) => {
         if (item.parent_id === null) {
-          // Top-level section
           rootItems.push(itemMap[item.id]);
         } else if (itemMap[item.parent_id]) {
-          // Child item - add to parent's children
           itemMap[item.parent_id].children.push(itemMap[item.id]);
         }
       });
 
-    // Sort items by order within each level
     const sortItems = (items) => {
       return (
         items &&
@@ -153,11 +143,9 @@ const ManualsContent = () => {
           }))
       );
     };
-
     return sortItems(rootItems);
   };
 
-  // Initialize expandedItems to auto-expand items with children
   useEffect(() => {
     if (navigations.length > 0) {
       const initialExpandedItems = {};
@@ -174,21 +162,18 @@ const ManualsContent = () => {
     }
   }, [navigations]);
 
-  // Handle Add icon click
   const handleAddClick = (event, item) => {
     event.stopPropagation();
     setCurrentItem(item);
     setAddMenuAnchorEl(event.currentTarget);
   };
 
-  // Handle More Vert icon click
   const handleMoreVertClick = (event, item) => {
     event.stopPropagation();
     setCurrentItem(item);
     setMoreMenuAnchorEl(event.currentTarget);
   };
 
-  // Handle Add Sub Section
   const handleAddSubSectionClick = () => {
     setAddMenuAnchorEl(null);
     setDialogMode("create");
@@ -202,20 +187,23 @@ const ManualsContent = () => {
     );
   };
 
-  // Handle Edit
   const handleEditClick = () => {
     setMoreMenuAnchorEl(null);
-    setDialogMode("edit");
-    setIsModalOpen(true);
+    if (currentItem && currentItem?.table !== null) {
+      navigate(
+        `/manuals/edit/${id}/policies/edit/${currentItem?.primary_id}/details`
+      );
+    } else {
+      setDialogMode("edit");
+      setIsModalOpen(true);
+    }
   };
 
-  // Handle Delete
   const handleDeleteClick = () => {
     setMoreMenuAnchorEl(null);
     setDeleteDialogOpen(true);
   };
 
-  // Confirm Delete
   const handleConfirmDelete = async () => {
     try {
       await httpClient.delete(`/navigations/${currentItem.id}`);
@@ -224,7 +212,7 @@ const ManualsContent = () => {
         message: "Item deleted successfully",
         severity: "success",
       });
-      await fetchNavigations(); // Refetch after delete
+      await fetchNavigations();
     } catch (error) {
       console.error("Error deleting item:", error);
       setSnackbar({
@@ -237,15 +225,13 @@ const ManualsContent = () => {
     }
   };
 
-  // Cancel Delete
   const handleCancelDelete = () => {
     setDeleteDialogOpen(false);
   };
 
-  // Handle successful save/update
   const handleSaveSuccess = async () => {
     try {
-      await fetchNavigations(); // Refetch the latest data
+      await fetchNavigations();
       setSnackbar({
         open: true,
         message: `Section ${
@@ -263,12 +249,10 @@ const ManualsContent = () => {
     }
   };
 
-  // Close snackbar
   const handleSnackbarClose = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
-  // Render navigation items recursively
   const renderNavigationItem = (item, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
@@ -276,23 +260,17 @@ const ManualsContent = () => {
 
     return (
       <React.Fragment key={item.id}>
-        {/* Shift entire ListItem to the right */}
-        <Box
-          sx={{
-            ml: depth * 3, // Indentation by shifting the entire box
-            mb: 0.5,
-          }}
-        >
+        <Box sx={{ ml: depth * 3, mb: 0.5 }}>
           <ListItem
             sx={{
               border: "1px solid #e0e0e0",
               borderRadius: 1,
               backgroundColor:
                 depth === 0
-                  ? "#f5f5f5" // Top-level sections
+                  ? "#f5f5f5"
                   : depth > 0 && !isPolicy
-                  ? "#fafafa" // Sub-sections
-                  : "white", // Policies
+                  ? "#fafafa"
+                  : "white",
             }}
           >
             {isPolicy && (
@@ -300,7 +278,6 @@ const ManualsContent = () => {
                 <Article sx={{ fontSize: 16 }} />
               </ListItemIcon>
             )}
-
             <ListItemText
               primary={item.title}
               sx={{
@@ -308,8 +285,6 @@ const ManualsContent = () => {
                 color: isPolicy ? "#1976d2" : "inherit",
               }}
             />
-
-            {/* Expand/Collapse Icon (only for items with children) */}
             {hasChildren && (
               <IconButton
                 size="small"
@@ -321,10 +296,7 @@ const ManualsContent = () => {
                 {isExpanded ? <ExpandLess /> : <ExpandMore />}
               </IconButton>
             )}
-
-            {/* Action Buttons */}
             <Box sx={{ display: "flex", gap: 1 }}>
-              {/* Add Icon with Dropdown (only for sections/sub-sections) */}
               {!isPolicy && (
                 <Tooltip title="Add">
                   <IconButton
@@ -335,8 +307,6 @@ const ManualsContent = () => {
                   </IconButton>
                 </Tooltip>
               )}
-
-              {/* More Vert Icon for Edit and Delete (only for sections/sub-sections) */}
               {!isPolicy && (
                 <Tooltip title="More Actions">
                   <IconButton
@@ -347,8 +317,6 @@ const ManualsContent = () => {
                   </IconButton>
                 </Tooltip>
               )}
-
-              {/* Edit and Delete for Policies (as before) */}
               {isPolicy && (
                 <>
                   <Tooltip title="Edit">
@@ -380,7 +348,6 @@ const ManualsContent = () => {
             </Box>
           </ListItem>
         </Box>
-
         {hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
@@ -394,8 +361,9 @@ const ManualsContent = () => {
     );
   };
 
-  // Build the navigation tree
   const navigationTree = buildNavigationTree(navigations);
+
+  console.log(navigationTree, "navigationTree content");
 
   return (
     <Container
@@ -409,12 +377,7 @@ const ManualsContent = () => {
       }}
     >
       <Box
-        sx={{
-          width: "70%",
-          display: "flex",
-          flexDirection: "column",
-          gap: 3,
-        }}
+        sx={{ width: "70%", display: "flex", flexDirection: "column", gap: 3 }}
       >
         <Typography
           variant="h4"
@@ -423,7 +386,6 @@ const ManualsContent = () => {
         >
           Content
         </Typography>
-        {/* <RichTextEditor value={content} onChange={setContent} /> */}
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 9 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
@@ -447,7 +409,6 @@ const ManualsContent = () => {
                 </div>
               </Box>
               <Divider sx={{ my: 2 }} />
-              {/* Display Navigations */}
               <Box>
                 {loading && <Typography>Loading...</Typography>}
                 {error && <Typography color="error">{error}</Typography>}
@@ -470,8 +431,6 @@ const ManualsContent = () => {
           </Grid>
         </Grid>
       </Box>
-
-      {/* Section Creation Dialog */}
       <CreateSectionDialog
         open={isModalOpen}
         onClose={handleModalClose}
@@ -480,8 +439,6 @@ const ManualsContent = () => {
         item={currentItem}
         onSaveSuccess={handleSaveSuccess}
       />
-
-      {/* Add Menu */}
       <Menu
         anchorEl={addMenuAnchorEl}
         open={Boolean(addMenuAnchorEl)}
@@ -490,8 +447,6 @@ const ManualsContent = () => {
         <MenuItem onClick={handleAddSubSectionClick}>Add Sub Section</MenuItem>
         <MenuItem onClick={handleAddPolicyClick}>Add Policy</MenuItem>
       </Menu>
-
-      {/* More Actions Menu */}
       <Menu
         anchorEl={moreMenuAnchorEl}
         open={Boolean(moreMenuAnchorEl)}
@@ -500,8 +455,6 @@ const ManualsContent = () => {
         <MenuItem onClick={handleEditClick}>Edit</MenuItem>
         <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
       </Menu>
-
-      {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialogOpen}
         onClose={handleCancelDelete}
@@ -525,8 +478,6 @@ const ManualsContent = () => {
           </Button>
         </DialogActions>
       </Dialog>
-
-      {/* Snackbar for notifications */}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={6000}
