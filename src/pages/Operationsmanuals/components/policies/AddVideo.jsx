@@ -119,7 +119,7 @@ const getYoutubeVideoId = (url) => {
 // Helper function to extract Vimeo video ID
 const getVimeoVideoId = (url) => {
   const regExp =
-    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
+    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
   const match = url.match(regExp);
   return match ? match[1] : null;
 };
@@ -437,15 +437,15 @@ const AddVideo = ({
                   </Typography>
                 </UploadArea>
                 {/* Preview for uploaded video */}
-                {videoObjectUrl && (
+                {(videoObjectUrl || videoData.url) && (
                   <Box sx={{ mt: 2 }}>
                     <Typography variant="subtitle2" sx={{ mb: 1 }}>
                       Preview:
                     </Typography>
                     <video
-                      src={videoObjectUrl}
+                      src={videoObjectUrl || videoData.url}
                       controls
-                      style={{ width: "100%", maxHeight: "400px" }}
+                      style={{ width: "100%", maxHeight: "460px" }}
                     />
                   </Box>
                 )}
@@ -512,7 +512,7 @@ const AddVideo = ({
                               allowFullScreen
                               style={{
                                 width: "100%",
-                                height: "450px",
+                                height: "400px",
                                 border: "none",
                               }}
                             />

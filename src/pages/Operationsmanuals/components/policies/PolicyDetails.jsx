@@ -197,6 +197,10 @@ const PolicyDetails = () => {
             setFormData({ title: data.title, content: data.content });
             setTags(data.tags.map((t) => t.title));
             setVideos(data.videos || []);
+            // Enable video switch if there are videos
+            if (data.videos && data.videos.length > 0) {
+              setIsVideoEnabled(true);
+            }
             setSelectedLinks(data.links || []);
             setEmbeddedPdf(data.embedded_pdf || null);
 
@@ -1224,7 +1228,6 @@ const PolicyDetails = () => {
         fullWidth
       >
         <DialogTitle>
-          Video Preview
           <IconButton
             aria-label="close"
             onClick={() => setShowVideoPreview(false)}
@@ -1249,7 +1252,16 @@ const PolicyDetails = () => {
                   <video
                     src={URL.createObjectURL(previewVideo.file)}
                     controls
-                    style={{ width: "100%", maxHeight: "400px" }}
+                    style={{
+                      width: "100%",
+                      height: "460px",
+                    }}
+                  />
+                ) : previewVideo.reference_url ? (
+                  <video
+                    src={previewVideo.reference_url}
+                    controls
+                    style={{ width: "100%", maxHeight: "480px" }}
                   />
                 ) : (
                   <Typography>No video file available</Typography>

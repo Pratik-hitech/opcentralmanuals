@@ -563,8 +563,6 @@ const MediaFolderViewer = ({
   const renderMediaCard = (media) => {
     const isSelected = selectedFiles.some((f) => f.id === media.id);
 
-    console.log("renderMediaCard", media);
-
     return (
       <Card
         sx={{
