@@ -241,7 +241,7 @@ const AddVideo = ({
                     variant="h6"
                     sx={{ color: "#2d3748", fontWeight: 600 }}
                   >
-                    Video
+                    Videos
                   </Typography>
                   <Typography variant="body2" sx={{ color: "#718096" }}>
                     Add engaging video to your policy

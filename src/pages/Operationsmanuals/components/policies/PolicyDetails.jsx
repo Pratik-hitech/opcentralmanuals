@@ -201,8 +201,44 @@ const PolicyDetails = () => {
             if (data.videos && data.videos.length > 0) {
               setIsVideoEnabled(true);
             }
-            setSelectedLinks(data.links || []);
-            setEmbeddedPdf(data.embedded_pdf || null);
+            // Transform API links to match existing structure for display
+            let transformedLinks = (data.links || []).map((link) => ({
+              type: link.type,
+              data: {
+                id: link.type_id,
+                name: link.name,
+                title: link.name,
+                url: link.url,
+              },
+            }));
+            const updatedLinks = await Promise.all(
+              transformedLinks.map(async (link) => {
+                if (link.data.name === null) {
+                  if (link.type === "file") {
+                    link.data.name = link.data.url.split("/").pop();
+                    link.data.title = link.data.name;
+                  } else if (link.type === "policy") {
+                    try {
+                      const policyRes = await httpClient.get(
+                        `/policies/${link.data.id}`
+                      );
+                      if (policyRes.data.success) {
+                        link.data.name = policyRes.data.data.title;
+                        link.data.title = policyRes.data.data.title;
+                      }
+                    } catch (err) {
+                      console.error(
+                        `Failed to fetch policy ${link.data.id}:`,
+                        err
+                      );
+                    }
+                  }
+                }
+                return link;
+              })
+            );
+            setSelectedLinks(updatedLinks);
+            setEmbeddedPdf(data.pdf || null);
 
             const mappings = [];
             const navigationPromises = data.navigations.map(async (nav) => {
@@ -631,11 +667,20 @@ const PolicyDetails = () => {
         submitData.append(`links[${index}][type_id]`, link.data?.id);
       }
     });
+
     videos.forEach((video, index) => {
       submitData.append(`videos[${index}][type]`, video.type);
       submitData.append(`videos[${index}][title]`, video.title);
-      if (video.type === "upload" && video.file) {
-        submitData.append(`videos[${index}][file]`, video.file);
+
+      if (video.type === "upload") {
+        if (video.file) {
+          submitData.append(`videos[${index}][file]`, video.file);
+        } else if (video.reference_url) {
+          submitData.append(
+            `videos[${index}][reference_url]`,
+            video.reference_url
+          );
+        }
       } else if (
         (video.type === "youtube" || video.type === "vimeo") &&
         video.reference_url
@@ -647,13 +692,17 @@ const PolicyDetails = () => {
       }
     });
     if (embeddedPdf) {
-      submitData.append("embedded_pdf_id", embeddedPdf.id);
+      submitData.append("embeded_pdf", embeddedPdf.id);
     }
     mappedMappings.forEach((mapping, index) => {
       submitData.append(`navigations[${index}]`, mapping.navId);
     });
 
     submitData.append("collection_id", id);
+
+    for (const [key, value] of submitData) {
+      console.log(`${key}: ${value}`);
+    }
 
     try {
       setLoading(true);
@@ -924,9 +973,7 @@ const PolicyDetails = () => {
                             {link.type === "file" ? "File" : "Policy"}
                           </LinkTypeCell>
                           <LinkNameCell>
-                            {link.type === "file"
-                              ? link.data?.name
-                              : link.data?.title}
+                            {link.data?.name || link.data?.title || "Unnamed"}
                           </LinkNameCell>
                           <LinkActionsCell>
                             {link.type === "policy" && (
@@ -1160,6 +1207,11 @@ const PolicyDetails = () => {
               onClose={handlePolicyDialogClose}
               maxWidth="sm"
               fullWidth
+              PaperProps={{
+                sx: {
+                  minHeight: "350px",
+                },
+              }}
             >
               <DialogTitle>
                 {policyLinkToEditIndex !== null
