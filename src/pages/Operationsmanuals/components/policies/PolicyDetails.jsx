@@ -700,10 +700,6 @@ const PolicyDetails = () => {
 
     submitData.append("collection_id", id);
 
-    for (const [key, value] of submitData) {
-      console.log(`${key}: ${value}`);
-    }
-
     try {
       setLoading(true);
       let response;
