@@ -193,7 +193,7 @@ const ManualsContent = () => {
     const itemToEdit = item || currentItem;
     if (itemToEdit && itemToEdit?.table !== null) {
       navigate(
-        `/manuals/edit/${id}/policies/edit/${itemToEdit?.primary_id}/details`
+        `/manuals/edit/${id}/policies/edit/${itemToEdit?.primary_id}/details?navigationId=${itemToEdit?.parent_id}`
       );
     } else {
       setDialogMode("edit");

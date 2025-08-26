@@ -126,7 +126,7 @@ const getYoutubeVideoId = (url) => {
 
 const getVimeoVideoId = (url) => {
   const regExp =
-    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^\/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
+    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
   const match = url.match(regExp);
   return match ? match[1] : null;
 };
@@ -197,11 +197,11 @@ const PolicyDetails = () => {
             setFormData({ title: data.title, content: data.content });
             setTags(data.tags.map((t) => t.title));
             setVideos(data.videos || []);
-            // Enable video switch if there are videos
+
             if (data.videos && data.videos.length > 0) {
               setIsVideoEnabled(true);
             }
-            // Transform API links to match existing structure for display
+
             let transformedLinks = (data.links || []).map((link) => ({
               type: link.type,
               data: {
@@ -211,6 +211,7 @@ const PolicyDetails = () => {
                 url: link.url,
               },
             }));
+
             const updatedLinks = await Promise.all(
               transformedLinks.map(async (link) => {
                 if (link.data.name === null) {
@@ -237,6 +238,7 @@ const PolicyDetails = () => {
                 return link;
               })
             );
+
             setSelectedLinks(updatedLinks);
             setEmbeddedPdf(data.pdf || null);
 
@@ -275,6 +277,7 @@ const PolicyDetails = () => {
   const autoMapNavigation = async (navId) => {
     try {
       const navRes = await httpClient.get(`/navigations/${navId}`);
+
       if (navRes.data.success) {
         const navItem = navRes.data.data;
         const collectionRes = await httpClient.get(
@@ -284,8 +287,10 @@ const PolicyDetails = () => {
           const collection = collectionRes.data.data;
           setSelectedCollection(collection);
           const tree = await fetchNavigations(collection.id);
+
           if (tree) {
             const pathTitles = getPathToItem(tree, navItem.id);
+
             if (pathTitles) {
               const fullPath = [collection.title, ...pathTitles];
               setMappedMappings([{ navId: navItem.id, fullPath }]);
@@ -1322,7 +1327,7 @@ const PolicyDetails = () => {
                     );
                     return videoId ? (
                       <iframe
-                        src={`https://www.youtube.com/embed/${videoId}`}
+                        src={`https://www.youtube.com/embed/ ${videoId}`}
                         title={previewVideo.title}
                         allowFullScreen
                         style={{
@@ -1344,7 +1349,7 @@ const PolicyDetails = () => {
                     const videoId = getVimeoVideoId(previewVideo.reference_url);
                     return videoId ? (
                       <iframe
-                        src={`https://player.vimeo.com/video/${videoId}`}
+                        src={`https://player.vimeo.com/video/ ${videoId}`}
                         title={previewVideo.title}
                         allowFullScreen
                         style={{
