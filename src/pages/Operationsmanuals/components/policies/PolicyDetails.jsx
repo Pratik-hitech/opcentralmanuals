@@ -164,6 +164,7 @@ const PolicyDetails = () => {
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
   const { id, policyId } = useParams();
+
   const navigate = useNavigate();
   const showNotification = useNotification();
 
@@ -183,11 +184,14 @@ const PolicyDetails = () => {
   useEffect(() => {
     if (navigationId) {
       autoMapNavigation(navigationId);
+    } else if (id && !policyId) {
+      // Fallback: Use collection id when navigationId is null
+      autoMapNavigationFromCollection(id);
     }
-  }, [navigationId]);
+  }, [navigationId, id, policyId]);
 
   useEffect(() => {
-    if (policyId && !navigationId) {
+    if (policyId) {
       setLoading(true);
       httpClient
         .get(`/policies/${policyId}`)
@@ -263,7 +267,11 @@ const PolicyDetails = () => {
               return null;
             });
             const resolvedMappings = await Promise.all(navigationPromises);
-            setMappedMappings(resolvedMappings.filter((m) => m !== null));
+            // Only set mappedMappings from policy data if there's no navigationId
+            // (navigationId takes precedence for auto-mapping)
+            if (!navigationId) {
+              setMappedMappings(resolvedMappings.filter((m) => m !== null));
+            }
           }
           setLoading(false);
         })
@@ -272,8 +280,7 @@ const PolicyDetails = () => {
           setLoading(false);
         });
     }
-  }, [policyId, navigationId]);
-
+  }, [policyId]);
   const autoMapNavigation = async (navId) => {
     try {
       const navRes = await httpClient.get(`/navigations/${navId}`);
@@ -308,6 +315,34 @@ const PolicyDetails = () => {
       console.error("Error auto-mapping navigation:", err);
     }
   };
+
+  const autoMapNavigationFromCollection = async (collectionId) => {
+    try {
+      const collectionRes = await httpClient.get(
+        `/collections/${collectionId}`
+      );
+
+      if (collectionRes.data.success) {
+        const collection = collectionRes.data.data;
+        setSelectedCollection(collection);
+
+        // For fallback, just map to the collection root (Manual only)
+        const newMapping = {
+          navId: null, // No specific navigation item
+          fullPath: [collection.title],
+          collectionId: collection.id,
+        };
+
+        setMappedMappings([newMapping]);
+
+        // Also load the navigation tree for the UI
+        await fetchNavigations(collection.id);
+      }
+    } catch (err) {
+      console.error("Error auto-mapping from collection:", err);
+    }
+  };
+
   useEffect(() => {
     if (navigationTree.length > 0) {
       const initialExpandedItems = {};
