@@ -188,11 +188,12 @@ const ManualsContent = () => {
     );
   };
 
-  const handleEditClick = () => {
+  const handleEditClick = (item = null) => {
     setMoreMenuAnchorEl(null);
-    if (currentItem && currentItem?.table !== null) {
+    const itemToEdit = item || currentItem;
+    if (itemToEdit && itemToEdit?.table !== null) {
       navigate(
-        `/manuals/edit/${id}/policies/edit/${currentItem?.primary_id}/details`
+        `/manuals/edit/${id}/policies/edit/${itemToEdit?.primary_id}/details`
       );
     } else {
       setDialogMode("edit");
@@ -325,8 +326,7 @@ const ManualsContent = () => {
                       size="small"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setCurrentItem(item);
-                        handleEditClick();
+                        handleEditClick(item);
                       }}
                     >
                       <Edit sx={{ fontSize: 18 }} />
@@ -457,7 +457,7 @@ const ManualsContent = () => {
         open={Boolean(moreMenuAnchorEl)}
         onClose={() => setMoreMenuAnchorEl(null)}
       >
-        <MenuItem onClick={handleEditClick}>Edit</MenuItem>
+        <MenuItem onClick={() => handleEditClick()}>Edit</MenuItem>
         <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
       </Menu>
       <Dialog
