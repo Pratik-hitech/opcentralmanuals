@@ -25,8 +25,9 @@ import {
   Menu,
   MenuItem,
   ListItemButton,
-  Checkbox, // Import Checkbox
-  FormControlLabel, // Import FormControlLabel
+  Checkbox,
+  FormControlLabel,
+  Drawer,
 } from "@mui/material";
 import {
   Folder as FolderIcon,
@@ -45,8 +46,11 @@ import {
   ViewList as ListViewIcon,
   Delete as DeleteIcon,
   Edit as EditIcon,
+  Info as InfoIcon,
 } from "@mui/icons-material";
+import DescriptionIcon from "@mui/icons-material/Description";
 import { styled } from "@mui/material/styles";
+import { httpClient } from "../../utils/httpClientSetup";
 
 // Updated color palette with cream gradient background
 const colors = {
@@ -60,76 +64,6 @@ const colors = {
   folderYellow: "#ffc107", // Windows folder yellow color
 };
 
-// Sample media data
-const sampleMedia = {
-  home: [
-    {
-      id: "img1",
-      name: "welcome.jpg",
-      type: "image",
-      url: "https://source.unsplash.com/random/300x300?nature",
-    },
-    {
-      id: "vid1",
-      name: "intro.mp4",
-      type: "video",
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
-    },
-  ],
-  operations: [
-    {
-      id: "img2",
-      name: "safety.jpg",
-      type: "image",
-      url: "https://source.unsplash.com/random/300x300?safety",
-    },
-    {
-      id: "vid2",
-      name: "procedure.mp4",
-      type: "video",
-      url: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4",
-    },
-  ],
-  breeds: [
-    {
-      id: "img3",
-      name: "breed1.jpg",
-      type: "image",
-      url: "https://source.unsplash.com/random/300x300?dog",
-    },
-    {
-      id: "img4",
-      name: "breed2.jpg",
-      type: "image",
-      url: "https://source.unsplash.com/random/300x300?cat",
-    },
-  ],
-};
-
-// Mock API functions
-const api = {
-  getFolders: () => {
-    const savedFolders = localStorage.getItem("mediaFolders");
-    return savedFolders ? JSON.parse(savedFolders) : null;
-  },
-  saveFolders: (folders) => {
-    localStorage.setItem("mediaFolders", JSON.stringify(folders));
-  },
-  uploadFile: (file) => {
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        const url = URL.createObjectURL(file);
-        resolve({
-          id: `file-${Date.now()}`,
-          name: file.name,
-          type: file.type.startsWith("video") ? "video" : "image",
-          url,
-        });
-      }, 1000);
-    });
-  },
-};
-
 const StyledTreeItem = styled(Box)(({ theme }) => ({
   width: "100%",
   borderRadius: theme.shape.borderRadius,
@@ -137,11 +71,6 @@ const StyledTreeItem = styled(Box)(({ theme }) => ({
   "&:hover": {
     backgroundColor: theme.palette.action.hover,
   },
-}));
-
-const SelectedCard = styled(Card)(({ theme }) => ({
-  border: `2px solid ${theme.palette.primary.main}`,
-  // ... other styles
 }));
 
 const MediaCardOverlay = styled(Box)(({ theme }) => ({
@@ -162,6 +91,14 @@ const MediaCardOverlay = styled(Box)(({ theme }) => ({
   },
 }));
 
+const formatFileSize = (bytes) => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
 const MediaFolderViewer = ({
   selectionMode = false,
   onSelectionConfirm,
@@ -169,9 +106,17 @@ const MediaFolderViewer = ({
   fileTypeFilter = null, // Prop for file type filtering (e.g., 'pdf')
 }) => {
   const [folders, setFolders] = useState([]);
-  const [selectedMedia, setSelectedMedia] = useState(null);
   const [currentFolder, setCurrentFolder] = useState(null);
-  const [viewMode, setViewMode] = useState("home");
+  const [currentContents, setCurrentContents] = useState({
+    subfolders: [],
+    media: [],
+  });
+  const [loadingContents, setLoadingContents] = useState(false);
+  const [selectedMedia, setSelectedMedia] = useState(null);
+  const [fileDetails, setFileDetails] = useState(null);
+  const [infoOpen, setInfoOpen] = useState(false);
+  const [infoLoading, setInfoLoading] = useState(false); // Add loading state for file info
+  const [viewMode, setViewMode] = useState("folder");
   const [newFolderName, setNewFolderName] = useState("");
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -188,50 +133,81 @@ const MediaFolderViewer = ({
   });
   const [viewType, setViewType] = useState("grid"); // 'grid' or 'list'
   const [selectedFiles, setSelectedFiles] = useState([]);
+  const [createParent, setCreateParent] = useState(null);
+  const [uploadToFolder, setUploadToFolder] = useState(null);
 
   const fileInputRef = useRef(null);
 
-  // Initialize folders from API/localStorage
-  useEffect(() => {
-    const loadFolders = () => {
-      const savedFolders = api.getFolders();
-      if (savedFolders) {
-        setFolders(savedFolders);
-        setCurrentFolder(savedFolders[0]);
-      } else {
-        // Initialize with sample data
-        const initialFolders = [
-          {
-            id: "home",
-            name: "Home",
-            isOpen: true,
-            media: [...sampleMedia.home],
-            subfolders: [
-              {
-                id: "operations",
-                name: "Operations Manual",
-                isOpen: false,
-                media: [...sampleMedia.operations],
-                subfolders: [],
-              },
-              {
-                id: "breeds",
-                name: "Restricted Breeds",
-                isOpen: false,
-                media: [...sampleMedia.breeds],
-                subfolders: [],
-              },
-            ],
-          },
-        ];
-        setFolders(initialFolders);
-        setCurrentFolder(initialFolders[0]);
-        api.saveFolders(initialFolders);
-      }
-    };
+  // Recursive function to map API folder data
+  const mapFolder = (f) => ({
+    id: f.id,
+    name: f.name,
+    parent_id: f.parent_id,
+    path: f.path,
+    isOpen: f.parent_id === null, // Open top-level folders by default
+    subfolders: f.folders ? f.folders.map(mapFolder) : [],
+  });
 
+  // Load folder tree from API
+  const loadFolders = async () => {
+    try {
+      const response = await httpClient.get("/files/tree");
+      const apiFolders = response.data.data;
+      const mappedFolders = apiFolders.map(mapFolder);
+      setFolders(mappedFolders);
+    } catch (error) {
+      console.error("Error fetching folder tree:", error);
+    }
+  };
+
+  useEffect(() => {
     loadFolders();
+    setCurrentFolder({
+      id: null,
+      name: "Media Library",
+      parent_id: null,
+      path: "",
+    });
   }, []);
+
+  // Fetch contents when currentFolder changes
+  useEffect(() => {
+    if (currentFolder) {
+      loadContents();
+    }
+  }, [currentFolder]);
+
+  const loadContents = async () => {
+    setLoadingContents(true);
+    try {
+      const id = currentFolder.id;
+      const url = id == null ? "/files" : `/files?parent_id=${id}`;
+      const response = await httpClient.get(url);
+      const items = response.data.data;
+      const subfolders = items
+        .filter((i) => i.file_type === "folder")
+        .map((i) => ({
+          id: i.id,
+          company_id: i.company_id,
+          name: i.name,
+          parent_id: i.parent_id,
+          path: i.path,
+        }));
+      const media = items
+        .filter((i) => i.file_type !== "folder")
+        .map((i) => ({
+          id: i.id,
+          company_id: i.company_id,
+          name: i.name,
+          type: i.file_type,
+          url: `/${i.path}`,
+        }));
+      setCurrentContents({ subfolders, media });
+    } catch (error) {
+      console.error("Error fetching folder contents:", error);
+    }
+    setLoadingContents(false);
+  };
 
   const toggleFolder = (folderId) => {
     const updatedFolders = updateFolderState(folders, folderId, (folder) => ({
@@ -239,11 +215,10 @@ const MediaFolderViewer = ({
       isOpen: !folder.isOpen,
     }));
     setFolders(updatedFolders);
-    api.saveFolders(updatedFolders);
   };
 
-  const updateFolderState = (folders, folderId, updateFn) => {
-    return folders.map((folder) => {
+  const updateFolderState = (foldersList, folderId, updateFn) => {
+    return foldersList.map((folder) => {
       if (folder.id === folderId) {
         return updateFn(folder);
       }
@@ -257,6 +232,41 @@ const MediaFolderViewer = ({
     });
   };
 
+  const findFolderById = (foldersList, id) => {
+    for (const folder of foldersList) {
+      if (folder.id === id) return folder;
+      if (folder.subfolders.length > 0) {
+        const found = findFolderById(folder.subfolders, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+
+  const handleBack = () => {
+    if (currentFolder.parent_id == null) return;
+    const parent = findFolderById(folders, currentFolder.parent_id) || {
+      id: null,
+      name: "Media Library",
+      parent_id: null,
+      path: "",
+    };
+    setCurrentFolder(parent);
+    setViewMode("folder");
+  };
+
+  const handleFolderClick = (folder) => {
+    setCurrentFolder(folder);
+    setSelectedMedia(null);
+    setViewMode("folder");
+  };
+
+  const handleSubfolderClick = (subfolder) => {
+    setCurrentFolder(subfolder);
+    setSelectedMedia(null);
+    setViewMode("folder");
+  };
+
   const handleFileSelect = (file, isChecked) => {
     if (isChecked) {
       setSelectedFiles((prev) => [...prev, file]);
@@ -267,15 +277,13 @@ const MediaFolderViewer = ({
 
   const handleSelectAllInFolder = (isChecked) => {
     if (isChecked) {
-      // Add all files in current folder view that are not already selected
-      const newFilesToAdd = (currentFolder?.media || []).filter(
+      const newFilesToAdd = currentContents.media.filter(
         (file) => !selectedFiles.some((selected) => selected.id === file.id)
       );
       setSelectedFiles((prev) => [...prev, ...newFilesToAdd]);
     } else {
-      // Remove all files in current folder view
       const currentFolderFileIds = new Set(
-        (currentFolder?.media || []).map((f) => f.id)
+        currentContents.media.map((f) => f.id)
       );
       setSelectedFiles((prev) =>
         prev.filter((f) => !currentFolderFileIds.has(f.id))
@@ -287,99 +295,108 @@ const MediaFolderViewer = ({
     if (onSelectionConfirm) {
       onSelectionConfirm(selectedFiles);
     }
-    // Reset selection if needed after confirm, or let parent handle it
-    // setSelectedFiles([]);
   };
 
   const cancelSelection = () => {
-    setSelectedFiles([]); // Clear selection
+    setSelectedFiles([]);
     if (onCloseRequest) {
-      onCloseRequest(); // Notify parent to close the dialog/viewer
+      onCloseRequest();
     }
   };
 
-  const handleFolderClick = (folder) => {
-    setCurrentFolder(folder);
-    setSelectedMedia(null);
-    setViewMode(folder.id === "home" ? "home" : "subfolder");
+  const handlePreview = (media) => {
+    setSelectedMedia(media);
+    setViewMode("media");
   };
 
-  const handleSubfolderClick = (subfolder) => {
-    setCurrentFolder(subfolder);
-    setSelectedMedia(null);
-    setViewMode("subfolder");
+  const handleInfo = async (media) => {
+    setInfoLoading(true); // Set loading state
+    setInfoOpen(true);
+    try {
+      const response = await httpClient.get(`/files/${media.id}`);
+      setFileDetails(response.data.data);
+    } catch (error) {
+      console.error("Error fetching file details:", error);
+    } finally {
+      setInfoLoading(false); // Reset loading state
+    }
   };
 
-  const handleCreateFolder = () => {
-    if (newFolderName.trim()) {
-      const newFolder = {
-        id: `folder-${Date.now()}`,
-        name: newFolderName.trim(),
-        isOpen: false,
-        media: [],
-        subfolders: [],
-      };
-
-      const updatedFolders = updateFolderState(
-        folders,
-        currentFolder.id,
-        (folder) => ({
-          ...folder,
-          subfolders: [...folder.subfolders, newFolder],
-        })
-      );
-
-      setFolders(updatedFolders);
-      api.saveFolders(updatedFolders);
+  const handleCreateFolder = async () => {
+    if (!newFolderName.trim()) return;
+    try {
+      const formData = new FormData();
+      formData.append("path", createParent?.path || "");
+      formData.append("name", newFolderName.trim());
+      await httpClient.post("/files", formData);
       setNewFolderName("");
       setShowNewFolderDialog(false);
+      await loadFolders(); // Refresh tree
+      if (createParent?.id === currentFolder?.id) {
+        await loadContents(); // Refresh contents if created in current folder
+      }
+    } catch (error) {
+      console.error("Error creating folder:", error);
     }
+  };
+
+  const handleCreateSubfolder = () => {
+    if (!contextMenu) return;
+    setCreateParent(contextMenu.folder);
+    setShowNewFolderDialog(true);
+    handleCloseContextMenu();
   };
 
   const handleFileUpload = async (e) => {
     const files = e.target.files;
-    if (files.length > 0) {
-      setIsUploading(true);
-      setUploadProgress(0);
-
-      const interval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(interval);
-            return prev;
-          }
-          return prev + 10;
-        });
-      }, 200);
-
-      try {
-        const uploadedMedia = await api.uploadFile(files[0]);
-        clearInterval(interval);
-        setUploadProgress(100);
-
-        const updatedFolders = updateFolderState(
-          folders,
-          currentFolder.id,
-          (folder) => ({
-            ...folder,
-            media: [...folder.media, uploadedMedia],
-          })
-        );
-
-        setFolders(updatedFolders);
-        api.saveFolders(updatedFolders);
-
-        setTimeout(() => {
-          setUploadProgress(0);
-          setIsUploading(false);
-        }, 500);
-      } catch (error) {
-        console.error("Upload failed:", error);
-        clearInterval(interval);
-        setIsUploading(false);
-        setUploadProgress(0);
+    if (files.length === 0) return;
+    setIsUploading(true);
+    setUploadProgress(0);
+    // Simulate progress
+    const interval = setInterval(() => {
+      setUploadProgress((prev) => {
+        if (prev >= 90) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 10;
+      });
+    }, 200);
+    try {
+      const formData = new FormData();
+      formData.append(
+        "path",
+        uploadToFolder?.path || currentFolder?.path || ""
+      );
+      formData.append("file", files[0]);
+      await httpClient.post("/files", formData);
+      clearInterval(interval);
+      setUploadProgress(100);
+      if (
+        uploadToFolder?.id === currentFolder?.id ||
+        (!uploadToFolder && currentFolder)
+      ) {
+        await loadContents();
       }
+      setTimeout(() => {
+        setUploadProgress(0);
+        setIsUploading(false);
+        setUploadToFolder(null);
+      }, 500);
+    } catch (error) {
+      console.error("Upload failed:", error);
+      clearInterval(interval);
+      setIsUploading(false);
+      setUploadProgress(0);
+      setUploadToFolder(null);
     }
+  };
+
+  const handleUploadToFolder = () => {
+    if (!contextMenu) return;
+    setUploadToFolder(contextMenu.folder);
+    handleCloseContextMenu();
+    fileInputRef.current.click();
   };
 
   const handleContextMenu = (event, folder) => {
@@ -415,6 +432,7 @@ const MediaFolderViewer = ({
   };
 
   const confirmRenameFolder = () => {
+    // Mock implementation - not synced with API
     const { folderId, newName } = renameDialog;
     if (newName.trim()) {
       const updatedFolders = updateFolderState(folders, folderId, (folder) => ({
@@ -422,16 +440,19 @@ const MediaFolderViewer = ({
         name: newName.trim(),
       }));
       setFolders(updatedFolders);
-      api.saveFolders(updatedFolders);
+      if (currentFolder.id === folderId) {
+        setCurrentFolder({ ...currentFolder, name: newName.trim() });
+      }
       setRenameDialog({ open: false, folderId: "", newName: "" });
     }
   };
 
   const confirmDeleteFolder = () => {
+    // Mock implementation - not synced with API
     const { folderId } = deleteDialog;
 
-    const deleteFolder = (folders, targetId) => {
-      return folders.reduce((acc, folder) => {
+    const deleteFolder = (foldersList, targetId) => {
+      return foldersList.reduce((acc, folder) => {
         if (folder.id === targetId) return acc;
         if (folder.subfolders?.length > 0) {
           return [
@@ -448,12 +469,10 @@ const MediaFolderViewer = ({
 
     const updatedFolders = deleteFolder(folders, folderId);
     setFolders(updatedFolders);
-    api.saveFolders(updatedFolders);
 
-    // If we deleted the current folder, go back to home
+    // If we deleted the current folder, go back to parent or root
     if (currentFolder?.id === folderId) {
-      setCurrentFolder(folders[0]);
-      setViewMode("home");
+      handleBack();
     }
 
     setDeleteDialog({ open: false, folderId: "" });
@@ -465,7 +484,7 @@ const MediaFolderViewer = ({
         <ListItem
           sx={{
             pl: depth * 2 + 2,
-            pr: 4, // Added right padding to prevent crowding
+            pr: 4,
             borderRadius: 1,
             backgroundColor:
               currentFolder?.id === folder.id ? "action.selected" : "inherit",
@@ -506,7 +525,7 @@ const MediaFolderViewer = ({
                   whiteSpace: "nowrap",
                   overflow: "hidden",
                   textOverflow: "ellipsis",
-                  maxWidth: 200 - depth * 20, // Adjust based on depth
+                  maxWidth: 200 - depth * 20,
                 }}
               >
                 {folder.name}
@@ -529,23 +548,22 @@ const MediaFolderViewer = ({
 
   // Apply filter when rendering media items
   const filterMedia = (mediaList) => {
-    if (!fileTypeFilter) return mediaList; // No filter, show all
+    if (!fileTypeFilter) return mediaList;
     return mediaList.filter((media) => {
       if (fileTypeFilter === "pdf") {
-        // Filter for PDFs based on type or name extension
-        // Assuming media.type might not be specific enough, check name too
         return (
           media.type === "application/pdf" ||
           media.name.toLowerCase().endsWith(".pdf")
         );
       }
-      // Add other filters if needed in the future
-      return true; // Default: show all if filter not matched
+      return true;
     });
   };
 
   const renderMediaCard = (media) => {
     const isSelected = selectedFiles.some((f) => f.id === media.id);
+
+    console.log("renderMediaCard", media);
 
     return (
       <Card
@@ -556,7 +574,7 @@ const MediaFolderViewer = ({
           height: 250,
           backgroundColor: colors.paper,
           borderRadius: 2,
-          ...(isSelected && { border: `2px solid ${colors.primary}` }), // Highlight if selected
+          ...(isSelected && { border: `2px solid ${colors.primary}` }),
           "&:hover": {
             boxShadow: 3,
             transform: "translateY(-2px)",
@@ -565,27 +583,23 @@ const MediaFolderViewer = ({
         }}
         onClick={() => {
           if (selectionMode) {
-            // Toggle selection on card click in selection mode
             handleFileSelect(media, !isSelected);
           } else {
-            // Original preview logic if not in selection mode
-            setSelectedMedia(media);
-            setViewMode("media");
+            handlePreview(media);
           }
         }}
       >
-        {/* Checkbox in top-left corner for selection mode */}
         {selectionMode && (
           <Checkbox
             checked={isSelected}
             onChange={(e) => handleFileSelect(media, e.target.checked)}
-            onClick={(e) => e.stopPropagation()} // Prevent card click when clicking checkbox
+            onClick={(e) => e.stopPropagation()}
             sx={{
               position: "absolute",
               top: 8,
               left: 8,
               zIndex: 10,
-              backgroundColor: "rgba(255, 255, 255, 0.7)", // Semi-transparent background
+              backgroundColor: "rgba(255, 255, 255, 0.7)",
               "&.Mui-checked": {
                 color: colors.primary,
               },
@@ -596,16 +610,16 @@ const MediaFolderViewer = ({
           <>
             <CardMedia
               component="video"
-              image={media.url}
+              image={`https://opmanual.franchise.care/uploaded/${media.company_id}${media.url}`}
               sx={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
-                borderRadius: 2, // Added border radius
-                opacity: selectionMode && isSelected ? 0.7 : 1, // Slightly dim selected card
+                borderRadius: 2,
+                opacity: selectionMode && isSelected ? 0.7 : 1,
               }}
             />
-            {!selectionMode && ( // Only show overlay actions if NOT in selection mode
+            {!selectionMode && (
               <MediaCardOverlay>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Tooltip title="Preview">
@@ -613,8 +627,7 @@ const MediaFolderViewer = ({
                       color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedMedia(media);
-                        setViewMode("media");
+                        handlePreview(media);
                       }}
                       sx={{ backgroundColor: colors.paper }}
                     >
@@ -634,6 +647,18 @@ const MediaFolderViewer = ({
                       sx={{ backgroundColor: colors.paper }}
                     >
                       <DownloadIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Info">
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInfo(media);
+                      }}
+                      sx={{ backgroundColor: colors.paper }}
+                    >
+                      <InfoIcon />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -644,17 +669,17 @@ const MediaFolderViewer = ({
           <>
             <CardMedia
               component="img"
-              image={media.url}
+              image={`https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`}
               alt={media.name}
               sx={{
                 width: "100%",
                 height: "100%",
                 objectFit: "cover",
                 borderRadius: 2,
-                opacity: selectionMode && isSelected ? 0.7 : 1, // Slightly dim selected card
+                opacity: selectionMode && isSelected ? 0.7 : 1,
               }}
             />
-            {!selectionMode && ( // Only show overlay actions if NOT in selection mode
+            {!selectionMode && (
               <MediaCardOverlay>
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Tooltip title="Preview">
@@ -662,8 +687,7 @@ const MediaFolderViewer = ({
                       color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        setSelectedMedia(media);
-                        setViewMode("media");
+                        handlePreview(media);
                       }}
                       sx={{ backgroundColor: colors.paper }}
                     >
@@ -685,12 +709,23 @@ const MediaFolderViewer = ({
                       <DownloadIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Info">
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInfo(media);
+                      }}
+                      sx={{ backgroundColor: colors.paper }}
+                    >
+                      <InfoIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </MediaCardOverlay>
             )}
           </>
         )}
-        {/* File name label at the bottom */}
         <CardContent
           sx={{
             position: "absolute",
@@ -726,19 +761,16 @@ const MediaFolderViewer = ({
           backgroundColor: colors.paper,
           borderRadius: 1,
           mb: 1,
-          ...(isSelected && { backgroundColor: "action.selected" }), // Highlight if selected
+          ...(isSelected && { backgroundColor: "action.selected" }),
           "&:hover": {
             backgroundColor: colors.cardHover,
           },
         }}
         onClick={() => {
           if (selectionMode) {
-            // Toggle selection on list item click in selection mode
             handleFileSelect(media, !isSelected);
           } else {
-            // Original preview logic if not in selection mode
-            setSelectedMedia(media);
-            setViewMode("media");
+            handlePreview(media);
           }
         }}
       >
@@ -746,7 +778,7 @@ const MediaFolderViewer = ({
           <Checkbox
             checked={isSelected}
             onChange={(e) => handleFileSelect(media, e.target.checked)}
-            onClick={(e) => e.stopPropagation()} // Prevent item click when clicking checkbox
+            onClick={(e) => e.stopPropagation()}
           />
         )}
         {media.type === "video" ? (
@@ -764,100 +796,115 @@ const MediaFolderViewer = ({
         >
           {media.name}
         </Typography>
-        {!selectionMode && ( // Only show download if NOT in selection mode
-          <Tooltip title="Download">
-            <IconButton
-              onClick={(e) => {
-                e.stopPropagation();
-                const link = document.createElement("a");
-                link.href = media.url;
-                link.download = media.name;
-                link.click();
-              }}
-            >
-              <DownloadIcon sx={{ color: colors.primary }} />
-            </IconButton>
-          </Tooltip>
+        {!selectionMode && (
+          <>
+            <Tooltip title="Download">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  const link = document.createElement("a");
+                  link.href = media.url;
+                  link.download = media.name;
+                  link.click();
+                }}
+              >
+                <DownloadIcon sx={{ color: colors.primary }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Info">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleInfo(media);
+                }}
+              >
+                <InfoIcon sx={{ color: colors.primary }} />
+              </IconButton>
+            </Tooltip>
+          </>
         )}
       </ListItemButton>
     );
   };
 
-  const renderHomeView = () => {
+  const renderFolderView = () => {
+    const parent =
+      currentFolder.id !== null
+        ? findFolderById(folders, currentFolder.parent_id) || {
+            name: "Media Library",
+          }
+        : null;
+
     return (
       <>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 2,
-          }}
-        >
-          <Typography
-            variant="h6"
-            sx={{ color: colors.text, fontWeight: "normal" }}
-          >
-            {" "}
-            {/* Reduced boldness */}
-            Subfolders
-          </Typography>
+        {currentFolder.id !== null && (
+          <Box sx={{ mb: 3 }}>
+            <Button
+              variant="outlined"
+              startIcon={<FolderIcon sx={{ color: colors.folderYellow }} />}
+              onClick={handleBack}
+              sx={{ color: colors.text, borderColor: colors.divider }}
+            >
+              Back to {parent.name}
+            </Button>
+          </Box>
+        )}
+
+        <Box sx={{ mb: 4 }}>
+          {loadingContents ? (
+            <CircularProgress sx={{ m: "auto", display: "block" }} />
+          ) : currentContents.subfolders.length > 0 ? (
+            <Grid container spacing={2}>
+              {currentContents.subfolders.map((subfolder) => (
+                <Grid item xs={12} sm={6} md={4} key={subfolder.id}>
+                  <Card
+                    sx={{
+                      cursor: "pointer",
+                      backgroundColor: colors.paper,
+                      "&:hover": {
+                        boxShadow: 3,
+                        transform: "translateY(-2px)",
+                        transition: "all 0.2s ease",
+                      },
+                    }}
+                    onClick={() => handleSubfolderClick(subfolder)}
+                    onContextMenu={(e) => handleContextMenu(e, subfolder)}
+                  >
+                    <CardContent
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        minHeight: 80,
+                      }}
+                    >
+                      <FolderIcon
+                        sx={{ mr: 2, fontSize: 40, color: colors.folderYellow }}
+                      />
+                      <Typography
+                        variant="body1"
+                        sx={{
+                          color: colors.text,
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          maxWidth: 200,
+                          fontWeight: "normal",
+                        }}
+                      >
+                        {subfolder.name}
+                      </Typography>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+            </Grid>
+          ) : null}
         </Box>
 
-        <Grid container spacing={2} sx={{ mb: 4 }}>
-          {currentFolder.subfolders.map((subfolder) => (
-            <Grid item xs={12} sm={6} md={4} key={subfolder.id}>
-              <Card
-                sx={{
-                  cursor: "pointer",
-                  backgroundColor: colors.paper,
-                  "&:hover": {
-                    boxShadow: 3,
-                    transform: "translateY(-2px)",
-                    transition: "all 0.2s ease",
-                  },
-                }}
-                onClick={() => handleSubfolderClick(subfolder)}
-              >
-                <CardContent
-                  sx={{ display: "flex", alignItems: "center", minHeight: 80 }}
-                >
-                  <FolderIcon
-                    sx={{ mr: 2, fontSize: 40, color: colors.folderYellow }}
-                  />{" "}
-                  {/* Yellow folder icon */}
-                  <Typography
-                    variant="body1" // Changed from h6 to body1 for smaller size
-                    sx={{
-                      color: colors.text,
-                      whiteSpace: "nowrap",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      maxWidth: 200,
-                      fontWeight: "normal", // Reduced boldness
-                    }}
-                  >
-                    {subfolder.name}
-                  </Typography>
-                </CardContent>
-              </Card>
-            </Grid>
-          ))}
-        </Grid>
-
         <Box sx={{ mb: 3 }}>
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              mb: 2,
-            }}
-          >
-            <Typography variant="h6" sx={{ color: colors.text }}>
-              Home Media
-            </Typography>
-          </Box>
+          <Typography variant="h6" sx={{ color: colors.text, mb: 2 }}>
+            Media
+          </Typography>
 
           {uploadProgress > 0 && (
             <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
@@ -872,10 +919,12 @@ const MediaFolderViewer = ({
             </Box>
           )}
 
-          {currentFolder.media.length > 0 ? (
+          {loadingContents ? (
+            <CircularProgress sx={{ m: "auto", display: "block" }} />
+          ) : filterMedia(currentContents.media).length > 0 ? (
             viewType === "grid" ? (
               <Grid container spacing={3}>
-                {filterMedia(currentFolder.media).map((media) => (
+                {filterMedia(currentContents.media).map((media) => (
                   <Grid item key={media.id}>
                     {renderMediaCard(media)}
                   </Grid>
@@ -883,7 +932,7 @@ const MediaFolderViewer = ({
               </Grid>
             ) : (
               <List>
-                {filterMedia(currentFolder.media).map((media) => (
+                {filterMedia(currentContents.media).map((media) => (
                   <React.Fragment key={media.id}>
                     {renderMediaListItem(media)}
                   </React.Fragment>
@@ -908,91 +957,16 @@ const MediaFolderViewer = ({
     );
   };
 
-  const renderSubfolderView = () => {
-    return (
-      <>
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Button
-            variant="outlined"
-            startIcon={<FolderIcon sx={{ color: colors.folderYellow }} />} // Yellow folder icon
-            onClick={() => handleFolderClick(folders[0])}
-            sx={{ color: colors.text, borderColor: colors.divider }}
-          >
-            Back to Home
-          </Button>
-        </Box>
-
-        {uploadProgress > 0 && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
-            <CircularProgress
-              variant="determinate"
-              value={uploadProgress}
-              size={24}
-            />
-            <Typography variant="body2" sx={{ color: colors.text }}>
-              {uploadProgress}%
-            </Typography>
-          </Box>
-        )}
-
-        <Typography variant="h6" sx={{ mb: 2, color: colors.text }}>
-          {currentFolder.name} Media
-        </Typography>
-
-        {currentFolder.media.length > 0 ? (
-          viewType === "grid" ? (
-            <Grid container spacing={3}>
-              {filterMedia(currentFolder.media).map((media) => (
-                <Grid item key={media.id}>
-                  {renderMediaCard(media)}
-                </Grid>
-              ))}
-            </Grid>
-          ) : (
-            <List>
-              {filterMedia(currentFolder.media).map((media) => (
-                <React.Fragment key={media.id}>
-                  {renderMediaListItem(media)}
-                </React.Fragment>
-              ))}
-            </List>
-          )
-        ) : (
-          <Paper
-            sx={{
-              p: 4,
-              textAlign: "center",
-              backgroundColor: colors.secondary,
-            }}
-          >
-            <Typography variant="body1" sx={{ color: colors.text }}>
-              No media files in this folder yet.
-            </Typography>
-          </Paper>
-        )}
-      </>
-    );
-  };
-
   const renderMediaView = () => {
     return (
       <>
         <Button
           variant="outlined"
-          startIcon={<FolderIcon sx={{ color: colors.folderYellow }} />} // Yellow folder icon
-          onClick={() =>
-            setViewMode(currentFolder.id === "home" ? "home" : "subfolder")
-          }
+          startIcon={<FolderIcon sx={{ color: colors.folderYellow }} />}
+          onClick={() => setViewMode("folder")}
           sx={{ mb: 3, color: colors.text, borderColor: colors.divider }}
         >
-          Back to {currentFolder.id === "home" ? "Home" : currentFolder.name}
+          Back to {currentFolder.name}
         </Button>
 
         <Paper
@@ -1058,7 +1032,7 @@ const MediaFolderViewer = ({
               </video>
             ) : (
               <img
-                src={selectedMedia.url}
+                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
                 alt={selectedMedia.name}
                 style={{
                   maxWidth: "100%",
@@ -1091,7 +1065,8 @@ const MediaFolderViewer = ({
       <Paper
         elevation={3}
         sx={{
-          width: { xs: "100%", md: 300 },
+          maxWidth: { xs: "100%", md: 300 },
+          width: "100%",
           p: 2,
           display: "flex",
           flexDirection: "column",
@@ -1118,16 +1093,31 @@ const MediaFolderViewer = ({
               alignItems: "center",
               gap: 1,
               color: colors.text,
+              cursor: "pointer",
+              backgroundColor:
+                currentFolder.id === null ? "action.selected" : "transparent",
+              p: 1,
+              borderRadius: 1,
             }}
+            onClick={() =>
+              setCurrentFolder({
+                id: null,
+                name: "Media Library",
+                parent_id: null,
+                path: "",
+              })
+            }
           >
-            <FolderOpenIcon sx={{ color: colors.folderYellow }} />{" "}
-            {/* Yellow folder icon */}
+            <FolderOpenIcon sx={{ color: colors.folderYellow }} />
             Media Library
           </Typography>
           <Box sx={{ display: "flex", gap: 1 }}>
             <Tooltip title="Add folder">
               <IconButton
-                onClick={() => setShowNewFolderDialog(true)}
+                onClick={() => {
+                  setCreateParent(currentFolder);
+                  setShowNewFolderDialog(true);
+                }}
                 size="small"
                 sx={{ color: colors.primary }}
               >
@@ -1136,7 +1126,10 @@ const MediaFolderViewer = ({
             </Tooltip>
             <Tooltip title="Upload media">
               <IconButton
-                onClick={() => fileInputRef.current.click()}
+                onClick={() => {
+                  setUploadToFolder(currentFolder);
+                  fileInputRef.current.click();
+                }}
                 disabled={isUploading}
                 size="small"
                 sx={{ color: colors.primary }}
@@ -1155,8 +1148,6 @@ const MediaFolderViewer = ({
         </Box>
         <Divider sx={{ backgroundColor: colors.divider, mb: 2 }} />
         <Box sx={{ flexGrow: 1, overflow: "auto", pr: 1 }}>
-          {" "}
-          {/* Added right padding */}
           <List>{folders.map((folder) => renderFolderTree(folder))}</List>
         </Box>
       </Paper>
@@ -1192,28 +1183,27 @@ const MediaFolderViewer = ({
             {currentFolder?.name || "Select a folder"}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            {/* Select All Checkbox for current folder (only in selection mode) */}
             {selectionMode &&
-              currentFolder?.media &&
-              currentFolder.media.length > 0 && (
+              currentContents.media &&
+              currentContents.media.length > 0 && (
                 <FormControlLabel
                   control={
                     <Checkbox
                       checked={
-                        currentFolder.media.length > 0 &&
-                        currentFolder.media.every((file) =>
+                        currentContents.media.length > 0 &&
+                        currentContents.media.every((file) =>
                           selectedFiles.some(
                             (selected) => selected.id === file.id
                           )
                         )
                       }
                       indeterminate={
-                        currentFolder.media.some((file) =>
+                        currentContents.media.some((file) =>
                           selectedFiles.some(
                             (selected) => selected.id === file.id
                           )
                         ) &&
-                        !currentFolder.media.every((file) =>
+                        !currentContents.media.every((file) =>
                           selectedFiles.some(
                             (selected) => selected.id === file.id
                           )
@@ -1228,6 +1218,18 @@ const MediaFolderViewer = ({
                   sx={{ mr: 1 }}
                 />
               )}
+            <Tooltip title="Upload media">
+              <IconButton
+                onClick={() => {
+                  setUploadToFolder(currentFolder);
+                  fileInputRef.current.click();
+                }}
+                disabled={isUploading}
+                sx={{ color: colors.primary }}
+              >
+                <UploadIcon />
+              </IconButton>
+            </Tooltip>
             <Tooltip title={viewType === "grid" ? "List view" : "Grid view"}>
               <IconButton
                 onClick={() =>
@@ -1242,7 +1244,6 @@ const MediaFolderViewer = ({
         </Box>
         <Divider sx={{ backgroundColor: colors.divider, mb: 3 }} />
 
-        {/* Selection Mode Action Buttons (Fixed at bottom or top) */}
         {selectionMode && (
           <Box
             sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mb: 2 }}
@@ -1270,11 +1271,259 @@ const MediaFolderViewer = ({
         )}
 
         <Box sx={{ flexGrow: 1 }}>
-          {viewMode === "home" && renderHomeView()}
-          {viewMode === "subfolder" && renderSubfolderView()}
+          {viewMode === "folder" && renderFolderView()}
           {viewMode === "media" && renderMediaView()}
         </Box>
       </Paper>
+
+      {/* Info Drawer */}
+      <Drawer
+        anchor="right"
+        open={infoOpen}
+        onClose={() => setInfoOpen(false)}
+        sx={{
+          "& .MuiDrawer-paper": {
+            boxShadow: "0px 0px 20px rgba(0, 0, 0, 0.1)",
+          },
+        }}
+      >
+        {infoLoading ? (
+          <Box
+            sx={{
+              width: { xs: "100vw", sm: 480 },
+              maxWidth: "100%",
+              p: 3,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: "100%",
+            }}
+          >
+            <CircularProgress sx={{ mb: 2 }} />
+            <Typography>Loading file information...</Typography>
+          </Box>
+        ) : (
+          fileDetails && (
+            <Box
+              sx={{ width: { xs: "100vw", sm: 480 }, maxWidth: "100%", p: 0 }}
+            >
+              {/* Header */}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  p: 2.5,
+                  borderBottom: "1px solid",
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  sx={{
+                    fontWeight: 600,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    pr: 1,
+                  }}
+                >
+                  {fileDetails.name}
+                </Typography>
+                <IconButton
+                  onClick={() => setInfoOpen(false)}
+                  sx={{
+                    color: "text.secondary",
+                    "&:hover": {
+                      backgroundColor: "action.hover",
+                    },
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </Box>
+
+              {/* Content */}
+              <Box
+                sx={{
+                  p: 3,
+                  overflowY: "auto",
+                  maxHeight: "calc(100vh - 64px)",
+                }}
+              >
+                {/* Media Preview */}
+                {fileDetails.file_type === "image" ? (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    <img
+                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      alt={fileDetails.name}
+                      style={{
+                        width: "100%",
+                        display: "block",
+                        maxHeight: "300px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </Box>
+                ) : fileDetails.file_type === "video" ? (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      boxShadow: "0 4px 12px rgba(0,0,0,0.05)",
+                    }}
+                  >
+                    <video
+                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      controls
+                      style={{
+                        width: "100%",
+                        display: "block",
+                        maxHeight: "300px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </Box>
+                ) : (
+                  <Box
+                    sx={{
+                      mb: 3,
+                      borderRadius: 1,
+                      overflow: "hidden",
+                      backgroundColor: "grey.50",
+                      height: 120,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      border: "1px dashed",
+                      borderColor: "divider",
+                    }}
+                  >
+                    <Box sx={{ textAlign: "center", color: "text.secondary" }}>
+                      <DescriptionIcon sx={{ fontSize: 40, mb: 1 }} />
+                      <Typography variant="body2">
+                        {fileDetails.name}
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+
+                {/* File Details */}
+                <Box
+                  sx={{
+                    backgroundColor: "grey.50",
+                    borderRadius: 1,
+                    p: 2.5,
+                    mb: 3,
+                  }}
+                >
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      mb: 2,
+                      color: "text.secondary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <InfoIcon sx={{ fontSize: 18, mr: 1 }} /> File Information
+                  </Typography>
+
+                  <Box sx={{ "& > div": { mb: 1.5 } }}>
+                    <Box sx={{ display: "flex" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary", minWidth: 100 }}
+                      >
+                        Size:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {formatFileSize(fileDetails.size)}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: "flex" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary", minWidth: 100 }}
+                      >
+                        Updated Date:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {new Date(fileDetails.updated_at).toLocaleString()}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: "flex" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary", minWidth: 100 }}
+                      >
+                        Created Date:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {new Date(fileDetails.created_at).toLocaleString()}
+                      </Typography>
+                    </Box>
+
+                    <Box sx={{ display: "flex" }}>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "text.secondary", minWidth: 100 }}
+                      >
+                        Created By:
+                      </Typography>
+                      <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                        {fileDetails.created_by}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Path Information */}
+                <Box>
+                  <Typography
+                    variant="subtitle2"
+                    sx={{
+                      mb: 1,
+                      color: "text.secondary",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <FolderIcon sx={{ fontSize: 18, mr: 1 }} /> Location
+                  </Typography>
+                  <Box
+                    sx={{
+                      backgroundColor: "grey.50",
+                      borderRadius: 1,
+                      p: 2,
+                      wordBreak: "break-all",
+                      fontFamily: "monospace",
+                      fontSize: "0.85rem",
+                    }}
+                  >
+                    /{fileDetails.path}
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+          )
+        )}
+      </Drawer>
 
       {/* New Folder Dialog */}
       <Dialog
@@ -1282,6 +1531,7 @@ const MediaFolderViewer = ({
         onClose={() => setShowNewFolderDialog(false)}
         PaperProps={{
           sx: {
+            minWidth: 400,
             borderRadius: 2,
             backgroundColor: colors.paper,
           },
@@ -1461,10 +1711,13 @@ const MediaFolderViewer = ({
           </ListItemIcon>
           <ListItemText>Rename</ListItemText>
         </MenuItem>
-        <MenuItem
-          onClick={() => fileInputRef.current.click()}
-          sx={{ color: colors.text }}
-        >
+        <MenuItem onClick={handleCreateSubfolder} sx={{ color: colors.text }}>
+          <ListItemIcon>
+            <CreateNewFolderIcon sx={{ color: colors.primary }} />
+          </ListItemIcon>
+          <ListItemText>Create Folder</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleUploadToFolder} sx={{ color: colors.text }}>
           <ListItemIcon>
             <UploadIcon sx={{ color: colors.primary }} />
           </ListItemIcon>
