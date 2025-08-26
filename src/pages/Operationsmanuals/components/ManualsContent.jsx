@@ -23,6 +23,7 @@ import {
   DialogActions,
   Snackbar,
   Alert,
+  CircularProgress,
 } from "@mui/material";
 import {
   Add,
@@ -407,8 +408,14 @@ const ManualsContent = () => {
                 </div>
               </Box>
               <Divider sx={{ my: 2 }} />
-              <Box>
-                {loading && <Typography>Loading...</Typography>}
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                {loading && <CircularProgress sx={{ my: 2 }} />}
                 {error && <Typography color="error">{error}</Typography>}
                 {!loading && !error && navigationTree.length > 0 && (
                   <List sx={{ width: "100%" }}>

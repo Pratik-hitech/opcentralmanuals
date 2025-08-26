@@ -149,7 +149,6 @@ const ManualsDetails = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          minHeight: "100vh",
         }}
       >
         <CircularProgress />
