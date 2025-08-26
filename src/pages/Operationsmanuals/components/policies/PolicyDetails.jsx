@@ -187,7 +187,7 @@ const PolicyDetails = () => {
   }, [navigationId]);
 
   useEffect(() => {
-    if (policyId) {
+    if (policyId && !navigationId) {
       setLoading(true);
       httpClient
         .get(`/policies/${policyId}`)
@@ -272,7 +272,7 @@ const PolicyDetails = () => {
           setLoading(false);
         });
     }
-  }, [policyId]);
+  }, [policyId, navigationId]);
 
   const autoMapNavigation = async (navId) => {
     try {
@@ -293,7 +293,13 @@ const PolicyDetails = () => {
 
             if (pathTitles) {
               const fullPath = [collection.title, ...pathTitles];
-              setMappedMappings([{ navId: navItem.id, fullPath }]);
+              const newMapping = {
+                navId: navItem.id,
+                fullPath,
+                collectionId: navItem.collection_id,
+              };
+
+              setMappedMappings([newMapping]);
             }
           }
         }
@@ -302,7 +308,6 @@ const PolicyDetails = () => {
       console.error("Error auto-mapping navigation:", err);
     }
   };
-
   useEffect(() => {
     if (navigationTree.length > 0) {
       const initialExpandedItems = {};
