@@ -61,7 +61,7 @@ const ManualsContent = () => {
 
   const fetchNavigations = async () => {
     try {
-      const response = await httpClient.get(`/navigations?collection_id=${id}`);
+      const response = await httpClient.get(`/navigations/tree/${id}`);
       const data = response.data.data || [];
       setNavigations(data);
       return data;
@@ -116,37 +116,6 @@ const ManualsContent = () => {
     }));
   };
 
-  const buildNavigationTree = (items) => {
-    const itemMap = {};
-    items &&
-      items.forEach((item) => {
-        itemMap[item.id] = { ...item, children: [] };
-      });
-
-    const rootItems = [];
-    items &&
-      items.forEach((item) => {
-        if (item.parent_id === null) {
-          rootItems.push(itemMap[item.id]);
-        } else if (itemMap[item.parent_id]) {
-          itemMap[item.parent_id].children.push(itemMap[item.id]);
-        }
-      });
-
-    const sortItems = (items) => {
-      return (
-        items &&
-        items
-          .sort((a, b) => a.order - b.order)
-          .map((item) => ({
-            ...item,
-            children: sortItems(item.children),
-          }))
-      );
-    };
-    return sortItems(rootItems);
-  };
-
   useEffect(() => {
     if (navigations.length > 0) {
       const initialExpandedItems = {};
@@ -158,7 +127,7 @@ const ManualsContent = () => {
           traverseAndSetExpanded(item.children);
         });
       };
-      traverseAndSetExpanded(buildNavigationTree(navigations));
+      traverseAndSetExpanded(navigations);
       setExpandedItems(initialExpandedItems);
     }
   }, [navigations]);
@@ -362,7 +331,7 @@ const ManualsContent = () => {
     );
   };
 
-  const navigationTree = buildNavigationTree(navigations);
+  const navigationTree = navigations;
 
   return (
     <Container
