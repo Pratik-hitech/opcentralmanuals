@@ -54,9 +54,9 @@ import VerifyUserPage from "../pages/VerifyUser/VerifyUser";
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
 export const router = createBrowserRouter([
-  {
+    {
     path: "/",
-    element: <Login />,
+    element: <Navigate to="/login" replace />, 
   },
   {
     path: "/login",
@@ -67,7 +67,7 @@ export const router = createBrowserRouter([
     element: <VerifyUserPage />,
   },
   {
-    path : "/create-password/:id ",
+    path : "/create-password/:id",
     element : <AddUser />
   },
   {

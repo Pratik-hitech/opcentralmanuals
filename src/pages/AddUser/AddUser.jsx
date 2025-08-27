@@ -14,6 +14,7 @@ import {
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { httpClient } from "../../utils/httpClientSetup";
+import { publicClient } from "../../utils/publicClient";
 import CompanyLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
 
 const AddUser = () => {
@@ -50,7 +51,7 @@ const AddUser = () => {
 
       try {
         const payload = { id: userId, token };
-        const { data } = await publicClient.post("/users/validate-token", payload);
+        const { data } = await publicClient.post("users/validate-token", payload);
 
         if (data.success) {
           setTokenValid(true);

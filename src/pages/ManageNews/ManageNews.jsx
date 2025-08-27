@@ -1,5 +1,7 @@
+
+
 // import React, { useState, useEffect } from "react";
-// import { useNavigate, useLoaderData } from "react-router-dom";
+// import { useNavigate, useLoaderData, useSearchParams } from "react-router-dom";
 // import {
 //   Box,
 //   Table,
@@ -40,9 +42,17 @@
 // import { saveAs } from "file-saver";
 // import { httpClient } from "../../utils/httpClientSetup";
 
+// const ARTICLE_STATUS = {
+//   PUBLISHED: 'published',
+//   DRAFT: 'draft',
+//   ARCHIVED: 'archived'
+// };
+
 // export async function loader({ request }) {
 //   const url = new URL(request.url);
 //   const tab = url.searchParams.get("tab") || "active";
+//   const page = url.searchParams.get("page") || 1;
+//   const perPage = url.searchParams.get("perPage") || 10;
 //   const token = localStorage.getItem("token");
   
 //   if (!token) {
@@ -50,16 +60,19 @@
 //   }
   
 //   try {
-//     const response = await httpClient.get("news");
+//     const endpoint = tab === "archived" 
+//       ? `news?status=${ARTICLE_STATUS.ARCHIVED}&page=${page}&per_page=${perPage}`
+//       : `news?status=${ARTICLE_STATUS.PUBLISHED}|${ARTICLE_STATUS.DRAFT}&page=${page}&per_page=${perPage}`;
+    
+//     const response = await httpClient.get(endpoint);
+   
     
 //     if (response.data.success) {
-//       const allArticles = response.data.data;
-//       const filteredArticles = allArticles.filter(article => 
-//         tab === "archived" 
-//           ? article.status === "archived" 
-//           : article.status !== "archived"
-//       );
-//       return { articles: filteredArticles };
+       
+//       return { 
+//         articles: response.data.data,
+//         pagination: response.data.pagination 
+//       };
 //     }
 //     throw new Error("Failed to fetch articles");
 //   } catch (error) {
@@ -69,19 +82,24 @@
 
 // const ManageArticles = () => {
 //   const navigate = useNavigate();
-//   const { articles: initialArticles } = useLoaderData();
+//   const [searchParams, setSearchParams] = useSearchParams();
+//   const { articles: initialArticles, pagination: initialPagination } = useLoaderData();
 
 //   // State declarations
 //   const [articles, setArticles] = useState(initialArticles);
 //   const [filteredArticles, setFilteredArticles] = useState(initialArticles);
+//   const [pagination, setPagination] = useState(initialPagination || {
+//     total: 0,
+//     current_page: 1,
+//     last_page: 1,
+//     per_page: 10
+//   });
 //   const [isActionLoading, setIsActionLoading] = useState(false);
 //   const [error, setError] = useState(null);
 //   const [isLoading, setIsLoading] = useState(false);
 //   const [selected, setSelected] = useState([]);
-//   const [tab, setTab] = useState("active");
+//   const [tab, setTab] = useState(searchParams.get("tab") || "active");
 //   const [searchTerm, setSearchTerm] = useState("");
-//   const [page, setPage] = useState(0);
-//   const [rowsPerPage, setRowsPerPage] = useState(5);
 //   const [anchorEl, setAnchorEl] = useState(null);
 //   const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
 //   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
@@ -89,6 +107,7 @@
 //   const [activeRowId, setActiveRowId] = useState(null);
 //   const [openArchiveModal, setOpenArchiveModal] = useState(false);
 //   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+//   const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false);
 //   const [articleToDelete, setArticleToDelete] = useState(null);
 //   const [snackbar, setSnackbar] = useState({
 //     open: false,
@@ -96,21 +115,20 @@
 //     severity: "success",
 //   });
 
-//   // Fetch articles when tab changes
-//   const fetchArticles = async () => {
+//   // Fetch articles when tab or pagination changes
+//   const fetchArticles = async (newPage = pagination.current_page, newPerPage = pagination.per_page) => {
 //     setIsLoading(true);
 //     try {
-//       const response = await httpClient.get("news");
+//       const endpoint = tab === "archived" 
+//         ? `news?status=${ARTICLE_STATUS.ARCHIVED}&page=${newPage}&per_page=${newPerPage}`
+//         : `news?status=${ARTICLE_STATUS.PUBLISHED}|${ARTICLE_STATUS.DRAFT}&page=${newPage}&per_page=${newPerPage}`;
       
+//       const response = await httpClient.get(endpoint);
+//       // console.log("publisher check", response.data.data.publisher.name)
 //       if (response.data.success) {
-//         const allArticles = response.data.data;
-//         const filteredArticles = allArticles.filter(article => 
-//           tab === "archived" 
-//             ? article.status === "archived" 
-//             : article.status !== "archived"
-//         );
-//         setArticles(filteredArticles);
-//         setFilteredArticles(filteredArticles);
+//         setArticles(response.data.data);
+//         filterArticles(response.data.data, searchTerm);
+//         setPagination(response.data.pagination);
 //         setSelected([]);
 //       } else {
 //         setError(response.data.message || "Failed to fetch articles");
@@ -122,23 +140,30 @@
 //     }
 //   };
 
-//   useEffect(() => {
-//     fetchArticles();
-//   }, [tab]);
-
-//   // Filter articles based on search term
-//   useEffect(() => {
-//     if (searchTerm.trim() === "") {
-//       setFilteredArticles(articles);
-//     } else {
-//       const filtered = articles.filter(
-//         (article) =>
+//   // Client-side filtering function
+//   const filterArticles = (articlesToFilter, searchTerm) => {
+//     let filtered = articlesToFilter;
+    
+//     if (searchTerm.trim() !== "") {
+//       filtered = filtered.filter(
+//         article =>
 //           article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 //           (article.published_by?.toString() || "").includes(searchTerm)
 //       );
-//       setFilteredArticles(filtered);
 //     }
-//     setPage(0);
+    
+//     setFilteredArticles(filtered);
+//   };
+
+//   useEffect(() => {
+//     const currentPage = parseInt(searchParams.get("page")) || 1;
+//     const currentPerPage = parseInt(searchParams.get("perPage")) || 10;
+//     fetchArticles(currentPage, currentPerPage);
+//   }, [tab, searchParams]);
+
+//   // Filter articles based on search term
+//   useEffect(() => {
+//     filterArticles(articles, searchTerm);
 //   }, [searchTerm, articles]);
 
 //   // Helper functions
@@ -155,15 +180,20 @@
 //     );
 //   };
 
-//   const handleChangePage = (_, newPage) => setPage(newPage);
-//   const handleChangeRowsPerPage = (e) => {
-//     setRowsPerPage(parseInt(e.target.value, 10));
-//     setPage(0);
+//   const handleChangePage = (_, newPage) => {
+//     searchParams.set("page", newPage + 1);
+//     setSearchParams(searchParams);
 //   };
 
-//   // Toggle publish status between published and draft
+//   const handleChangeRowsPerPage = (e) => {
+//     const newPerPage = parseInt(e.target.value, 10);
+//     searchParams.set("perPage", newPerPage);
+//     searchParams.set("page", 1);
+//     setSearchParams(searchParams);
+//   };
+
 //   const handleTogglePublish = async (articleId, currentStatus) => {
-//     if (currentStatus === "archived") {
+//     if (currentStatus === ARTICLE_STATUS.ARCHIVED) {
 //       setSnackbar({
 //         open: true,
 //         message: "Cannot modify status of archived articles",
@@ -174,18 +204,37 @@
 
 //     setIsActionLoading(true);
 //     try {
-//       const newStatus = currentStatus === "published" ? "draft" : "published";
-//       const response = await httpClient.put(`news/${articleId}`, {
+//       const newStatus = currentStatus === ARTICLE_STATUS.PUBLISHED 
+//         ? ARTICLE_STATUS.DRAFT 
+//         : ARTICLE_STATUS.PUBLISHED;
+      
+//       const response = await httpClient.patch(`news/${articleId}`, {
 //         status: newStatus
 //       });
       
 //       if (response.data.success) {
 //         setSnackbar({
 //           open: true,
-//           message: `Article ${newStatus === "published" ? "published" : "saved as draft"} successfully`,
+//           message: `Article ${newStatus === ARTICLE_STATUS.PUBLISHED ? "published" : "saved as draft"} successfully`,
 //           severity: "success",
 //         });
-//         fetchArticles();
+        
+//         setArticles(prevArticles => 
+//           prevArticles.map(article => 
+//             article.id === articleId 
+//               ? { ...article, status: newStatus } 
+//               : article
+//           )
+//         );
+//         setFilteredArticles(prev => 
+//           prev.map(article => 
+//             article.id === articleId 
+//               ? { ...article, status: newStatus } 
+//               : article
+//           )
+//         );
+//       } else {
+//         throw new Error(response.data.message || "Failed to update status");
 //       }
 //     } catch (error) {
 //       setSnackbar({
@@ -198,12 +247,11 @@
 //     }
 //   };
 
-//   // Archive an article
 //   const handleArchiveArticle = async (articleId) => {
 //     setIsActionLoading(true);
 //     try {
-//       const response = await httpClient.put(`news/${articleId}`, {
-//         status: "archived",
+//       const response = await httpClient.patch(`news/${articleId}`, {
+//         status: ARTICLE_STATUS.ARCHIVED,
 //         archived_at: new Date().toISOString()
 //       });
       
@@ -227,12 +275,11 @@
 //     }
 //   };
 
-//   // Unarchive an article
 //   const handleUnarchiveArticle = async (articleId) => {
 //     setIsActionLoading(true);
 //     try {
-//       const response = await httpClient.put(`news/${articleId}`, {
-//         status: "draft",
+//       const response = await httpClient.patch(`news/${articleId}`, {
+//         status: ARTICLE_STATUS.DRAFT,
 //         archived_at: null
 //       });
       
@@ -255,14 +302,13 @@
 //     }
 //   };
 
-//   // Bulk archive/unarchive
 //   const handleBulkArchive = async () => {
 //     setIsActionLoading(true);
 //     try {
 //       const responses = await Promise.all(
 //         selected.map(id =>
-//           httpClient.put(`news/${id}`, { 
-//             status: "archived",
+//           httpClient.patch(`news/${id}`, { 
+//             status: ARTICLE_STATUS.ARCHIVED,
 //             archived_at: new Date().toISOString()
 //           })
 //         )
@@ -297,8 +343,8 @@
 //     try {
 //       const responses = await Promise.all(
 //         selected.map(id =>
-//           httpClient.put(`news/${id}`, { 
-//             status: "draft",
+//           httpClient.patch(`news/${id}`, { 
+//             status: ARTICLE_STATUS.DRAFT,
 //             archived_at: null
 //           })
 //         )
@@ -327,7 +373,66 @@
 //     }
 //   };
 
-//   // Delete actions
+//   const handleCloneArticle = async (articleId) => {
+//   setIsActionLoading(true);
+//   try {
+//     const response = await httpClient.get(`news/clone/${articleId}`);
+    
+//     if (response.data.success) {
+//       setSnackbar({
+//         open: true,
+//         message: "Article cloned successfully",
+//         severity: "success",
+//       });
+//       // Refresh the articles list to show the new clone
+//       fetchArticles();
+//     } else {
+//       throw new Error(response.data.message || "Failed to clone article");
+//     }
+//   } catch (error) {
+//     setSnackbar({
+//       open: true,
+//       message: error.response?.data?.message || "Failed to clone article",
+//       severity: "error",
+//     });
+//   } finally {
+//     setIsActionLoading(false);
+//     handleMenuClose(setRowMenuAnchorEl)();
+//   }
+// };
+
+//   const handleBulkDelete = async () => {
+//     setIsActionLoading(true);
+//     try {
+//       const responses = await Promise.all(
+//         selected.map(id => httpClient.delete(`news/${id}`))
+//       );
+
+//       const successfulDeletes = responses.filter(
+//         response => response.data.success
+//       );
+
+//       if (successfulDeletes.length > 0) {
+//         setSnackbar({
+//           open: true,
+//           message: `Successfully deleted ${successfulDeletes.length} article(s)`,
+//           severity: "success",
+//         });
+//         fetchArticles();
+//       }
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message: error.response?.data?.message || "Failed to delete articles",
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsActionLoading(false);
+    
+//   setOpenBulkDeleteModal(false);
+//    handleMenuClose(setBulkAnchorEl)();
+//     }
+//   };
 //   const handleDeleteClick = (id) => {
 //     setArticleToDelete(id);
 //     setOpenDeleteModal(true);
@@ -360,7 +465,6 @@
 //     }
 //   };
 
-//   // Export data
 //   const exportData = (type) => {
 //     const data = filteredArticles.map((article) => ({
 //       Title: article.title,
@@ -390,9 +494,8 @@
 //     setDownloadAnchorEl(null);
 //   };
 
-//   // Skeleton loader
 //   const renderSkeletonRows = () => {
-//     return Array(rowsPerPage).fill(0).map((_, index) => (
+//     return Array(pagination.per_page).fill(0).map((_, index) => (
 //       <TableRow key={`skeleton-${index}`}>
 //         <TableCell><Skeleton variant="rectangular" width={20} height={20} /></TableCell>
 //         <TableCell><Skeleton variant="text" width={200} /></TableCell>
@@ -411,28 +514,33 @@
 //     ));
 //   };
 
-//   // Format date for display
 //   const formatDate = (dateString) => {
 //     if (!dateString) return "-";
 //     const date = new Date(dateString);
 //     return date.toLocaleDateString();
 //   };
 
-//   // Status chip component
 //   const StatusChip = ({ status }) => {
-//     const color = status === "published" 
+//     const color = status === ARTICLE_STATUS.PUBLISHED 
 //       ? "success" 
-//       : status === "archived" 
+//       : status === ARTICLE_STATUS.ARCHIVED 
 //         ? "default" 
 //         : "warning";
     
-//     const label = status === "published" 
+//     const label = status === ARTICLE_STATUS.PUBLISHED 
 //       ? "Published" 
-//       : status === "archived" 
+//       : status === ARTICLE_STATUS.ARCHIVED 
 //         ? "Archived" 
 //         : "Draft";
     
 //     return <Chip label={label} color={color} size="small" />;
+//   };
+
+//   const handleTabChange = (newTab) => {
+//     setTab(newTab);
+//     searchParams.set("tab", newTab);
+//     searchParams.set("page", 1);
+//     setSearchParams(searchParams);
 //   };
 
 //   return (
@@ -464,7 +572,7 @@
 //           </Button>
 //           <Button
 //             variant="text"
-//             onClick={() => setTab("active")}
+//             onClick={() => handleTabChange("active")}
 //             disabled={isActionLoading}
 //             style={{
 //               borderBottom: tab === "active" ? "2px solid #ccc" : "none",
@@ -474,7 +582,7 @@
 //           </Button>
 //           <Button
 //             variant="text"
-//             onClick={() => setTab("archived")}
+//             onClick={() => handleTabChange("archived")}
 //             disabled={isActionLoading}
 //             style={{
 //               borderBottom: tab === "archived" ? "2px solid #ccc" : "none",
@@ -556,59 +664,57 @@
 //           {isLoading ? (
 //             renderSkeletonRows()
 //           ) : filteredArticles.length > 0 ? (
-//             filteredArticles
-//               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-//               .map((article) => (
-//                 <TableRow key={article.id}>
-//                   <TableCell>
-//                     <Checkbox
-//                       checked={selected.includes(article.id)}
-//                       onChange={() => handleSelect(article.id)}
-//                       disabled={isActionLoading}
-//                     />
-//                   </TableCell>
-//                   <TableCell>{article.title}</TableCell>
-//                   <TableCell>{article.slug}</TableCell>
-//                   <TableCell>{article.views}</TableCell>
-//                   <TableCell>{article.percent_viewed}%</TableCell>
-//                   <TableCell>{formatDate(article.created_at)}</TableCell>
-//                   <TableCell>{article.published_by}</TableCell>
-//                   <TableCell>{article.featured ? "Yes" : "No"}</TableCell>
-//                   <TableCell>{article.pinned ? "Yes" : "No"}</TableCell>
-//                   <TableCell>
-//                     <StatusChip status={article.status} />
-//                   </TableCell>
-//                   <TableCell>{formatDate(article.archived_at)}</TableCell>
-//                   <TableCell>{article.schedule || "-"}</TableCell>
-//                   <TableCell>
-//                     <Box display="flex" alignItems="center" gap={1}>
-//                       {article.status !== "archived" && (
-//                         <Tooltip 
-//                           title={article.status === "published" ? "Unpublish" : "Publish"} 
-//                           placement="top"
-//                         >
-//                           <Switch
-//                             checked={article.status === "published"}
-//                             onChange={() => handleTogglePublish(article.id, article.status)}
-//                             color="primary"
-//                             size="small"
-//                             disabled={isActionLoading}
-//                           />
-//                         </Tooltip>
-//                       )}
-//                       <IconButton
-//                         onClick={(e) => {
-//                           setActiveRowId(article.id);
-//                           handleMenuOpen(setRowMenuAnchorEl)(e);
-//                         }}
-//                         disabled={isActionLoading}
+//             filteredArticles.map((article) => (
+//               <TableRow key={article.id}>
+//                 <TableCell>
+//                   <Checkbox
+//                     checked={selected.includes(article.id)}
+//                     onChange={() => handleSelect(article.id)}
+//                     disabled={isActionLoading}
+//                   />
+//                 </TableCell>
+//                 <TableCell>{article.title}</TableCell>
+//                 <TableCell>{article.slug}</TableCell>
+//                 <TableCell>{article.views}</TableCell>
+//                 <TableCell>{article.percent_viewed}%</TableCell>
+//                 <TableCell>{formatDate(article.created_at)}</TableCell>
+//                 <TableCell>{article.published_by}</TableCell>
+//                 <TableCell>{article.featured === 1 ? "Yes" : "No"}</TableCell>
+// <TableCell>{article.pinned === 1 ? "Yes" : "No"}</TableCell>
+//                 <TableCell>
+//                   <StatusChip status={article.status} />
+//                 </TableCell>
+//                 <TableCell>{formatDate(article.archived_at)}</TableCell>
+//                 <TableCell>{article.schedule || "-"}</TableCell>
+//                 <TableCell>
+//                   <Box display="flex" alignItems="center" gap={1}>
+//                     {article.status !== ARTICLE_STATUS.ARCHIVED && (
+//                       <Tooltip 
+//                         title={article.status === ARTICLE_STATUS.PUBLISHED ? "Unpublish" : "Publish"} 
+//                         placement="top"
 //                       >
-//                         <MoreVert />
-//                       </IconButton>
-//                     </Box>
-//                   </TableCell>
-//                 </TableRow>
-//               ))
+//                         <Switch
+//                           checked={article.status === ARTICLE_STATUS.PUBLISHED}
+//                           onChange={() => handleTogglePublish(article.id, article.status)}
+//                           color="primary"
+//                           size="small"
+//                           disabled={isActionLoading}
+//                         />
+//                       </Tooltip>
+//                     )}
+//                     <IconButton
+//                       onClick={(e) => {
+//                         setActiveRowId(article.id);
+//                         handleMenuOpen(setRowMenuAnchorEl)(e);
+//                       }}
+//                       disabled={isActionLoading}
+//                     >
+//                       <MoreVert />
+//                     </IconButton>
+//                   </Box>
+//                 </TableCell>
+//               </TableRow>
+//             ))
 //           ) : (
 //             <TableRow>
 //               <TableCell colSpan={13} align="center">
@@ -623,9 +729,9 @@
 //       <TablePagination
 //         rowsPerPageOptions={[5, 10, 25]}
 //         component="div"
-//         count={filteredArticles.length}
-//         rowsPerPage={rowsPerPage}
-//         page={page}
+//         count={pagination.total}
+//         rowsPerPage={pagination.per_page}
+//         page={pagination.current_page - 1}
 //         onPageChange={handleChangePage}
 //         onRowsPerPageChange={handleChangeRowsPerPage}
 //         disabled={isActionLoading || isLoading}
@@ -644,6 +750,7 @@
 //         ) : (
 //           <MenuItem onClick={handleBulkUnarchive}>Unarchive</MenuItem>
 //         )}
+//         <MenuItem onClick={() => setOpenBulkDeleteModal(true)}>Delete</MenuItem>
 //         <MenuItem>Remove Featured</MenuItem>
 //         <MenuItem>Remove Pinned</MenuItem>
 //         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
@@ -680,7 +787,10 @@
 //         >
 //           Edit
 //         </MenuItem>
-//         <MenuItem disabled={isActionLoading}>Clone</MenuItem>
+//         <MenuItem      onClick={() => {
+//       handleCloneArticle(activeRowId);
+//     }}
+//  disabled={isActionLoading}>Clone</MenuItem>
 //         {tab === "active" ? (
 //           <MenuItem 
 //             onClick={() => {
@@ -788,6 +898,36 @@
 //         </DialogActions>
 //       </Dialog>
 
+//       {/* Bulk Delete Confirmation Dialog */}
+//       <Dialog
+//         open={openBulkDeleteModal}
+//         onClose={() => setOpenBulkDeleteModal(false)}
+//       >
+//         <DialogTitle>Confirm Bulk Delete</DialogTitle>
+//         <DialogContent>
+//           <DialogContentText>
+//             Are you sure you want to delete {selected.length} selected articles? This action cannot be undone.
+//           </DialogContentText>
+//         </DialogContent>
+//         <DialogActions>
+//           <Button 
+//             onClick={() => setOpenBulkDeleteModal(false)} 
+//             color="primary"
+//             disabled={isActionLoading}
+//           >
+//             Cancel
+//           </Button>
+//           <Button
+//             onClick={handleBulkDelete}
+//             color="error"
+//             autoFocus
+//             disabled={isActionLoading}
+//           >
+//             {isActionLoading ? "Deleting..." : "Confirm Delete"}
+//           </Button>
+//         </DialogActions>
+//       </Dialog>
+
 //       {/* Action Loader */}
 //       {isActionLoading && (
 //         <Box
@@ -809,13 +949,14 @@
 //       {/* Snackbar Notification */}
 //       <Snackbar
 //         open={snackbar.open}
-//         autoHideDuration={6000}
+//         autoHideDuration={2000}
 //         onClose={() => setSnackbar({ ...snackbar, open: false })}
 //         anchorOrigin={{ vertical: "top", horizontal: "right" }}
 //       >
 //         <Alert
 //           onClose={() => setSnackbar({ ...snackbar, open: false })}
 //           severity={snackbar.severity}
+//           variant = "filled"
 //           sx={{ width: "100%" }}
 //         >
 //           {snackbar.message}
@@ -826,6 +967,11 @@
 // };
 
 // export default ManageArticles;
+
+
+
+
+// *****************************
 
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLoaderData, useSearchParams } from "react-router-dom";
@@ -892,8 +1038,10 @@ export async function loader({ request }) {
       : `news?status=${ARTICLE_STATUS.PUBLISHED}|${ARTICLE_STATUS.DRAFT}&page=${page}&per_page=${perPage}`;
     
     const response = await httpClient.get(endpoint);
+   
     
     if (response.data.success) {
+       
       return { 
         articles: response.data.data,
         pagination: response.data.pagination 
@@ -973,7 +1121,7 @@ const ManageArticles = () => {
       filtered = filtered.filter(
         article =>
           article.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          (article.published_by?.toString() || "").includes(searchTerm)
+          (article.publisher?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase())
       );
     }
     
@@ -1199,32 +1347,32 @@ const ManageArticles = () => {
   };
 
   const handleCloneArticle = async (articleId) => {
-  setIsActionLoading(true);
-  try {
-    const response = await httpClient.get(`news/clone/${articleId}`);
-    
-    if (response.data.success) {
+    setIsActionLoading(true);
+    try {
+      const response = await httpClient.get(`news/clone/${articleId}`);
+      
+      if (response.data.success) {
+        setSnackbar({
+          open: true,
+          message: "Article cloned successfully",
+          severity: "success",
+        });
+        // Refresh the articles list to show the new clone
+        fetchArticles();
+      } else {
+        throw new Error(response.data.message || "Failed to clone article");
+      }
+    } catch (error) {
       setSnackbar({
         open: true,
-        message: "Article cloned successfully",
-        severity: "success",
+        message: error.response?.data?.message || "Failed to clone article",
+        severity: "error",
       });
-      // Refresh the articles list to show the new clone
-      fetchArticles();
-    } else {
-      throw new Error(response.data.message || "Failed to clone article");
+    } finally {
+      setIsActionLoading(false);
+      handleMenuClose(setRowMenuAnchorEl)();
     }
-  } catch (error) {
-    setSnackbar({
-      open: true,
-      message: error.response?.data?.message || "Failed to clone article",
-      severity: "error",
-    });
-  } finally {
-    setIsActionLoading(false);
-    handleMenuClose(setRowMenuAnchorEl)();
-  }
-};
+  };
 
   const handleBulkDelete = async () => {
     setIsActionLoading(true);
@@ -1253,11 +1401,11 @@ const ManageArticles = () => {
       });
     } finally {
       setIsActionLoading(false);
-    
-  setOpenBulkDeleteModal(false);
-   handleMenuClose(setBulkAnchorEl)();
+      setOpenBulkDeleteModal(false);
+      handleMenuClose(setBulkAnchorEl)();
     }
   };
+
   const handleDeleteClick = (id) => {
     setArticleToDelete(id);
     setOpenDeleteModal(true);
@@ -1299,7 +1447,7 @@ const ManageArticles = () => {
       Featured: article.featured,
       Pinned: article.pinned,
       "Created At": article.created_at,
-      "Published By": article.published_by,
+      "Publisher": article.publisher ? article.publisher.name : 'Unknown',
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -1476,7 +1624,7 @@ const ManageArticles = () => {
             <TableCell>Views</TableCell>
             <TableCell>% Viewed</TableCell>
             <TableCell>Created At</TableCell>
-            <TableCell>Published By</TableCell>
+            <TableCell>Publisher</TableCell>
             <TableCell>Featured</TableCell>
             <TableCell>Pinned</TableCell>
             <TableCell>Status</TableCell>
@@ -1503,9 +1651,11 @@ const ManageArticles = () => {
                 <TableCell>{article.views}</TableCell>
                 <TableCell>{article.percent_viewed}%</TableCell>
                 <TableCell>{formatDate(article.created_at)}</TableCell>
-                <TableCell>{article.published_by}</TableCell>
+                <TableCell>
+                  {article.publisher ? article.publisher.name : 'Unknown'}
+                </TableCell>
                 <TableCell>{article.featured === 1 ? "Yes" : "No"}</TableCell>
-<TableCell>{article.pinned === 1 ? "Yes" : "No"}</TableCell>
+                <TableCell>{article.pinned === 1 ? "Yes" : "No"}</TableCell>
                 <TableCell>
                   <StatusChip status={article.status} />
                 </TableCell>
@@ -1612,10 +1762,9 @@ const ManageArticles = () => {
         >
           Edit
         </MenuItem>
-        <MenuItem      onClick={() => {
-      handleCloneArticle(activeRowId);
-    }}
- disabled={isActionLoading}>Clone</MenuItem>
+        <MenuItem onClick={() => handleCloneArticle(activeRowId)} disabled={isActionLoading}>
+          Clone
+        </MenuItem>
         {tab === "active" ? (
           <MenuItem 
             onClick={() => {
@@ -1781,7 +1930,7 @@ const ManageArticles = () => {
         <Alert
           onClose={() => setSnackbar({ ...snackbar, open: false })}
           severity={snackbar.severity}
-          variant = "filled"
+          variant="filled"
           sx={{ width: "100%" }}
         >
           {snackbar.message}
@@ -1792,7 +1941,3 @@ const ManageArticles = () => {
 };
 
 export default ManageArticles;
-
-
-
-

@@ -865,6 +865,7 @@ const LocationForm = () => {
               <TextField
                 fullWidth
                 name="name"
+                 label="Location Name *"
                 value={formData.name}
                 onChange={handleChange}
                 error={!!errors.name}
@@ -876,6 +877,7 @@ const LocationForm = () => {
                 select
                 fullWidth
                 name="type_id"
+                
                 value={formData.type_id}
                 onChange={handleChange}
                 error={!!errors.type_id}
@@ -890,7 +892,8 @@ const LocationForm = () => {
               </TextField>
               <TextField
                 fullWidth
-                name="contact"
+                name="Primary Contact"
+                label="Primary Contact"
                 value={formData.contact}
                 onChange={handleChange}
                 size="small"
@@ -899,6 +902,7 @@ const LocationForm = () => {
               <TextField
                 fullWidth
                 name="phone"
+                label="Phone Number"
                 value={formData.phone}
                 onChange={handleChange}
                 size="small"
@@ -908,6 +912,7 @@ const LocationForm = () => {
               <TextField
                 fullWidth
                 name="email"
+                 label="Email Address"
                 value={formData.email}
                 onChange={handleChange}
                 size="small"
@@ -917,6 +922,7 @@ const LocationForm = () => {
               <TextField
                 fullWidth
                 name="country"
+                 label="Country"
                 value={formData.country}
                 onChange={handleChange}
                 size="small"
@@ -938,19 +944,19 @@ const LocationForm = () => {
                 onChange={(_, newValue) => handleAddressSelect(newValue)}
                 onInputChange={(_, newInputValue) => setAddressValue(newInputValue)}
                 renderInput={(params) => (
-                  <TextField {...params} size="small" placeholder="Start typing address..." InputProps={{ ...params.InputProps, startAdornment: (<InputAdornment position="start"><LocationIcon fontSize="small" /></InputAdornment>) }} />
+                  <TextField {...params} size="small"  label="Search Address" placeholder="Start typing address..." InputProps={{ ...params.InputProps, startAdornment: (<InputAdornment position="start"><LocationIcon fontSize="small" /></InputAdornment>) }} />
                 )}
               />
               <Box display="flex" gap={2}>
-                <TextField fullWidth name="street_number" value={formData.street_number} onChange={handleChange} error={!!errors.street_number} helperText={errors.street_number} size="small" placeholder="Street Number *" />
-                <TextField fullWidth name="street_name" value={formData.street_name} onChange={handleChange} error={!!errors.street_name} helperText={errors.street_name} size="small" placeholder="Street Name *" />
+                <TextField fullWidth name="street_number" label="Street Number *" value={formData.street_number} onChange={handleChange} error={!!errors.street_number} helperText={errors.street_number} size="small" placeholder="Street Number *" />
+                <TextField fullWidth name="street_name" label="Street Name *" value={formData.street_name} onChange={handleChange} error={!!errors.street_name} helperText={errors.street_name} size="small" placeholder="Street Name *" />
               </Box>
-              <TextField fullWidth name="suburb" value={formData.suburb} onChange={handleChange} error={!!errors.suburb} helperText={errors.suburb} size="small" placeholder="Suburb *" />
+              <TextField fullWidth name="suburb" label="Suburb *" value={formData.suburb} onChange={handleChange} error={!!errors.suburb} helperText={errors.suburb} size="small" placeholder="Suburb *" />
               <Box display="flex" gap={2}>
-                <TextField select fullWidth name="state" value={formData.state} onChange={handleChange} error={!!errors.state} helperText={errors.state} size="small">
+                <TextField select fullWidth name="state" label="State *" value={formData.state} onChange={handleChange} error={!!errors.state} helperText={errors.state} size="small">
                   {australianStates.map(state => <MenuItem key={state.value} value={state.value}>{state.label}</MenuItem>)}
                 </TextField>
-                <TextField fullWidth name="postcode" value={formData.postcode} onChange={handleChange} error={!!errors.postcode} helperText={errors.postcode} size="small" placeholder="Postcode *" />
+                <TextField fullWidth name="postcode" label="Postcode *" value={formData.postcode} onChange={handleChange} error={!!errors.postcode} helperText={errors.postcode} size="small" placeholder="Postcode *" />
               </Box>
             </Stack>
           </Box>

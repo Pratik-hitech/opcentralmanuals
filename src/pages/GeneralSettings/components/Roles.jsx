@@ -170,10 +170,10 @@ const RolesTable = () => {
           variant="contained"
           color="primary"
           size={isMobile ? "small" : "medium"}
-          onClick={() => navigate("/roles/create")}
+          onClick={() => navigate("/general-settings/roles/create")}
           sx={{ minWidth: isMobile ? '100%' : 'auto' }}
         >
-          {isMobile ? "Add Role" : "Create New Role"}
+          {isMobile ? "Add Role" : "Create New Roles"}
         </Button>
 
         <TextField

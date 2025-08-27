@@ -831,7 +831,7 @@ const RoleDetailsForm = () => {
     File_Manager: ['manage_files'],
     Key_Contacts: ['manage_contacts'],
     News: ['news_delete', 'news_can_publish', 'news_manage_draft','news_export_pdf', 'news_view_reporting'],
-    Operational_Manuals: ['manual_publish','manual_drafts','manual_view_reporting','manual_export_pdf','manual_view_reporting'],
+    Operational_Manuals: ['manual_publish','manual_drafts','manual_view_reporting','manual_export_pdf'],
     social: ['can_create_posts'],
     Quick_Links: ['manage_links']
   };
@@ -867,7 +867,7 @@ const RoleDetailsForm = () => {
 
       <Grid container spacing={3}>
         <Grid item xs={12} md={6}>
-          <TextField fullWidth label="Role Name *" value={roleName} onChange={(e) => setRoleName(e.target.value)} margin="normal" required />
+          <TextField fullWidth label="Role Name " value={roleName} onChange={(e) => setRoleName(e.target.value)} margin="normal" required />
         </Grid>
       </Grid>
 
