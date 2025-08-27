@@ -58,8 +58,8 @@ import VerifyUserPage from "../pages/VerifyUser/VerifyUser";
 import PolicyDetailsView from "../pages/Operationsmanuals/components/PolicyDetailsView";
 import OperationsManual from "../pages/Operationsmanuals/components/manual/OperationsManual";
 import PolicyDetails from "../pages/Operationsmanuals/components/policies/PolicyDetails";
-import CreatePolicies from "../../../../opcentralmanuals/src/pages/Operationsmanuals/components/policies/CreatePolicies";
-import PolicyPermissions from "../../../../opcentralmanuals/src/pages/Operationsmanuals/components/policies/Permissions";
+import CreatePolicies from "../pages/Operationsmanuals/components/policies/CreatePolicies";
+import PolicyPermissions from "../pages/Operationsmanuals/components/policies/Permissions";
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
