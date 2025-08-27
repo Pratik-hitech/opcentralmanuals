@@ -2,7 +2,7 @@ import { forwardRef } from "react";
 import { Editor } from "@tinymce/tinymce-react";
 
 const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
-  const { value, onChange, ...rest } = props;
+  const { value, onChange, onImageUpload, ...rest } = props;
 
   const defaultInit = {
     height: 350,
@@ -10,7 +10,7 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
     statusbar: false,
 
     plugins:
-      "advlist autolink lists link image charmap preview anchor " +
+      "advlist autolink lists link charmap preview anchor " +
       "searchreplace visualblocks code codesample fullscreen " +
       "insertdatetime media table help wordcount",
 
@@ -41,6 +41,17 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
       }
     `;
         document.head.appendChild(style);
+      });
+
+      // Override the default image handler
+      editor.ui.registry.addButton("image", {
+        icon: "image",
+        tooltip: "Insert image",
+        onAction: function () {
+          if (onImageUpload) {
+            onImageUpload();
+          }
+        },
       });
     },
   };

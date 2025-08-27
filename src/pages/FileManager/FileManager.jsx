@@ -555,6 +555,21 @@ const MediaFolderViewer = ({
           media.type === "application/pdf" ||
           media.name.toLowerCase().endsWith(".pdf")
         );
+      } else if (fileTypeFilter === "image") {
+        // Filter for image files
+        const imageTypes = [
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/gif",
+          "image/svg+xml",
+          "image/webp",
+          "image/bmp",
+        ];
+        return (
+          imageTypes.includes(media.type) ||
+          media.name.toLowerCase().match(/\.(jpg|jpeg|png|gif|svg|webp|bmp)$/)
+        );
       }
       return true;
     });

@@ -160,6 +160,7 @@ const PolicyDetails = () => {
   const [previewVideo, setPreviewVideo] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
+  const [showImageMediaViewer, setShowImageMediaViewer] = useState(false);
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
@@ -579,6 +580,24 @@ const PolicyDetails = () => {
     }
   };
 
+  const handleImageUpload = () => {
+    setShowImageMediaViewer(true);
+  };
+
+  const handleImageMediaViewerClose = (selectedImageFiles = []) => {
+    setShowImageMediaViewer(false);
+    if (selectedImageFiles.length > 0) {
+      const selectedImage = selectedImageFiles[0];
+      // Get the TinyMCE editor instance and insert the image
+      const tinyMCEEditor = window.tinymce.activeEditor;
+      if (tinyMCEEditor) {
+        tinyMCEEditor.insertContent(
+          `<img src="https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
+        );
+      }
+    }
+  };
+
   const handleRemoveEmbeddedPdf = () => {
     setEmbeddedPdf(null);
   };
@@ -881,6 +900,7 @@ const PolicyDetails = () => {
               <RichTextEditor
                 value={formData.content}
                 onChange={handleContentChange}
+                onImageUpload={handleImageUpload}
               />
             </FormGrid>
             <Box>
@@ -1240,6 +1260,38 @@ const PolicyDetails = () => {
                   }
                   onCloseRequest={() => handlePdfMediaViewerClose([])}
                   fileTypeFilter="pdf"
+                />
+              </DialogContent>
+            </Dialog>
+            <Dialog
+              fullScreen
+              open={showImageMediaViewer}
+              onClose={() => handleImageMediaViewerClose([])}
+              maxWidth={false}
+            >
+              <DialogTitle sx={{ m: 0, p: 2 }}>
+                Select Image
+                <IconButton
+                  aria-label="close"
+                  onClick={() => handleImageMediaViewerClose([])}
+                  sx={{
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    color: (theme) => theme.palette.grey[500],
+                  }}
+                >
+                  <CloseIcon />
+                </IconButton>
+              </DialogTitle>
+              <DialogContent dividers sx={{ p: 0, height: "100%" }}>
+                <MediaFolderViewer
+                  selectionMode={true}
+                  onSelectionConfirm={(selectedFiles) =>
+                    handleImageMediaViewerClose(selectedFiles)
+                  }
+                  onCloseRequest={() => handleImageMediaViewerClose([])}
+                  fileTypeFilter="image"
                 />
               </DialogContent>
             </Dialog>
