@@ -563,6 +563,15 @@ const MediaFolderViewer = ({
   const renderMediaCard = (media) => {
     const isSelected = selectedFiles.some((f) => f.id === media.id);
 
+    // Check if the file is a PDF or DOCX
+    const isPdf =
+      media.type === "application/pdf" ||
+      media.name.toLowerCase().endsWith(".pdf");
+    const isDocx =
+      media.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      media.name.toLowerCase().endsWith(".docx");
+
     return (
       <Card
         sx={{
@@ -604,7 +613,74 @@ const MediaFolderViewer = ({
             }}
           />
         )}
-        {media.type === "video" ? (
+        {isPdf || isDocx ? (
+          // Render thumbnail for PDF or DOCX files
+          <>
+            <Box
+              sx={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: isPdf ? "#f5f5f5" : "#e3f2fd",
+                borderRadius: 2,
+              }}
+            >
+              <DescriptionIcon
+                sx={{
+                  fontSize: 64,
+                  color: isPdf ? "#d22d2d" : "#1976d2",
+                }}
+              />
+            </Box>
+            {!selectionMode && (
+              <MediaCardOverlay>
+                <Box sx={{ display: "flex", gap: 1 }}>
+                  <Tooltip title="Preview">
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handlePreview(media);
+                      }}
+                      sx={{ backgroundColor: colors.paper }}
+                    >
+                      <PreviewIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Download">
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const link = document.createElement("a");
+                        link.href = media.url;
+                        link.download = media.name;
+                        link.click();
+                      }}
+                      sx={{ backgroundColor: colors.paper }}
+                    >
+                      <DownloadIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Info">
+                    <IconButton
+                      color="primary"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleInfo(media);
+                      }}
+                      sx={{ backgroundColor: colors.paper }}
+                    >
+                      <InfoIcon />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+              </MediaCardOverlay>
+            )}
+          </>
+        ) : media.type === "video" ? (
           <>
             <CardMedia
               component="video"
@@ -1018,6 +1094,7 @@ const MediaFolderViewer = ({
           >
             {selectedMedia.type === "video" ? (
               <video
+                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}${selectedMedia.url}`}
                 controls
                 style={{
                   maxWidth: "100%",
@@ -1025,7 +1102,6 @@ const MediaFolderViewer = ({
                   borderRadius: 8,
                 }}
               >
-                <source src={selectedMedia.url} type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             ) : (
