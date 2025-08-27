@@ -602,7 +602,9 @@ const AllPolicies = () => {
                           size="small"
                           color="primary"
                           onClick={() =>
-                            window.open(policy.publicURL, "_blank")
+                            navigate(
+                              `/operations/manuals/policies/policy/${policy.id}`
+                            )
                           }
                           disabled={isActionLoading}
                         >
@@ -831,7 +833,7 @@ const AllPolicies = () => {
           display="flex"
           justifyContent="center"
           alignItems="center"
-          bgcolor="rgba(0,0,0,0.1)"
+          bgcolor="rgba(0,0,0.1)"
           zIndex={9999}
         >
           <CircularProgress />

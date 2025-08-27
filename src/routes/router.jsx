@@ -47,6 +47,7 @@ import CreatePolicies from "../pages/Operationsmanuals/components/policies/Creat
 import PolicyDetails from "../pages/Operationsmanuals/components/policies/PolicyDetails";
 import PolicyPermissions from "../pages/Operationsmanuals/components/policies/Permissions";
 import OperationsManual from "../pages/Operationsmanuals/components/manual/OperationsManual";
+import PolicyDetailsView from "../pages/Operationsmanuals/components/PolicyDetailsView";
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
 
@@ -110,6 +111,10 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: <OperationsManuals /> },
       { path: "policies/all", element: <AllPolicies /> },
+      {
+        path: "policies/policy/:policyId",
+        element: <PolicyDetailsView />,
+      },
     ],
   },
   {
