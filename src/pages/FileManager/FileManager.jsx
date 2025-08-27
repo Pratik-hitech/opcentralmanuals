@@ -478,6 +478,43 @@ const MediaFolderViewer = ({
     setDeleteDialog({ open: false, folderId: "" });
   };
 
+  const handleDownload = async (media) => {
+    const url = `https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`;
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include", // Includes cookies for auth
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Download failed: ${response.status} ${response.statusText}`
+        );
+      }
+
+      // Optional: Validate Content-Type to avoid downloading error pages (HTML)
+      const contentType = response.headers.get("Content-Type");
+      if (contentType && contentType.includes("text/html")) {
+        throw new Error(
+          "Received HTML instead of file (likely an auth or redirect issue)"
+        );
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = media.name; // e.g., 'file.pdf', 'video.mp4'
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      URL.revokeObjectURL(objectUrl); // Cleanup
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
   const renderFolderTree = (folder, depth = 0) => {
     return (
       <StyledTreeItem key={folder.id}>
@@ -669,10 +706,7 @@ const MediaFolderViewer = ({
                       color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const link = document.createElement("a");
-                        link.href = media.url;
-                        link.download = media.name;
-                        link.click();
+                        handleDownload(media);
                       }}
                       sx={{ backgroundColor: colors.paper }}
                     >
@@ -728,10 +762,7 @@ const MediaFolderViewer = ({
                       color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const link = document.createElement("a");
-                        link.href = media.url;
-                        link.download = media.name;
-                        link.click();
+                        handleDownload(media);
                       }}
                       sx={{ backgroundColor: colors.paper }}
                     >
@@ -788,10 +819,7 @@ const MediaFolderViewer = ({
                       color="primary"
                       onClick={(e) => {
                         e.stopPropagation();
-                        const link = document.createElement("a");
-                        link.href = media.url;
-                        link.download = media.name;
-                        link.click();
+                        handleDownload(media);
                       }}
                       sx={{ backgroundColor: colors.paper }}
                     >
@@ -891,10 +919,7 @@ const MediaFolderViewer = ({
               <IconButton
                 onClick={(e) => {
                   e.stopPropagation();
-                  const link = document.createElement("a");
-                  link.href = media.url;
-                  link.download = media.name;
-                  link.click();
+                  handleDownload(media);
                 }}
               >
                 <DownloadIcon sx={{ color: colors.primary }} />
@@ -1047,6 +1072,15 @@ const MediaFolderViewer = ({
   };
 
   const renderMediaView = () => {
+    // Check if the file is a PDF or DOCX
+    const isPdf =
+      selectedMedia.type === "application/pdf" ||
+      selectedMedia.name.toLowerCase().endsWith(".pdf");
+    const isDocx =
+      selectedMedia.type ===
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      selectedMedia.name.toLowerCase().endsWith(".docx");
+
     return (
       <>
         <Button
@@ -1081,11 +1115,9 @@ const MediaFolderViewer = ({
             <Button
               variant="contained"
               startIcon={<DownloadIcon sx={{ color: colors.paper }} />}
-              onClick={() => {
-                const link = document.createElement("a");
-                link.href = selectedMedia.url;
-                link.download = selectedMedia.name;
-                link.click();
+              onClick={(e) => {
+                e.stopPropagation();
+                handleDownload(selectedMedia);
               }}
               sx={{
                 backgroundColor: colors.primary,
@@ -1107,7 +1139,63 @@ const MediaFolderViewer = ({
               backgroundColor: colors.secondary,
             }}
           >
-            {selectedMedia.type === "video" ? (
+            {isPdf ? (
+              // PDF Preview using iframe
+              <iframe
+                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
+                title={selectedMedia.name}
+                style={{
+                  width: "100%",
+                  height: "70vh",
+                  border: "none",
+                  borderRadius: 8,
+                }}
+              />
+            ) : isDocx ? (
+              // DOCX files cannot be previewed in browser, show message with download option
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  textAlign: "center",
+                  p: 4,
+                  backgroundColor: colors.paper,
+                  borderRadius: 2,
+                  boxShadow: 3,
+                }}
+              >
+                <DescriptionIcon
+                  sx={{ fontSize: 64, color: "#1976d2", mb: 2 }}
+                />
+                <Typography variant="h6" sx={{ mb: 2, color: colors.text }}>
+                  Document Preview
+                </Typography>
+                <Typography variant="body1" sx={{ mb: 3, color: colors.text }}>
+                  This document cannot be previewed directly in the browser.
+                  Please download the file to view it.
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<DownloadIcon />}
+                  onClick={() => {
+                    const link = document.createElement("a");
+                    link.href = `https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`;
+                    link.download = selectedMedia.name;
+                    link.click();
+                  }}
+                  sx={{
+                    backgroundColor: colors.primary,
+                    "&:hover": { backgroundColor: colors.secondary },
+                  }}
+                >
+                  <Typography sx={{ color: colors.paper }}>
+                    Download Now
+                  </Typography>
+                </Button>
+              </Box>
+            ) : selectedMedia.type === "video" ? (
               <video
                 src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}${selectedMedia.url}`}
                 controls
