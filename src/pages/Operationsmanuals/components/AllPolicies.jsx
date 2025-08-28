@@ -43,6 +43,7 @@ import { saveAs } from "file-saver";
 import { httpClient } from "../../../utils/httpClientSetup";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { useNotification } from "../../../hooks/useNotification";
 
 const AllPolicies = () => {
   // State declarations
@@ -71,6 +72,7 @@ const AllPolicies = () => {
   const [tabValue, setTabValue] = useState("active");
 
   const navigate = useNavigate();
+  const showNotification = useNotification();
 
   // Fetch policies
   const fetchPolicies = async () => {
@@ -331,24 +333,20 @@ const AllPolicies = () => {
   const confirmDelete = async () => {
     setIsActionLoading(true);
     try {
-      const response = await httpClient.delete(
-        `https://6894256bbe3700414e121f1d.mockapi.io/policies/policies/${policyToDelete}`
-      );
+      const response = await httpClient.delete(`policies/${policyToDelete}`);
 
-      if (response.data) {
-        setSnackbar({
-          open: true,
-          message: "Policy deleted successfully",
-          severity: "success",
-        });
+      const { data } = response;
+
+      if (data.success) {
+        showNotification(
+          "success",
+          data.message || "Policy deleted successfully"
+        );
+
         fetchPolicies();
       }
     } catch (error) {
-      setSnackbar({
-        open: true,
-        message: error.message || "Failed to delete policy",
-        severity: "error",
-      });
+      showNotification("error", error.message || "Failed to delete policy");
     } finally {
       setIsActionLoading(false);
       setOpenDeleteModal(false);
