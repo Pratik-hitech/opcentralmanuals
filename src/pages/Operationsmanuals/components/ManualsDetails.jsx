@@ -126,6 +126,10 @@ const ManualsDetails = () => {
             thumbnailPreview: "",
           });
         }
+
+        setTimeout(() => {
+          navigate("/operations/manuals");
+        }, 1000);
       } else {
         showNotification("error", data.message || "Error saving manual");
       }

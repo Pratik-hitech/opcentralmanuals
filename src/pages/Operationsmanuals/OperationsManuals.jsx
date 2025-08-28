@@ -36,10 +36,11 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import AppsIcon from "@mui/icons-material/Apps";
 import ViewListIcon from "@mui/icons-material/ViewList";
 import { Link } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import BlueWheelersLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
 import { httpClient } from "../../utils/httpClientSetup";
+import { useNotification } from "../../hooks/useNotification";
 
 const fetchManuals = async () => {
   return httpClient
@@ -249,9 +250,11 @@ const OperationsManuals = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [viewMode, setViewMode] = useState("tiles");
   const [manuals, setManuals] = useState([]);
+  const [selectedManual, setSelectedManual] = useState(null);
   const [loading, setLoading] = useState(true);
   const [manualLoading, setManualLoading] = useState(false);
   const [loadingManualName, setLoadingManualName] = useState("");
+  const [deleting, setDeleting] = useState(false);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const [snackbar, setSnackbar] = useState({
@@ -260,31 +263,24 @@ const OperationsManuals = () => {
     severity: "success", // 'success', 'error', 'warning', 'info'
   });
   const navigate = useNavigate();
+  const showNotification = useNotification();
   const open = Boolean(anchorEl);
 
-  useEffect(() => {
-    const loadManuals = async () => {
-      try {
-        const data = await fetchManuals();
-        setManuals(data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching manuals:", error);
-        setLoading(false);
-        showSnackbar("Failed to load manuals", "error");
-      }
-    };
-
-    loadManuals();
+  const loadManuals = useCallback(async () => {
+    try {
+      const data = await fetchManuals();
+      setManuals(data);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching manuals:", error);
+      setLoading(false);
+      showNotification("error", "Failed to load manuals");
+    }
   }, []);
 
-  const showSnackbar = (message, severity) => {
-    setSnackbar({
-      open: true,
-      message,
-      severity,
-    });
-  };
+  useEffect(() => {
+    loadManuals();
+  }, [loadManuals]);
 
   const handleCloseSnackbar = () => {
     setSnackbar((prev) => ({ ...prev, open: false }));
@@ -316,20 +312,31 @@ const OperationsManuals = () => {
     setViewMode(viewMode === "tiles" ? "table" : "tiles");
   };
 
-  const handleDeleteManual = async (id) => {
-    try {
-      // Make API call to delete manual
-      await httpClient.delete(`/collections/${id}`);
+  const handleDeleteManual = async (manual) => {
+    setSelectedManual(manual);
 
-      const manualToDelete = manuals.find((m) => m.id === id);
-      setManuals(manuals.filter((manual) => manual.id !== id));
-      showSnackbar(
-        `"${manualToDelete.title}" manual deleted successfully`,
-        "success"
+    try {
+      setDeleting(true);
+      // Make API call to delete manual
+      const response = await httpClient.delete(`/collections/${manual.id}`);
+      const { data } = response;
+
+      if (!data.success) {
+        showNotification("error", data.message || "Failed to delete manual");
+
+        return;
+      }
+
+      showNotification(
+        "success",
+        data.message || "Manual deleted successfully"
       );
+      loadManuals();
     } catch (error) {
       console.error("Error deleting manual:", error);
-      showSnackbar("Failed to delete manual", "error");
+      showNotification("error", "Failed to delete manual");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -344,12 +351,16 @@ const OperationsManuals = () => {
     }, 1000);
   };
 
-  if (loading) {
+  if (loading || deleting) {
     return (
       <Box sx={{ p: 3, textAlign: "center" }}>
         <>
-          <CircularProgress />
-          <Typography mt={2}>Loading manuals...</Typography>
+          <CircularProgress color={deleting ? "error" : "default"} />
+          <Typography mt={2} sx={{ color: deleting ? "#ff0000" : "default" }}>
+            {deleting
+              ? `Deleting manual: ${selectedManual?.title}...`
+              : "Loading manuals..."}
+          </Typography>
         </>
       </Box>
     );
@@ -487,7 +498,7 @@ const OperationsManuals = () => {
               <LogoCard
                 key={manual.id}
                 manual={manual}
-                onDelete={() => handleDeleteManual(manual.id)}
+                onDelete={() => handleDeleteManual(manual)}
                 onManualView={handleManualView}
                 navigate={navigate}
               />
@@ -530,7 +541,7 @@ const OperationsManuals = () => {
                         <TableCell align="right">
                           <TableActions
                             manual={manual}
-                            onDelete={() => handleDeleteManual(manual.id)}
+                            onDelete={() => handleDeleteManual(manual)}
                             onManualView={handleManualView}
                             navigate={navigate}
                           />
@@ -660,8 +671,8 @@ const TableActions = ({ manual, onDelete, onManualView, navigate }) => {
         <DialogTitle>Delete Manual</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{manual.title}" manual? This action
-            cannot be undone.
+            Are you sure you want to delete <strong>{manual.title}</strong>
+            manual? This action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>

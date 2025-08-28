@@ -588,11 +588,13 @@ const PolicyDetails = () => {
     setShowImageMediaViewer(false);
     if (selectedImageFiles.length > 0) {
       const selectedImage = selectedImageFiles[0];
+      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}`;
+
       // Get the TinyMCE editor instance and insert the image
       const tinyMCEEditor = window.tinymce.activeEditor;
       if (tinyMCEEditor) {
         tinyMCEEditor.insertContent(
-          `<img src="https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
+          `<img src="${imageUrl}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
         );
       }
     }
