@@ -224,8 +224,8 @@ const LogoCard = ({
         <DialogTitle>Delete Manual</DialogTitle>
         <DialogContent>
           <DialogContentText>
-            Are you sure you want to delete "{title}" manual? This action cannot
-            be undone.
+            Are you sure you want to delete <strong>{title}</strong>? This
+            action cannot be undone.
           </DialogContentText>
         </DialogContent>
         <DialogActions>
