@@ -140,6 +140,7 @@ const PolicyDetails = () => {
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
   const [videos, setVideos] = useState([]);
@@ -767,7 +768,7 @@ const PolicyDetails = () => {
     submitData.append("collection_id", id);
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
       let response;
       if (isEdit) {
         response = await httpClient.post(`/policies/${policyId}`, submitData);
@@ -799,9 +800,18 @@ const PolicyDetails = () => {
         err.response?.data?.message || err.message || `Failed to save policy`;
       showNotification("error", errorMessage);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: "center" }}>
+        <CircularProgress />
+        <Typography mt={2}>{"Loading details..."}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Container
@@ -1350,8 +1360,8 @@ const PolicyDetails = () => {
               </DialogActions>
             </Dialog>
             <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
-              <Button type="submit" variant="contained" disabled={loading}>
-                {loading ? (
+              <Button type="submit" variant="contained" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircularProgress size={18} color="inherit" />
                     <Typography variant="body2" sx={{ ml: 1 }}>
