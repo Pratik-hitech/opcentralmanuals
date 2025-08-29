@@ -134,7 +134,7 @@ const getVimeoVideoId = (url) => {
 const PolicyDetails = () => {
   const [formData, setFormData] = useState({
     title: "",
-    content: "<p>Hello Blue Wheelers!</p>",
+    content: "",
   });
   const [tags, setTags] = useState([]);
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
@@ -783,7 +783,7 @@ const PolicyDetails = () => {
             `Policy ${isEdit ? "updated" : "saved"} successfully`
         );
         if (!isEdit) {
-          setFormData({ title: "", content: "<p>Hello Blue Wheelers!</p>" });
+          setFormData({ title: "", content: "" });
           setTags([]);
           setSelectedLinks([]);
           setEmbeddedPdf(null);
@@ -793,6 +793,10 @@ const PolicyDetails = () => {
           setNavigationTree([]);
           setVideos([]);
         }
+
+        setTimeout(() => {
+          navigate(-1);
+        }, 1000);
       }
     } catch (err) {
       console.error("Error saving policy:", err);
