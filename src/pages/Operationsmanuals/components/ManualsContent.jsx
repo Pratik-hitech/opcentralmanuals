@@ -843,6 +843,7 @@ const ManualsContent = () => {
         mode={dialogMode}
         id={id}
         item={currentItem}
+        navigations={navigations}
         onSaveSuccess={handleSaveSuccess}
       />
       <Menu

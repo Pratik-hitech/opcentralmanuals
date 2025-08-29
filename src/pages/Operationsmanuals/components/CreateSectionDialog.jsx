@@ -20,6 +20,7 @@ const CreateSectionDialog = ({
   mode = "create",
   id,
   item = null,
+  navigations = [],
   onSaveSuccess,
 }) => {
   const [sectionTitle, setSectionTitle] = useState("");
@@ -36,6 +37,37 @@ const CreateSectionDialog = ({
     setError("");
   }, [mode, item, open]);
 
+  // Calculate the proper order for new sections/sub-sections
+  const calculateOrder = () => {
+    if (mode === "edit") {
+      // Keep existing order for edits
+      return item?.order || 1;
+    }
+
+    if (!item) {
+      // Creating a top-level section
+      const topLevelItems = navigations.filter((nav) => nav.parent_id === null);
+      const maxOrder =
+        topLevelItems.length > 0
+          ? Math.max(...topLevelItems.map((nav) => nav.order || 0))
+          : 0;
+      return maxOrder + 1;
+    } else {
+      // Creating a sub-section
+      const children = navigations
+        .filter((nav) => nav.parent_id === item.id)
+        .concat(
+          // Also include children from the tree structure if available
+          item.children ? item.children : []
+        );
+      const maxOrder =
+        children.length > 0
+          ? Math.max(...children.map((child) => child.order || 0))
+          : 0;
+      return maxOrder + 1;
+    }
+  };
+
   const handleSaveSection = async () => {
     if (!sectionTitle.trim()) {
       setError("Title is required");
@@ -46,8 +78,8 @@ const CreateSectionDialog = ({
 
     const payload = {
       title: sectionTitle.trim(),
-      collection_id: id, // TODO: Make this dynamic later
-      order: "1", // TODO: Implement proper ordering logic
+      collection_id: id,
+      order: String(calculateOrder()),
     };
 
     try {
