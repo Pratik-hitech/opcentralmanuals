@@ -256,10 +256,9 @@ const PolicyDetails = () => {
               if (colRes.data.success) {
                 const col = colRes.data.data;
                 const treeRes = await httpClient.get(
-                  `/navigations?collection_id=${nav.collection_id}`
+                  `/navigations/tree/${nav.collection_id}`
                 );
-                const treeData = treeRes.data.data || [];
-                const tree = buildNavigationTree(treeData);
+                const tree = treeRes.data.data || [];
                 const pathTitles = getPathToItem(tree, nav.id);
                 if (pathTitles) {
                   const fullPath = [col.title, ...pathTitles];
@@ -363,10 +362,9 @@ const PolicyDetails = () => {
 
   const fetchNavigations = async (colId) => {
     try {
-      const res = await httpClient.get(`/navigations?collection_id=${colId}`);
+      const res = await httpClient.get(`/navigations/tree/${colId}`);
       if (res.data.success) {
-        const data = res.data.data;
-        const tree = buildNavigationTree(data);
+        const tree = res.data.data;
         setNavigationTree(tree);
         return tree;
       }
@@ -603,32 +601,6 @@ const PolicyDetails = () => {
 
   const handleRemoveEmbeddedPdf = () => {
     setEmbeddedPdf(null);
-  };
-
-  const buildNavigationTree = (items) => {
-    const itemMap = {};
-    items.forEach((item) => {
-      if (item.table === null) {
-        itemMap[item.id] = { ...item, children: [] };
-      }
-    });
-    const rootItems = [];
-    items.forEach((item) => {
-      if (item.table === null && item.parent_id === null) {
-        rootItems.push(itemMap[item.id]);
-      } else if (item.table === null && itemMap[item.parent_id]) {
-        itemMap[item.parent_id].children.push(itemMap[item.id]);
-      }
-    });
-    const sortItems = (items) => {
-      return items
-        .sort((a, b) => a.order - b.order)
-        .map((item) => ({
-          ...item,
-          children: sortItems(item.children),
-        }));
-    };
-    return sortItems(rootItems);
   };
 
   const toggleExpand = (id) => {
