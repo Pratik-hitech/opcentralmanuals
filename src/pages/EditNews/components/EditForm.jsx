@@ -624,8 +624,8 @@ const NewsArticleForm = () => {
     featured: false,
     primary_image: null,
     featured_image: null,
-    status: "draft",
-    schedule: "",
+    status: "DRAFT",
+    schedule_at: "",
     videos: [],
     attachments: [],
   });
@@ -705,7 +705,7 @@ const handleCategoriesUpdated = () => {
               }))
             : [];
 
-          setIsScheduled(Boolean(data.schedule));
+          setIsScheduled(Boolean(data.schedule_at));
 
           setFormData(prev => ({
             ...prev,
@@ -719,7 +719,7 @@ const handleCategoriesUpdated = () => {
             primary_image: data.primary_image || null,
             featured_image: data.featured_image || null,
             status: data.status || "DRAFT",
-            schedule: formatDateForInput(data.schedule),
+            schedule_at: formatDateForInput(data.schedule),
             videos: normalizedVideos,
             attachments: data.attachments || [],
           }));
@@ -821,11 +821,11 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
       // If scheduling, set a default date
       setFormData(prev => ({ 
         ...prev, 
-        schedule: prev.schedule || formatDateForInput(new Date())
+        schedule_at: prev.schedule_at || formatDateForInput(new Date())
       }));
     } else {
       // If unscheduling, clear the schedule date
-      setFormData(prev => ({ ...prev, schedule: "" }));
+      setFormData(prev => ({ ...prev, schedule_at: "" }));
     }
   };
 
@@ -837,8 +837,8 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
 
     try {
       // Format schedule date for API in Y-m-d H:i:s format
-      const formattedSchedule = formData.schedule 
-        ? formatDateForAPI(formData.schedule)
+      const formattedSchedule = formData.schedule_at 
+        ? formatDateForAPI(formData.schedule_at)
         : "";
 
       // Create FormData for the request (must use multipart/form-data for files)
@@ -854,7 +854,7 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
       // Set status based on schedule
       if (isScheduled) {
         formDataObj.append("schedule_status", "ARCHIVED");
-        formDataObj.append("schedule", formattedSchedule);
+        formDataObj.append("schedule_at", formattedSchedule);
       } else {
         formDataObj.append("status", formData.status);
       }
@@ -1143,8 +1143,8 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
             fullWidth 
             label="Schedule Date & Time" 
             type="datetime-local"
-            value={formData.schedule}
-            onChange={(e) => setFormData(prev => ({ ...prev, schedule: e.target.value }))}
+            value={formData.schedul_at}
+            onChange={(e) => setFormData(prev => ({ ...prev, schedule_at: e.target.value }))}
             InputLabelProps={{ shrink: true }}
             sx={{ mb: 3 }}
           />
