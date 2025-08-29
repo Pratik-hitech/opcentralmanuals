@@ -295,7 +295,7 @@ const UserProfileLayout = () => {
 
         <DetailRow>
           <DetailLabel>Phone Number</DetailLabel>
-          <DetailValue>{userData.company?.phone || '-'}</DetailValue>
+          <DetailValue>{userData.phone_number || '-'}</DetailValue>
         </DetailRow>
 
         <DetailRow>
@@ -304,7 +304,10 @@ const UserProfileLayout = () => {
             {userData.status === 1 ? 'Active' : 'Inactive'}
           </DetailValue>
         </DetailRow>
-
+ <DetailRow>
+          <DetailLabel>Job Title</DetailLabel>
+          <DetailValue>{userData.job_title || '-'}</DetailValue>
+        </DetailRow>
         <DetailRow>
           <DetailLabel>Company</DetailLabel>
           <DetailValue>{userData.company?.name || '-'}</DetailValue>

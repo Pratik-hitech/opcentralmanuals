@@ -718,7 +718,7 @@ const handleCategoriesUpdated = () => {
             featured: data.featured === 1,
             primary_image: data.primary_image || null,
             featured_image: data.featured_image || null,
-            status: data.status || "draft",
+            status: data.status || "DRAFT",
             schedule: formatDateForInput(data.schedule),
             videos: normalizedVideos,
             attachments: data.attachments || [],
@@ -853,7 +853,7 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
       
       // Set status based on schedule
       if (isScheduled) {
-        formDataObj.append("schedule_status", "archived");
+        formDataObj.append("schedule_status", "ARCHIVED");
         formDataObj.append("schedule", formattedSchedule);
       } else {
         formDataObj.append("status", formData.status);
@@ -1159,9 +1159,9 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
               onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value }))}
               label="Status"
             >
-              <MenuItem value="draft">Draft</MenuItem>
-              <MenuItem value="published">Published</MenuItem>
-              <MenuItem value="archived">Archived</MenuItem>
+              <MenuItem value="DRAFT">Draft</MenuItem>
+              <MenuItem value="PUBLISHED">Published</MenuItem>
+              <MenuItem value="ARCHIVED">Archived</MenuItem>
             </Select>
           </FormControl>
         </Collapse>

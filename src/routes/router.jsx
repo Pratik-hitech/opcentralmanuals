@@ -49,6 +49,8 @@ import ErrorPage from "../components/ErrorHandlers/ErrorPage";
 import PermissionDenied from "../components/PermissionDenied/PermissionDenied";
 import AddUser from "../pages/AddUser/AddUser";
 import VerifyUserPage from "../pages/VerifyUser/VerifyUser";
+import ResetPasswordVerify from "../pages/ResetPaasswordVerify/ResetPasswordVerify";
+import SearchNav from "../pages/SearchNav/SearchNav";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -71,6 +73,10 @@ export const router = createBrowserRouter([
     element : <AddUser />
   },
   {
+    path : "/reset-password",
+    element : <ResetPasswordVerify />
+  },
+  {
     path: "/dashboard",
     element: (
       <PrivateRoute>
@@ -86,6 +92,18 @@ export const router = createBrowserRouter([
      
     ],
   },
+{
+path : "/search",
+element :(
+  <PrivateRoute>
+    <PrivateLayout />
+  </PrivateRoute>
+),
+children:[
+  {index:true, element:<SearchNav />}
+]
+},
+
 {
   path : "/dashboardnews/:id",
   element :(

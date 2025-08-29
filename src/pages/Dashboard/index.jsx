@@ -951,31 +951,65 @@ import {
   Select,
   FormControl,
   CircularProgress,
+  Chip,
+  Autocomplete,
+  TextField,
 } from "@mui/material";
 import NewsCard from "./components/NewsCard";
 import RightCard from "./components/RightCard1";
 import { httpClient } from "../../utils/httpClientSetup";
 
 // Loader function to fetch paginated news
+
 export async function loader({ request }) {
   try {
     const url = new URL(request.url);
     const page = url.searchParams.get("page") || 1;
     const perPage = url.searchParams.get("per_page") || 10;
+    const categories = url.searchParams.getAll("categories[]");
 
-    const response = await httpClient.get(
-      `news?page=${page}&per_page=${perPage}&status=published`
-    );
-    const data = response.data;
-
-    if (!data.success) throw new Error(data.message || "Failed to fetch news");
-
+    // First, get all featured news
+    let featuredQuery = `news?per_page=100&status=PUBLISHED&featured=1`;
+    if (categories.length > 0) {
+      categories.forEach(catId => {
+        featuredQuery += `&categories[]=${catId}`;
+      });
+    }
+    
+    const featuredResponse = await httpClient.get(featuredQuery);
+    const featuredData = featuredResponse.data;
+    
+    if (!featuredData.success) throw new Error(featuredData.message || "Failed to fetch featured news");
+    
+    // Then get paginated non-featured news
+    let nonFeaturedQuery = `news?page=${page}&per_page=${perPage}&status=PUBLISHED&featured=0`;
+    if (categories.length > 0) {
+      categories.forEach(catId => {
+        nonFeaturedQuery += `&categories[]=${catId}`;
+      });
+    }
+    
+    const nonFeaturedResponse = await httpClient.get(nonFeaturedQuery);
+    const nonFeaturedData = nonFeaturedResponse.data;
+    
+    if (!nonFeaturedData.success) throw new Error(nonFeaturedData.message || "Failed to fetch news");
+    
+    // Combine featured news with paginated non-featured news
+    const allNews = [...featuredData.data, ...nonFeaturedData.data];
+    
+    // Calculate adjusted pagination
+    const totalNonFeatured = nonFeaturedData.pagination.total;
+    const totalNews = featuredData.data.length + totalNonFeatured;
+    const adjustedPagination = {
+      ...nonFeaturedData.pagination,
+      total: totalNews,
+      per_page: parseInt(perPage),
+    };
+    
     return {
-      news: data.data, // ✅ Pass the full raw objects now
-      pagination: {
-        ...data.pagination,
-        per_page: parseInt(perPage),
-      },
+      news: allNews,
+      pagination: adjustedPagination,
+      featuredCount: featuredData.data.length,
     };
   } catch (error) {
     console.error("Loader error:", error);
@@ -987,31 +1021,62 @@ export async function loader({ request }) {
         last_page: 1,
         per_page: 10,
       },
+      featuredCount: 0,
     };
   }
 }
-
 function Dashboard() {
   const loaderData = useLoaderData();
   const navigation = useNavigation();
   const [searchParams, setSearchParams] = useSearchParams();
   const currentPage = parseInt(searchParams.get("page") || 1);
-  const [itemsPerPage, setItemsPerPage] = useState(
-    loaderData.pagination.per_page || 10
-  );
-
+  const perPageFromUrl = parseInt(searchParams.get("per_page") || 10);
+  const [itemsPerPage, setItemsPerPage] = useState(perPageFromUrl);
+const [featuredCount, setFeaturedCount] = useState(loaderData.featuredCount || 0);
   const [news, setNews] = useState(loaderData.news || []);
   const [pagination, setPagination] = useState(loaderData.pagination || {});
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState([]);
+  const [availableCategories, setAvailableCategories] = useState([]);
 
   const navigate = useNavigate();
+useEffect(() => {
+    setNews(loaderData.news);
+    setPagination(loaderData.pagination);
+    setFeaturedCount(loaderData.featuredCount || 0);
+    setIsLoading(false);
+  }, [loaderData]);
+  // Fetch available categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await httpClient.get('categories/list');
+        if (response.data.success) {
+          setAvailableCategories(response.data.data);
+          
+          // Set initial selected categories from URL params after categories are loaded
+          const categoryParams = searchParams.getAll("categories[]");
+          if (categoryParams.length > 0) {
+            const selected = response.data.data.filter(cat => 
+              categoryParams.includes(cat.id.toString())
+            );
+            setSelectedCategories(selected);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching categories:", error);
+      }
+    };
+
+    fetchCategories();
+  }, [searchParams]);
 
   // Update news and pagination when loaderData changes
   useEffect(() => {
     setNews(loaderData.news);
     setPagination(loaderData.pagination);
     setIsLoading(false);
-  }, [loaderData.news, loaderData.pagination]);
+  }, [loaderData]);
 
   // Show loading overlay when navigation state is loading
   useEffect(() => {
@@ -1019,7 +1084,18 @@ function Dashboard() {
   }, [navigation.state]);
 
   const handlePageChange = (event, value) => {
-    setSearchParams({ page: value, per_page: itemsPerPage });
+    const params = new URLSearchParams();
+    params.set("page", value);
+    params.set("per_page", itemsPerPage);
+    
+    // Add categories to params if any are selected
+    if (selectedCategories.length > 0) {
+      selectedCategories.forEach(cat => {
+        params.append("categories[]", cat.id);
+      });
+    }
+    
+    setSearchParams(params);
     const newsSection = document.getElementById("news-section");
     if (newsSection) newsSection.scrollIntoView({ behavior: "smooth" });
   };
@@ -1027,7 +1103,36 @@ function Dashboard() {
   const handleItemsPerPageChange = (event) => {
     const newPerPage = event.target.value;
     setItemsPerPage(newPerPage);
-    setSearchParams({ page: 1, per_page: newPerPage });
+    
+    const params = new URLSearchParams();
+    params.set("page", 1);
+    params.set("per_page", newPerPage);
+    
+    // Add categories to params if any are selected
+    if (selectedCategories.length > 0) {
+      selectedCategories.forEach(cat => {
+        params.append("categories[]", cat.id);
+      });
+    }
+    
+    setSearchParams(params);
+  };
+
+  const handleCategoryChange = (event, newValue) => {
+    setSelectedCategories(newValue);
+    
+    const params = new URLSearchParams();
+    params.set("page", 1);
+    params.set("per_page", itemsPerPage);
+    
+    // Add categories to params if any are selected
+    if (newValue.length > 0) {
+      newValue.forEach(cat => {
+        params.append("categories[]", cat.id);
+      });
+    }
+    
+    setSearchParams(params);
   };
 
   return (
@@ -1079,7 +1184,7 @@ function Dashboard() {
                 position: "relative",
               }}
             >
-              {/* Overlay loader */}
+              {/* Overlay loader - only shown when loading news */}
               {isLoading && (
                 <Box
                   sx={{
@@ -1100,27 +1205,56 @@ function Dashboard() {
                 </Box>
               )}
 
-              <Typography
-                variant="h4"
-                sx={{
-                  fontWeight: 700,
-                  mb: 3,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <Box
-                  component="span"
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3, flexWrap: 'wrap', gap: 2 }}>
+                <Typography
+                  variant="h4"
                   sx={{
-                    width: 8,
-                    height: 32,
-                    bgcolor: "primary.main",
-                    borderRadius: 1,
+                    fontWeight: 700,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 2,
                   }}
+                >
+                  <Box
+                    component="span"
+                    sx={{
+                      width: 8,
+                      height: 32,
+                      bgcolor: "primary.main",
+                      borderRadius: 1,
+                    }}
+                  />
+                  News Updates
+                </Typography>
+                
+                {/* Filter Section - Right aligned */}
+                <Autocomplete
+                  multiple
+                  options={availableCategories}
+                  getOptionLabel={(option) => option.title}
+                  value={selectedCategories}
+                  onChange={handleCategoryChange}
+                  filterSelectedOptions
+                  sx={{ minWidth: 250 }}
+                  renderInput={(params) => (
+                    <TextField
+                      {...params}
+                      label="Filter by categories"
+                      placeholder="Select categories"
+                    />
+                  )}
+                  renderTags={(value, getTagProps) =>
+                    value.map((option, index) => (
+                      <Chip
+                        label={option.title}
+                        {...getTagProps({ index })}
+                        key={option.id}
+                        size="small"
+                      />
+                    ))
+                  }
                 />
-                News Updates
-              </Typography>
+              </Box>
 
               {news.length > 0 ? (
                 <>
@@ -1158,7 +1292,7 @@ function Dashboard() {
                       </Box>
 
                       {/* Pagination */}
-                      <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <Box sx={{ display: "flex", alignItems: "center", flexWrap: 'wrap' }}>
                         <Pagination
                           count={Math.ceil(pagination.total / itemsPerPage)}
                           page={currentPage}
@@ -1190,12 +1324,13 @@ function Dashboard() {
                             },
                           }}
                         />
-                        <Typography variant="body2" sx={{ ml: 2 }}>
-                          Showing{" "}
-                          {(currentPage - 1) * itemsPerPage + 1} –{" "}
-                          {Math.min(currentPage * itemsPerPage, pagination.total)}{" "}
-                          of {pagination.total} articles
-                        </Typography>
+                      <Typography variant="body2" sx={{ ml: 2 }}>
+  Showing{" "}
+  {(currentPage - 1) * itemsPerPage + 1} –{" "}
+  {Math.min(currentPage * itemsPerPage, pagination.total)}{" "}
+  of {pagination.total} articles
+  {/* {featuredCount > 0 && ` (${featuredCount} featured always shown first)`} */}
+</Typography>
                       </Box>
                     </Box>
                   )}
@@ -1205,7 +1340,7 @@ function Dashboard() {
                   variant="body1"
                   sx={{ textAlign: "center", py: 4, color: "text.secondary" }}
                 >
-                  No published news available
+                  {isLoading ? "Loading news..." : "No published news available"}
                 </Typography>
               )}
             </Paper>
@@ -1286,6 +1421,7 @@ function Dashboard() {
           </Box>
         </Stack>
       </Container>
+      <Outlet />
     </Box>
   );
 }

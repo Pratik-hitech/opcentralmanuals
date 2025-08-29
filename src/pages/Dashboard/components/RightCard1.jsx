@@ -171,6 +171,7 @@ function QuickLinksCard() {
         padding: 2,
         borderRadius: 2,
         boxSizing: "border-box",
+        
       }}
     >
       {/* Header Row */}
@@ -180,9 +181,10 @@ function QuickLinksCard() {
           justifyContent: "space-between",
           alignItems: "center",
           mb: 1,
+          
         }}
       >
-        <Typography variant="subtitle1" fontWeight="bold">
+        <Typography variant="subtitle1" fontWeight="bold" >
           QUICK LINKS
         </Typography>
         {/* <IconButton size="small" onClick={handleMenuClick}>
@@ -225,7 +227,7 @@ function QuickLinksCard() {
               color: "inherit",
             }}
           >
-            <MenuBookIcon sx={{ color: "#d8d80e", fontSize: 40 }} />
+            <MenuBookIcon sx={{ color: "#1976D2", fontSize: 40, }} /> 
             <Typography
               variant="body2"
               sx={{ mt: 1, fontWeight: 500, textAlign: "center" }}
@@ -255,7 +257,7 @@ function QuickLinksCard() {
               },
             }}
           >
-            <HelpOutlineIcon sx={{ color: "#d8d80e", fontSize: 40 }} />
+            <HelpOutlineIcon sx={{ color: "#1976D2", fontSize: 40 }} />
             <Typography
               variant="body2"
               sx={{ mt: 1, fontWeight: 500, textAlign: "center" }}
