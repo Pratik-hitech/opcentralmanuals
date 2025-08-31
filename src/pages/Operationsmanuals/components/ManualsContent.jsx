@@ -35,6 +35,8 @@ import {
   Article,
   MoreVert as MoreVertIcon,
   DragIndicator,
+  UnfoldMore as UnfoldMoreIcon,
+  UnfoldLess as UnfoldLessIcon,
 } from "@mui/icons-material";
 import {
   DndContext,
@@ -728,7 +730,38 @@ const ManualsContent = () => {
         <Grid container spacing={3}>
           <Grid size={{ xs: 12, md: 9 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+                <Tooltip
+                  title={
+                    Object.values(expandedItems).every(Boolean)
+                      ? "Collapse All"
+                      : "Expand All"
+                  }
+                >
+                  <IconButton
+                    onClick={() => {
+                      const allExpanded =
+                        Object.values(expandedItems).every(Boolean);
+                      const newExpandedItems = {};
+                      const traverseAndSetExpanded = (items, expand) => {
+                        items.forEach((item) => {
+                          if (item.children && item.children.length > 0) {
+                            newExpandedItems[item.id] = !expand;
+                          }
+                          traverseAndSetExpanded(item.children || [], expand);
+                        });
+                      };
+                      traverseAndSetExpanded(navigationTree, allExpanded);
+                      setExpandedItems(newExpandedItems);
+                    }}
+                  >
+                    {Object.values(expandedItems).every(Boolean) ? (
+                      <UnfoldLessIcon />
+                    ) : (
+                      <UnfoldMoreIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
                 <div>
                   <Button
                     variant="outlined"

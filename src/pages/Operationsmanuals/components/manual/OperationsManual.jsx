@@ -17,6 +17,7 @@ import {
   Link as MuiLink,
   Container,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import {
   ExpandMore,
@@ -25,6 +26,8 @@ import {
   PlayCircle,
   Link as LinkIcon,
   Edit as EditIcon,
+  UnfoldMore as UnfoldMoreIcon,
+  UnfoldLess as UnfoldLessIcon,
 } from "@mui/icons-material";
 import { httpClient } from "../../../../utils/httpClientSetup";
 
@@ -96,17 +99,26 @@ const OperationsManual = () => {
         // Since the data is already nested, we don't need to build the tree
         setNavigationTree(navigationData);
 
-        // Set all items with children as expanded by default
+        // Set only the first section and its children as expanded by default
         const initialExpandedItems = {};
-        const traverseAndSetExpanded = (items) => {
-          items.forEach((item) => {
-            if (item.children && item.children.length > 0) {
-              initialExpandedItems[item.id] = true;
+        const traverseAndSetExpanded = (items, isFirstLevel = false) => {
+          items.forEach((item, index) => {
+            // Expand first section and its children
+            if (isFirstLevel && index === 0) {
+              if (item.children && item.children.length > 0) {
+                initialExpandedItems[item.id] = true;
+              }
+              traverseAndSetExpanded(item.children || [], false);
+            } else if (!isFirstLevel) {
+              // Expand all children of the first section
+              if (item.children && item.children.length > 0) {
+                initialExpandedItems[item.id] = true;
+              }
+              traverseAndSetExpanded(item.children || [], false);
             }
-            traverseAndSetExpanded(item.children || []);
           });
         };
-        traverseAndSetExpanded(navigationData);
+        traverseAndSetExpanded(navigationData, true);
         setExpandedItems(initialExpandedItems);
 
         // Build policy navigation order
@@ -472,9 +484,50 @@ const OperationsManual = () => {
         {/* Left Column - Table of Contents */}
         <Grid size={{ xs: 12, md: 3 }}>
           <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
-            <Typography variant="h6" gutterBottom>
-              Table of Contents
-            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6" gutterBottom>
+                Table of Contents
+              </Typography>
+              <Tooltip
+                title={
+                  Object.values(expandedItems).every(Boolean)
+                    ? "Collapse All"
+                    : "Expand All"
+                }
+              >
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    const allExpanded =
+                      Object.values(expandedItems).every(Boolean);
+                    const newExpandedItems = {};
+                    const traverseAndSetExpanded = (items, expand) => {
+                      items.forEach((item) => {
+                        if (item.children && item.children.length > 0) {
+                          newExpandedItems[item.id] = !expand;
+                        }
+                        traverseAndSetExpanded(item.children || [], expand);
+                      });
+                    };
+                    traverseAndSetExpanded(navigationTree, allExpanded);
+                    setExpandedItems(newExpandedItems);
+                  }}
+                >
+                  {Object.values(expandedItems).every(Boolean) ? (
+                    <UnfoldLessIcon />
+                  ) : (
+                    <UnfoldMoreIcon />
+                  )}
+                </IconButton>
+              </Tooltip>
+            </Box>
             <Divider sx={{ mb: 2 }} />
             {navigationTree.length > 0 ? (
               <List sx={{ width: "100%" }}>
