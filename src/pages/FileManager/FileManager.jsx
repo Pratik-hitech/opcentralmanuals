@@ -364,10 +364,19 @@ const MediaFolderViewer = ({
     }, 200);
     try {
       const formData = new FormData();
-      formData.append(
-        "path",
-        uploadToFolder?.path || currentFolder?.path || ""
-      );
+
+      const getPathForFolder = (folder) => {
+        if (!folder) return "";
+        // Check if path exists and is not empty
+        return folder.path && folder.path.trim() !== "" ? folder.path : "";
+      };
+
+      const uploadPath =
+        getPathForFolder(uploadToFolder) ||
+        getPathForFolder(currentFolder) ||
+        "";
+
+      formData.append("path", uploadPath);
       formData.append("file", files[0]);
       await httpClient.post("/files", formData);
       clearInterval(interval);
@@ -1299,19 +1308,6 @@ const MediaFolderViewer = ({
                 sx={{ color: colors.primary }}
               >
                 <CreateNewFolderIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Upload media">
-              <IconButton
-                onClick={() => {
-                  setUploadToFolder(currentFolder);
-                  fileInputRef.current.click();
-                }}
-                disabled={isUploading}
-                size="small"
-                sx={{ color: colors.primary }}
-              >
-                <UploadIcon />
               </IconButton>
             </Tooltip>
             <input
