@@ -748,11 +748,22 @@ const PolicyDetails = () => {
     if (embeddedPdf) {
       submitData.append("embeded_pdf", embeddedPdf.id);
     }
-    mappedMappings.forEach((mapping, index) => {
-      submitData.append(`navigations[${index}]`, mapping.navId);
-    });
+    const findNavigationId = (tree, targetId) => {
+      for (let item of tree) {
+        if (item.id === targetId) {
+          // If it's a policy, send parent_id; otherwise, send its own id
+          return item.table === "policies" ? item.parent_id : item.id;
+        }
+        const childResult = findNavigationId(item.children, targetId);
+        if (childResult !== null) return childResult;
+      }
+      return null;
+    };
 
-    submitData.append("collection_id", id);
+    mappedMappings.forEach((mapping, index) => {
+      const navId = findNavigationId(navigationTree, mapping.navId);
+      submitData.append(`navigations[${index}]`, navId || mapping.navId);
+    });
 
     try {
       setIsSubmitting(true);

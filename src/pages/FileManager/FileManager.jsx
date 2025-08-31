@@ -326,7 +326,11 @@ const MediaFolderViewer = ({
     if (!newFolderName.trim()) return;
     try {
       const formData = new FormData();
-      formData.append("path", createParent?.path || "");
+
+      if (createParent?.path) {
+        formData.append("path", createParent?.path || "");
+      }
+
       formData.append("name", newFolderName.trim());
       await httpClient.post("/files", formData);
       setNewFolderName("");
@@ -376,7 +380,10 @@ const MediaFolderViewer = ({
         getPathForFolder(currentFolder) ||
         "";
 
-      formData.append("path", uploadPath);
+      if (uploadPath) {
+        formData.append("path", uploadPath);
+      }
+
       formData.append("file", files[0]);
       await httpClient.post("/files", formData);
       clearInterval(interval);
@@ -1894,7 +1901,7 @@ const MediaFolderViewer = ({
           <ListItemIcon>
             <UploadIcon sx={{ color: colors.primary }} />
           </ListItemIcon>
-          <ListItemText>Upload Files</ListItemText>
+          <ListItemText>Upload File</ListItemText>
         </MenuItem>
         <Divider sx={{ backgroundColor: colors.divider }} />
         <MenuItem onClick={handleDeleteFolder} sx={{ color: "#d32f2f" }}>
