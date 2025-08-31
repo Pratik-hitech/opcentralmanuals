@@ -268,11 +268,8 @@ const PolicyDetails = () => {
               return null;
             });
             const resolvedMappings = await Promise.all(navigationPromises);
-            // Only set mappedMappings from policy data if there's no navigationId
-            // (navigationId takes precedence for auto-mapping)
-            if (!navigationId) {
-              setMappedMappings(resolvedMappings.filter((m) => m !== null));
-            }
+            // Always set mappedMappings from policy data
+            setMappedMappings(resolvedMappings.filter((m) => m !== null));
           }
           setLoading(false);
         })
@@ -349,16 +346,32 @@ const PolicyDetails = () => {
       const initialExpandedItems = {};
       const traverseAndSetExpanded = (items) => {
         items.forEach((item) => {
-          if (item.children && item.children.length > 0) {
+          // Only expand items that are mapped or have mapped children
+          const isMappedItem = mappedMappings.some((m) => m.navId === item.id);
+          const hasMappedChildren =
+            item.children &&
+            item.children.some((child) =>
+              mappedMappings.some((m) => m.navId === child.id)
+            );
+
+          // Also expand items that are ancestors of mapped items
+          const isAncestorOfMapped = mappedMappings.some((mapping) => {
+            // Check if this item is in the path to a mapped item
+            return mapping.fullPath && mapping.fullPath.includes(item.title);
+          });
+
+          if (isMappedItem || hasMappedChildren || isAncestorOfMapped) {
             initialExpandedItems[item.id] = true;
+            if (item.children) {
+              traverseAndSetExpanded(item.children);
+            }
           }
-          traverseAndSetExpanded(item.children);
         });
       };
       traverseAndSetExpanded(navigationTree);
       setExpandedItems(initialExpandedItems);
     }
-  }, [navigationTree]);
+  }, [navigationTree, mappedMappings]);
 
   const fetchNavigations = async (colId) => {
     try {
@@ -641,6 +654,8 @@ const PolicyDetails = () => {
   const renderMappingItem = (item, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
+    // Check if the item is a policy (similar to how it's done in ManualsContent.jsx)
+    const isPolicy = item.table !== null;
 
     return (
       <React.Fragment key={item.id}>
@@ -649,7 +664,7 @@ const PolicyDetails = () => {
             sx={{
               border: "1px solid #e0e0e0",
               borderRadius: 1,
-              backgroundColor: depth === 0 ? "#f5f5f5" : "#fafafa",
+              backgroundColor: depth === 0 ? "#eeeeee" : "#fafafa",
             }}
           >
             <ListItemText
@@ -663,7 +678,7 @@ const PolicyDetails = () => {
                 {isExpanded ? <ExpandLess /> : <ExpandMore />}
               </IconButton>
             )}
-            {!isMapped(item.id) && (
+            {!isMapped(item.id) && !isPolicy && (
               <Button
                 variant="outlined"
                 size="small"
@@ -1161,7 +1176,12 @@ const PolicyDetails = () => {
                     mappedMappings.map((mapping) => (
                       <Box
                         key={mapping.navId}
-                        sx={{ display: "flex", alignItems: "center", my: 0.5 }}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          my: 0.5,
+                        }}
                       >
                         <Breadcrumbs separator=" > " aria-label="breadcrumb">
                           {mapping.fullPath.map((title, index) => (
