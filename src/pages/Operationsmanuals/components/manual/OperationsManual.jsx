@@ -848,9 +848,9 @@ const OperationsManual = () => {
                 <Divider sx={{ mb: 3 }} />
 
                 {/* Policy Content */}
-                <Typography variant="h4" gutterBottom>
+                {/* <Typography variant="h4" gutterBottom>
                   {selectedPolicy.title}
-                </Typography>
+                </Typography> */}
 
                 {selectedPolicy.content && (
                   <Box

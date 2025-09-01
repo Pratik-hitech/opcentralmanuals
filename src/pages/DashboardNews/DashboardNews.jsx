@@ -1255,13 +1255,7 @@ import {
   Alert,
   Skeleton,
 } from "@mui/material";
-import {
-  PictureAsPdf,
-  MoreVert,
-  ArrowBack,
-  NavigateBefore,
-  NavigateNext,
-} from "@mui/icons-material";
+import { PictureAsPdf, MoreVert, ArrowBack, NavigateBefore, NavigateNext } from "@mui/icons-material";
 import moment from "moment";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -1271,16 +1265,11 @@ import { useAuth } from "../../context/AuthContext";
 export async function dashboardNewsLoader({ params }) {
   try {
     const articleResponse = await httpClient.get(`news/${params.id}`);
-    if (!articleResponse.data.success) {
-      throw new Error(articleResponse.data.message || "Failed to fetch article");
-    }
+    if (!articleResponse.data.success) throw new Error(articleResponse.data.message || "Failed to fetch article");
     return { article: articleResponse.data.data };
   } catch (err) {
     console.error("Loader error:", err);
-    throw new Response(
-      JSON.stringify({ message: err.message || "Failed to load article" }),
-      { status: 404 }
-    );
+    throw new Response(JSON.stringify({ message: err.message || "Failed to load article" }), { status: 404 });
   }
 }
 
@@ -1293,42 +1282,35 @@ const DashboardNews = () => {
   const { user } = useAuth();
 
   const [article, setArticle] = useState(initialArticle);
-  const [newsIds, setNewsIds] = useState([]);
+  const [newsList, setNewsList] = useState([]); // full list of published news
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [loading, setLoading] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const open = Boolean(anchorEl);
 
-  // Fetch news IDs once for navigation
+  // Fetch published news list once for navigation
   useEffect(() => {
-    const fetchNewsIds = async () => {
+    const fetchNewsList = async () => {
       try {
-        const response = await httpClient.get("news");
+        const response = await httpClient.get("news/list?status=PUBLISHED");
         if (response.data.success) {
-          const sortedNews = [...response.data.data].sort(
-            (a, b) => new Date(b.created_at) - new Date(a.created_at)
-          );
-          const ids = sortedNews.map((item) => item.id);
-          setNewsIds(ids);
+          const sortedNews = [...response.data.data]; // keep order as returned
+          setNewsList(sortedNews);
 
-          const index = ids.findIndex((newsId) => newsId === parseInt(id));
+          const index = sortedNews.findIndex(news => news.id === parseInt(id));
           setCurrentIndex(index);
         }
       } catch (error) {
-        console.error("Error fetching news IDs:", error);
+        console.error("Error fetching news list:", error);
       }
     };
-    fetchNewsIds();
+    fetchNewsList();
   }, []);
 
-  // Fetch article when ID changes
+  // Fetch article whenever ID changes
   useEffect(() => {
     const fetchArticle = async () => {
       if (!id) return;
@@ -1339,51 +1321,38 @@ const DashboardNews = () => {
         if (response.data.success) {
           const articleData = response.data.data;
 
+          // Fetch author info
           let userName = "Blue Wheelers Admin";
           let userInitial = "B";
           if (articleData.created_by) {
             try {
-              const userResponse = await httpClient.get(
-                `users/${articleData.created_by}`
-              );
-              if (
-                userResponse.data.success &&
-                userResponse.data.data.name
-              ) {
+              const userResponse = await httpClient.get(`users/${articleData.created_by}`);
+              if (userResponse.data.success && userResponse.data.data.name) {
                 userName = userResponse.data.data.name;
                 userInitial = userName.charAt(0).toUpperCase();
               }
-            } catch (userError) {
-              console.error("Error fetching user:", userError);
+            } catch (err) {
+              console.error("Error fetching user:", err);
             }
           }
 
-          setArticle({
-            ...articleData,
-            authorName: userName,
-            authorInitial: userInitial,
-          });
+          setArticle({ ...articleData, authorName: userName, authorInitial: userInitial });
 
-          if (newsIds.length > 0) {
-            const index = newsIds.findIndex(
-              (newsId) => newsId === parseInt(id)
-            );
+          // Update current index based on newsList
+          if (newsList.length > 0) {
+            const index = newsList.findIndex(news => news.id === parseInt(id));
             setCurrentIndex(index);
           }
         }
       } catch (error) {
-        setSnackbar({
-          open: true,
-          message: "Failed to load article",
-          severity: "error",
-        });
+        setSnackbar({ open: true, message: "Failed to load article", severity: "error" });
       } finally {
         setLoading(false);
       }
     };
 
     fetchArticle();
-  }, [id, newsIds]);
+  }, [id, newsList]);
 
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
@@ -1398,37 +1367,21 @@ const DashboardNews = () => {
     try {
       const response = await httpClient.delete(`news/${article.id}`);
       if (response.data?.success) {
-        setSnackbar({
-          open: true,
-          message: "Article deleted successfully",
-          severity: "success",
-        });
+        setSnackbar({ open: true, message: "Article deleted successfully", severity: "success" });
         setTimeout(() => navigate("/dashboard"), 800);
-      } else {
-        throw new Error(response.data?.message || "Failed to delete article");
-      }
+      } else throw new Error(response.data?.message || "Failed to delete article");
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: err.message || "Failed to delete article",
-        severity: "error",
-      });
+      setSnackbar({ open: true, message: err.message || "Failed to delete article", severity: "error" });
     }
   };
 
   const handleExportPDF = async () => {
     if (!articleRef.current) return;
 
-    if (controlsRef.current) {
-      controlsRef.current.style.display = "none";
-    }
+    if (controlsRef.current) controlsRef.current.style.display = "none";
 
     try {
-      const canvas = await html2canvas(articleRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
+      const canvas = await html2canvas(articleRef.current, { scale: 2, useCORS: true, backgroundColor: "#ffffff" });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "pt", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -1441,8 +1394,7 @@ const DashboardNews = () => {
       pdf.setFontSize(60);
       pdf.setFont("helvetica", "bold");
 
-      const watermarkText =
-        user?.name || user?.company_name || "Exported Document";
+      const watermarkText = user?.name || user?.company_name || "Exported Document";
       const textWidth = pdf.getTextWidth(watermarkText);
       const x = (pdfWidth - textWidth) / 2;
       const y = pdfHeight / 2;
@@ -1450,67 +1402,45 @@ const DashboardNews = () => {
       pdf.text(watermarkText, x, y, { angle: -30 });
       pdf.save(`${article.title || "Article"}.pdf`);
     } catch (err) {
-      setSnackbar({
-        open: true,
-        message: "Failed to export PDF",
-        severity: "error",
-      });
+      setSnackbar({ open: true, message: "Failed to export PDF", severity: "error" });
     } finally {
-      if (controlsRef.current) {
-        controlsRef.current.style.display = "flex";
-      }
+      if (controlsRef.current) controlsRef.current.style.display = "flex";
     }
   };
 
   const navigateToArticle = (direction) => {
-    if (newsIds.length <= 1 || currentIndex === -1) return;
+    if (newsList.length <= 1 || currentIndex === -1) return;
 
     let newIndex;
-    if (direction === "next") {
-      newIndex = (currentIndex + 1) % newsIds.length;
-    } else {
-      newIndex = (currentIndex - 1 + newsIds.length) % newsIds.length;
-    }
+    if (direction === "next") newIndex = (currentIndex + 1) % newsList.length;
+    else newIndex = (currentIndex - 1 + newsList.length) % newsList.length;
 
-    const nextArticleId = newsIds[newIndex];
+    const nextArticleId = newsList[newIndex].id;
     navigate(`/dashboardnews/${nextArticleId}`);
   };
 
-  const handleBack = () => navigate("/dashboard");
+  const handleBack = () => navigate(-1);
 
   return (
     <Box sx={{ maxWidth: 800, mx: "auto", p: 3, position: "relative" }}>
       {/* Navigation */}
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <IconButton onClick={handleBack} sx={{ mr: 1 }}>
-          <ArrowBack />
-        </IconButton>
+        <IconButton onClick={handleBack}><ArrowBack /></IconButton>
         <Box display="flex" alignItems="center">
-          {/* <Typography variant="body2" sx={{ mr: 1, color: "text.secondary" }}>
-            {currentIndex !== -1
-              ? `${currentIndex + 1} of ${newsIds.length}`
-              : "Loading..."}
-          </Typography> */}
-          {/* <IconButton
-            onClick={() => navigateToArticle("prev")}
-            disabled={newsIds.length <= 1 || currentIndex === -1}
-            sx={{ mr: 1 }}
-            size="large"
-          >
+          <Typography variant="body2" sx={{ mr: 1, color: "text.secondary" }}>
+            {currentIndex !== -1 ? `${currentIndex + 1} of ${newsList.length}` : "Loading..."}
+          </Typography>
+          <IconButton onClick={() => navigateToArticle("prev")} disabled={newsList.length <= 1 || currentIndex === -1}>
             <NavigateBefore />
-          </IconButton> */}
-          {/* <IconButton
-            onClick={() => navigateToArticle("next")}
-            disabled={newsIds.length <= 1 || currentIndex === -1}
-            size="large"
-          >
+          </IconButton>
+          <IconButton onClick={() => navigateToArticle("next")} disabled={newsList.length <= 1 || currentIndex === -1}>
             <NavigateNext />
-          </IconButton> */}
+          </IconButton>
         </Box>
       </Box>
 
+      {/* Article */}
       {loading ? (
-        // Show skeletons instead of blank spinner
         <Paper sx={{ p: 3, borderRadius: 4 }}>
           <Skeleton variant="text" width="80%" height={60} />
           <Skeleton variant="text" width="40%" height={30} />
@@ -1518,84 +1448,31 @@ const DashboardNews = () => {
           <Skeleton variant="text" width="60%" height={30} />
         </Paper>
       ) : (
-        <Paper
-          ref={articleRef}
-          elevation={0}
-          sx={{
-            p: 4,
-            borderRadius: 4,
-            bgcolor: "rgba(255,255,255,0.8)",
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
+        <Paper ref={articleRef} elevation={0} sx={{ p: 4, borderRadius: 4, bgcolor: "rgba(255,255,255,0.8)" }}>
           {/* Header */}
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={4}>
-            <Typography variant="h3" sx={{ fontWeight: 800 }}>
-              {article.title || "Untitled Article"}
-            </Typography>
+            <Typography variant="h3" sx={{ fontWeight: 800 }}>{article.title || "Untitled Article"}</Typography>
             <Box ref={controlsRef} display="flex">
-              <IconButton onClick={handleExportPDF} sx={{ mr: 1 }}>
-                <PictureAsPdf />
-              </IconButton>
-              <IconButton onClick={handleMenuClick}>
-                <MoreVert />
-              </IconButton>
-              <Menu
-                id="article-menu"
-                anchorEl={anchorEl}
-                open={open}
-                onClose={handleMenuClose}
-                anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                transformOrigin={{ vertical: "top", horizontal: "right" }}
-              >
-                <MenuItem
-                  onClick={() =>
-                    navigate(`/manage/newsarticle/${article.id}/details`)
-                  }
-                >
-                  Edit
-                </MenuItem>
+              <IconButton onClick={handleExportPDF} sx={{ mr: 1 }}><PictureAsPdf /></IconButton>
+              <IconButton onClick={handleMenuClick}><MoreVert /></IconButton>
+              <Menu id="article-menu" anchorEl={anchorEl} open={open} onClose={handleMenuClose} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
+                <MenuItem onClick={() => navigate(`/manage/newsarticle/${article.id}/details`)}>Edit</MenuItem>
                 <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
               </Menu>
             </Box>
           </Box>
 
-          {/* Author Info */}
+          {/* Author */}
           <Box display="flex" alignItems="center" mb={4}>
-            <Avatar
-              sx={{
-                bgcolor: "primary.main",
-                mr: 2,
-                width: 40,
-                height: 40,
-                fontSize: "1rem",
-              }}
-            >
-              {article.authorInitial}
-            </Avatar>
+            <Avatar sx={{ bgcolor: "primary.main", mr: 2, width: 40, height: 40, fontSize: "1rem" }}>{article.authorInitial}</Avatar>
             <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                {article.authorName}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                Published{" "}
-                {moment(article.created_at).format("MMMM D, YYYY [at] h:mm A")}
-              </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>{article.authorName}</Typography>
+              <Typography variant="caption" color="text.secondary">Published {moment(article.created_at).format("MMMM D, YYYY [at] h:mm A")}</Typography>
             </Box>
           </Box>
 
           <Divider sx={{ my: 3 }} />
-
-          <Typography
-            variant="body1"
-            paragraph
-            sx={{
-              whiteSpace: "pre-line",
-              fontSize: "1.1rem",
-              lineHeight: "1.8",
-            }}
-          >
+          <Typography variant="body1" paragraph sx={{ whiteSpace: "pre-line", fontSize: "1.1rem", lineHeight: "1.8" }}>
             {article.content}
           </Typography>
         </Paper>
@@ -1605,34 +1482,17 @@ const DashboardNews = () => {
       <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
         <DialogTitle>Delete Article</DialogTitle>
         <DialogContent>
-          <DialogContentText>
-            Are you sure you want to delete this article? This action cannot be undone.
-          </DialogContentText>
+          <DialogContentText>Are you sure you want to delete this article? This action cannot be undone.</DialogContentText>
         </DialogContent>
         <DialogActions>
-          <Button onClick={() => setOpenDeleteModal(false)} color="primary">
-            Cancel
-          </Button>
-          <Button onClick={handleDeleteConfirm} color="error" autoFocus>
-            Delete
-          </Button>
+          <Button onClick={() => setOpenDeleteModal(false)} color="primary">Cancel</Button>
+          <Button onClick={handleDeleteConfirm} color="error" autoFocus>Delete</Button>
         </DialogActions>
       </Dialog>
 
       {/* Snackbar */}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant="filled"
-        >
-          {snackbar.message}
-        </Alert>
+      <Snackbar open={snackbar.open} autoHideDuration={3000} onClose={() => setSnackbar({ ...snackbar, open: false })} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+        <Alert onClose={() => setSnackbar({ ...snackbar, open: false })} severity={snackbar.severity} variant="filled">{snackbar.message}</Alert>
       </Snackbar>
     </Box>
   );
