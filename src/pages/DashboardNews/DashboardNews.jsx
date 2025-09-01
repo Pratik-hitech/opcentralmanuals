@@ -1486,26 +1486,26 @@ const DashboardNews = () => {
           <ArrowBack />
         </IconButton>
         <Box display="flex" alignItems="center">
-          <Typography variant="body2" sx={{ mr: 1, color: "text.secondary" }}>
+          {/* <Typography variant="body2" sx={{ mr: 1, color: "text.secondary" }}>
             {currentIndex !== -1
               ? `${currentIndex + 1} of ${newsIds.length}`
               : "Loading..."}
-          </Typography>
-          <IconButton
+          </Typography> */}
+          {/* <IconButton
             onClick={() => navigateToArticle("prev")}
             disabled={newsIds.length <= 1 || currentIndex === -1}
             sx={{ mr: 1 }}
             size="large"
           >
             <NavigateBefore />
-          </IconButton>
-          <IconButton
+          </IconButton> */}
+          {/* <IconButton
             onClick={() => navigateToArticle("next")}
             disabled={newsIds.length <= 1 || currentIndex === -1}
             size="large"
           >
             <NavigateNext />
-          </IconButton>
+          </IconButton> */}
         </Box>
       </Box>
 
