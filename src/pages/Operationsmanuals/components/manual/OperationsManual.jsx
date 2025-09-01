@@ -17,15 +17,22 @@ import {
   Link as MuiLink,
   Container,
   CircularProgress,
+  Tooltip,
 } from "@mui/material";
 import {
   ExpandMore,
   ExpandLess,
   Article,
   PlayCircle,
+  PauseCircle,
+  Stop,
   Link as LinkIcon,
   Edit as EditIcon,
+  UnfoldMore as UnfoldMoreIcon,
+  UnfoldLess as UnfoldLessIcon,
 } from "@mui/icons-material";
+import ExpandIcon from "@mui/icons-material/Expand";
+import TocIcon from "@mui/icons-material/Toc";
 import { httpClient } from "../../../../utils/httpClientSetup";
 
 const OperationsManual = () => {
@@ -44,6 +51,11 @@ const OperationsManual = () => {
   const [policyLoading, setPolicyLoading] = useState(false);
   const [loadingPolicyName, setLoadingPolicyName] = useState("");
   const [error, setError] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+
+  const user = JSON.parse(localStorage.getItem("user"));
 
   // Fetch manual data
   const fetchManual = async () => {
@@ -96,18 +108,47 @@ const OperationsManual = () => {
         // Since the data is already nested, we don't need to build the tree
         setNavigationTree(navigationData);
 
-        // Set all items with children as expanded by default
-        const initialExpandedItems = {};
+        // Preserve manually expanded items and ensure the section containing the current policy is expanded
+        const updatedExpandedItems = { ...expandedItems };
+
+        // Function to check if an item or its children contain the current policy
+        const containsCurrentPolicy = (item) => {
+          if (
+            policyId &&
+            item.table === "policies" &&
+            item.primary_id === parseInt(policyId)
+          ) {
+            return true;
+          }
+          if (item.children) {
+            return item.children.some((child) => containsCurrentPolicy(child));
+          }
+          return false;
+        };
+
+        // Function to traverse and expand items as needed
         const traverseAndSetExpanded = (items) => {
           items.forEach((item) => {
+            // Expand sections that contain the current policy
             if (item.children && item.children.length > 0) {
-              initialExpandedItems[item.id] = true;
+              if (containsCurrentPolicy(item)) {
+                updatedExpandedItems[item.id] = true;
+              }
+              // Expand first section by default if no sections are expanded and we're not viewing a specific policy
+              if (
+                !policyId &&
+                Object.keys(updatedExpandedItems).length === 0 &&
+                items.indexOf(item) === 0
+              ) {
+                updatedExpandedItems[item.id] = true;
+              }
             }
             traverseAndSetExpanded(item.children || []);
           });
         };
+
         traverseAndSetExpanded(navigationData);
-        setExpandedItems(initialExpandedItems);
+        setExpandedItems(updatedExpandedItems);
 
         // Build policy navigation order
         const policyOrder = [];
@@ -219,12 +260,70 @@ const OperationsManual = () => {
     setBreadcrumbPath([]);
   };
 
+  // Text-to-speech functions
+  const speakPolicyContent = () => {
+    if (!selectedPolicy || !selectedPolicy.content) return;
+
+    // Stop any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create a new speech utterance
+    const utterance = new SpeechSynthesisUtterance();
+
+    // Strip HTML tags from content for speech
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = selectedPolicy.content;
+    const textContent = tempDiv.textContent || tempDiv.innerText || "";
+
+    utterance.text = textContent;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const pauseSpeech = () => {
+    window.speechSynthesis.pause();
+    setIsPlaying(false);
+    setIsPaused(true);
+  };
+
+  const resumeSpeech = () => {
+    window.speechSynthesis.resume();
+    setIsPlaying(true);
+    setIsPaused(false);
+  };
+
+  const stopSpeech = () => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
+  };
+
   // Render navigation item
   const renderNavigationItem = (item, depth = 0, numberingPath = []) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
     const isPolicy = item.table === "policies";
     const currentNumber = numberingPath.join(".");
+    const isActivePolicy =
+      isPolicy && selectedPolicy && item.primary_id === selectedPolicy.id;
 
     return (
       <React.Fragment key={item.id}>
@@ -233,12 +332,13 @@ const OperationsManual = () => {
             sx={{
               border: "1px solid #e0e0e0",
               borderRadius: 1,
-              backgroundColor:
-                depth === 0
-                  ? "#f5f5f5"
-                  : depth > 0 && !isPolicy
-                  ? "#fafafa"
-                  : "white",
+              backgroundColor: isActivePolicy
+                ? "#e3f2fd" // Highlight color for active policy
+                : depth === 0
+                ? "#f5f5f5"
+                : depth > 0 && !isPolicy
+                ? "#fafafa"
+                : "white",
               cursor: isPolicy ? "pointer" : "default",
               "&:hover": {
                 backgroundColor: isPolicy ? "#e3f2fd" : "inherit",
@@ -470,28 +570,71 @@ const OperationsManual = () => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Grid container spacing={3}>
         {/* Left Column - Table of Contents */}
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
-            <Typography variant="h6" gutterBottom>
-              Table of Contents
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-            {navigationTree.length > 0 ? (
-              <List sx={{ width: "100%" }}>
-                {[...navigationTree]
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map((item, index) =>
-                    renderNavigationItem(item, 0, [index + 1])
-                  )}
-              </List>
-            ) : (
-              <Typography>No navigation items found</Typography>
-            )}
-          </Paper>
-        </Grid>
+        {isSidebarExpanded && (
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
+              >
+                <Typography variant="h6" gutterBottom>
+                  Table of Contents
+                </Typography>
+                <Tooltip
+                  title={
+                    Object.values(expandedItems).every(Boolean)
+                      ? "Collapse All"
+                      : "Expand All"
+                  }
+                >
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const allExpanded =
+                        Object.values(expandedItems).every(Boolean);
+                      const newExpandedItems = {};
+                      const traverseAndSetExpanded = (items, expand) => {
+                        items.forEach((item) => {
+                          if (item.children && item.children.length > 0) {
+                            newExpandedItems[item.id] = !expand;
+                          }
+                          traverseAndSetExpanded(item.children || [], expand);
+                        });
+                      };
+                      traverseAndSetExpanded(navigationTree, allExpanded);
+                      setExpandedItems(newExpandedItems);
+                    }}
+                  >
+                    {Object.values(expandedItems).every(Boolean) ? (
+                      <UnfoldLessIcon />
+                    ) : (
+                      <UnfoldMoreIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Divider sx={{ mb: 2 }} />
+              {navigationTree.length > 0 ? (
+                <List sx={{ width: "100%" }}>
+                  {[...navigationTree]
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((item, index) =>
+                      renderNavigationItem(item, 0, [index + 1])
+                    )}
+                </List>
+              ) : (
+                <Typography>No navigation items found</Typography>
+              )}
+            </Paper>
+          </Grid>
+        )}
 
         {/* Right Column - Content */}
-        <Grid size={{ xs: 12, md: 9 }}>
+        <Grid size={{ xs: 12, md: isSidebarExpanded ? 9 : 12 }}>
           <Paper elevation={3} sx={{ p: 3, minHeight: "70vh", height: "100%" }}>
             {policyLoading ? (
               <Box
@@ -632,17 +775,72 @@ const OperationsManual = () => {
                     )}
                   </Box>
 
-                  {/* Edit Button */}
+                  {/* Action Buttons */}
                   <Box sx={{ width: "25%", textAlign: "right" }}>
-                    <IconButton
-                      onClick={() => {
-                        // Navigate to edit page
-                        window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
-                      }}
-                      sx={{ border: "1px solid #ccc" }}
+                    {/* Play/Pause Button */}
+                    <Tooltip
+                      title={isPlaying ? "Pause" : isPaused ? "Resume" : "Play"}
                     >
-                      <EditIcon />
-                    </IconButton>
+                      <IconButton
+                        onClick={() => {
+                          if (isPlaying) {
+                            pauseSpeech();
+                          } else if (isPaused) {
+                            resumeSpeech();
+                          } else {
+                            speakPolicyContent();
+                          }
+                        }}
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isPlaying ? <PauseCircle /> : <PlayCircle />}
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* Stop Button */}
+                    {isPlaying || isPaused ? (
+                      <Tooltip title="Stop">
+                        <IconButton
+                          onClick={stopSpeech}
+                          sx={{ border: "1px solid #ccc", mr: 1 }}
+                        >
+                          <Stop />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+
+                    {/* Expand Reading Area Button */}
+                    <Tooltip
+                      title={
+                        isSidebarExpanded
+                          ? "Hide Table of Contents"
+                          : "Show Table of Contents"
+                      }
+                    >
+                      <IconButton
+                        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isSidebarExpanded ? (
+                          <ExpandIcon sx={{ transform: "rotate(-90deg)" }} />
+                        ) : (
+                          <TocIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* Edit Button */}
+                    <Tooltip title="Edit">
+                      <IconButton
+                        onClick={() => {
+                          // Navigate to edit page
+                          window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
+                        }}
+                        sx={{ border: "1px solid #ccc" }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Box>
 

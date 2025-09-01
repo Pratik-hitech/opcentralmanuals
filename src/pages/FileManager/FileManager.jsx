@@ -131,6 +131,12 @@ const MediaFolderViewer = ({
     open: false,
     folderId: "",
   });
+  const [deleteFileDialog, setDeleteFileDialog] = useState({
+    open: false,
+    fileId: "",
+    fileName: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   const [viewType, setViewType] = useState("grid"); // 'grid' or 'list'
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [createParent, setCreateParent] = useState(null);
@@ -181,7 +187,10 @@ const MediaFolderViewer = ({
     setLoadingContents(true);
     try {
       const id = currentFolder.id;
-      const url = id == null ? "/files" : `/files?parent_id=${id}`;
+      const url =
+        id == null
+          ? "/files?per_page=100"
+          : `/files?parent_id=${id}&per_page=100`;
       const response = await httpClient.get(url);
       const items = response.data.data;
       const subfolders = items
@@ -189,7 +198,7 @@ const MediaFolderViewer = ({
         .map((i) => ({
           id: i.id,
           company_id: i.company_id,
-          name: i.name,
+          name: i.original,
           parent_id: i.parent_id,
           path: i.path,
         }));
@@ -198,9 +207,9 @@ const MediaFolderViewer = ({
         .map((i) => ({
           id: i.id,
           company_id: i.company_id,
-          name: i.name,
+          name: i.original,
           type: i.file_type,
-          url: `/${i.path}`,
+          url: i.path.startsWith("/") ? `${i.path}` : `/${i.path}`, // Remove the extra slash since path already starts with /
         }));
       setCurrentContents({ subfolders, media });
     } catch (error) {
@@ -326,7 +335,11 @@ const MediaFolderViewer = ({
     if (!newFolderName.trim()) return;
     try {
       const formData = new FormData();
-      formData.append("path", createParent?.path || "");
+
+      if (createParent?.path) {
+        formData.append("path", createParent?.path || "");
+      }
+
       formData.append("name", newFolderName.trim());
       await httpClient.post("/files", formData);
       setNewFolderName("");
@@ -364,10 +377,22 @@ const MediaFolderViewer = ({
     }, 200);
     try {
       const formData = new FormData();
-      formData.append(
-        "path",
-        uploadToFolder?.path || currentFolder?.path || ""
-      );
+
+      const getPathForFolder = (folder) => {
+        if (!folder) return "";
+        // Check if path exists and is not empty
+        return folder.path && folder.path.trim() !== "" ? folder.path : "";
+      };
+
+      const uploadPath =
+        getPathForFolder(uploadToFolder) ||
+        getPathForFolder(currentFolder) ||
+        "";
+
+      if (uploadPath) {
+        formData.append("path", uploadPath);
+      }
+
       formData.append("file", files[0]);
       await httpClient.post("/files", formData);
       clearInterval(interval);
@@ -447,39 +472,77 @@ const MediaFolderViewer = ({
     }
   };
 
-  const confirmDeleteFolder = () => {
-    // Mock implementation - not synced with API
-    const { folderId } = deleteDialog;
+  const handleDeleteFile = (media) => {
+    setDeleteFileDialog({
+      open: true,
+      fileId: media.id,
+      fileName: media.name,
+    });
+  };
 
-    const deleteFolder = (foldersList, targetId) => {
-      return foldersList.reduce((acc, folder) => {
-        if (folder.id === targetId) return acc;
-        if (folder.subfolders?.length > 0) {
-          return [
-            ...acc,
-            {
-              ...folder,
-              subfolders: deleteFolder(folder.subfolders, targetId),
-            },
-          ];
-        }
-        return [...acc, folder];
-      }, []);
-    };
-
-    const updatedFolders = deleteFolder(folders, folderId);
-    setFolders(updatedFolders);
-
-    // If we deleted the current folder, go back to parent or root
-    if (currentFolder?.id === folderId) {
-      handleBack();
+  const confirmDeleteFile = async () => {
+    setIsDeleting(true);
+    const { fileId } = deleteFileDialog;
+    try {
+      await httpClient.delete(`/files/${fileId}`);
+      // Refresh contents after deletion
+      await loadContents();
+      setDeleteFileDialog({ open: false, fileId: "", fileName: "" });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      setDeleteFileDialog({ open: false, fileId: "", fileName: "" });
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    setDeleteDialog({ open: false, folderId: "" });
+  const confirmDeleteFolder = async () => {
+    setIsDeleting(true);
+    const { folderId } = deleteDialog;
+    try {
+      // Make API call to delete folder
+      await httpClient.delete(`/files/${folderId}`);
+
+      // Update folder tree after successful deletion
+      const deleteFolder = (foldersList, targetId) => {
+        return foldersList.reduce((acc, folder) => {
+          if (folder.id === targetId) return acc;
+          if (folder.subfolders?.length > 0) {
+            return [
+              ...acc,
+              {
+                ...folder,
+                subfolders: deleteFolder(folder.subfolders, targetId),
+              },
+            ];
+          }
+          return [...acc, folder];
+        }, []);
+      };
+
+      const updatedFolders = deleteFolder(folders, folderId);
+      setFolders(updatedFolders);
+
+      // If we deleted the current folder, go back to parent or root
+      if (currentFolder?.id === folderId) {
+        handleBack();
+      } else {
+        // Reload contents of current folder to reflect changes
+        await loadContents();
+      }
+
+      setDeleteDialog({ open: false, folderId: "" });
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      setDeleteDialog({ open: false, folderId: "" });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleDownload = async (media) => {
-    const url = `https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`;
+    const urlPart = media.url.startsWith("/") ? media.url : "/" + media.url;
+    const url = `https://opmanual.franchise.care/uploaded/${media.company_id}${urlPart}`;
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -725,6 +788,23 @@ const MediaFolderViewer = ({
                       <InfoIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </MediaCardOverlay>
             )}
@@ -781,6 +861,23 @@ const MediaFolderViewer = ({
                       <InfoIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </MediaCardOverlay>
             )}
@@ -789,12 +886,14 @@ const MediaFolderViewer = ({
           <>
             <CardMedia
               component="img"
-              image={`https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`}
+              image={`https://opmanual.franchise.care/uploaded/${
+                media.company_id
+              }${media.url.startsWith("/") ? media.url : "/" + media.url}`}
               alt={media.name}
               sx={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: "contain",
                 borderRadius: 2,
                 opacity: selectionMode && isSelected ? 0.7 : 1,
               }}
@@ -836,6 +935,23 @@ const MediaFolderViewer = ({
                       sx={{ backgroundColor: colors.paper }}
                     >
                       <InfoIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -933,6 +1049,17 @@ const MediaFolderViewer = ({
                 }}
               >
                 <InfoIcon sx={{ color: colors.primary }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFile(media);
+                }}
+                sx={{ color: "#d32f2f" }}
+              >
+                <DeleteIcon />
               </IconButton>
             </Tooltip>
           </>
@@ -1142,7 +1269,13 @@ const MediaFolderViewer = ({
             {isPdf ? (
               // PDF Preview using iframe
               <iframe
-                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
+                src={`https://opmanual.franchise.care/uploaded/${
+                  selectedMedia.company_id
+                }${
+                  selectedMedia.url.startsWith("/")
+                    ? selectedMedia.url
+                    : "/" + selectedMedia.url
+                }`}
                 title={selectedMedia.name}
                 style={{
                   width: "100%",
@@ -1181,7 +1314,13 @@ const MediaFolderViewer = ({
                   startIcon={<DownloadIcon />}
                   onClick={() => {
                     const link = document.createElement("a");
-                    link.href = `https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`;
+                    link.href = `https://opmanual.franchise.care/uploaded/${
+                      selectedMedia.company_id
+                    }${
+                      selectedMedia.url.startsWith("/")
+                        ? selectedMedia.url
+                        : "/" + selectedMedia.url
+                    }`;
                     link.download = selectedMedia.name;
                     link.click();
                   }}
@@ -1209,7 +1348,13 @@ const MediaFolderViewer = ({
               </video>
             ) : (
               <img
-                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
+                src={`https://opmanual.franchise.care/uploaded/${
+                  selectedMedia.company_id
+                }${
+                  selectedMedia.url.startsWith("/")
+                    ? selectedMedia.url
+                    : "/" + selectedMedia.url
+                }`}
                 alt={selectedMedia.name}
                 style={{
                   maxWidth: "100%",
@@ -1243,6 +1388,7 @@ const MediaFolderViewer = ({
         elevation={3}
         sx={{
           maxWidth: { xs: "100%", md: 300 },
+          minWidth: { xs: "100%", md: 300 },
           width: "100%",
           p: 2,
           display: "flex",
@@ -1299,19 +1445,6 @@ const MediaFolderViewer = ({
                 sx={{ color: colors.primary }}
               >
                 <CreateNewFolderIcon />
-              </IconButton>
-            </Tooltip>
-            <Tooltip title="Upload media">
-              <IconButton
-                onClick={() => {
-                  setUploadToFolder(currentFolder);
-                  fileInputRef.current.click();
-                }}
-                disabled={isUploading}
-                size="small"
-                sx={{ color: colors.primary }}
-              >
-                <UploadIcon />
               </IconButton>
             </Tooltip>
             <input
@@ -1510,7 +1643,7 @@ const MediaFolderViewer = ({
                     pr: 1,
                   }}
                 >
-                  {fileDetails.name}
+                  {fileDetails.original}
                 </Typography>
                 <IconButton
                   onClick={() => setInfoOpen(false)}
@@ -1544,7 +1677,13 @@ const MediaFolderViewer = ({
                     }}
                   >
                     <img
-                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      src={`https://opmanual.franchise.care/uploaded/${
+                        fileDetails.company_id
+                      }${
+                        fileDetails.path.startsWith("/")
+                          ? fileDetails.path
+                          : "/" + fileDetails.path
+                      }`}
                       alt={fileDetails.name}
                       style={{
                         width: "100%",
@@ -1564,7 +1703,13 @@ const MediaFolderViewer = ({
                     }}
                   >
                     <video
-                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      src={`https://opmanual.franchise.care/uploaded/${
+                        fileDetails.company_id
+                      }${
+                        fileDetails.path.startsWith("/")
+                          ? fileDetails.path
+                          : "/" + fileDetails.path
+                      }`}
                       controls
                       style={{
                         width: "100%",
@@ -1693,7 +1838,7 @@ const MediaFolderViewer = ({
                       fontSize: "0.85rem",
                     }}
                   >
-                    /{fileDetails.path}
+                    {fileDetails.path}
                   </Box>
                 </Box>
               </Box>
@@ -1769,6 +1914,67 @@ const MediaFolderViewer = ({
         </DialogActions>
       </Dialog>
 
+      {/* Delete File Dialog */}
+      <Dialog
+        open={deleteFileDialog.open}
+        onClose={() =>
+          !isDeleting &&
+          setDeleteFileDialog({ ...deleteFileDialog, open: false })
+        }
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            backgroundColor: colors.paper,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: colors.text }}>Delete File</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: colors.text }}>
+            Are you sure you want to delete the file "
+            {deleteFileDialog.fileName}"?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() =>
+              setDeleteFileDialog({ ...deleteFileDialog, open: false })
+            }
+            sx={{
+              borderRadius: 1,
+              color: colors.text,
+              borderColor: colors.divider,
+            }}
+            variant="outlined"
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDeleteFile}
+            variant="contained"
+            sx={{
+              borderRadius: 1,
+              backgroundColor: "#d32f2f",
+              "&:hover": { backgroundColor: "#b71c1c" },
+              minWidth: 100,
+            }}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} sx={{ color: colors.paper }} />
+                <Typography sx={{ color: colors.paper }}>
+                  Deleting...
+                </Typography>
+              </Box>
+            ) : (
+              <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Rename Folder Dialog */}
       <Dialog
         open={renameDialog.open}
@@ -1825,7 +2031,9 @@ const MediaFolderViewer = ({
       {/* Delete Folder Dialog */}
       <Dialog
         open={deleteDialog.open}
-        onClose={() => setDeleteDialog({ ...deleteDialog, open: false })}
+        onClose={() =>
+          !isDeleting && setDeleteDialog({ ...deleteDialog, open: false })
+        }
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -1848,6 +2056,7 @@ const MediaFolderViewer = ({
               borderColor: colors.divider,
             }}
             variant="outlined"
+            disabled={isDeleting}
           >
             Cancel
           </Button>
@@ -1858,9 +2067,20 @@ const MediaFolderViewer = ({
               borderRadius: 1,
               backgroundColor: "#d32f2f",
               "&:hover": { backgroundColor: "#b71c1c" },
+              minWidth: 100,
             }}
+            disabled={isDeleting}
           >
-            <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            {isDeleting ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} sx={{ color: colors.paper }} />
+                <Typography sx={{ color: colors.paper }}>
+                  Deleting...
+                </Typography>
+              </Box>
+            ) : (
+              <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            )}
           </Button>
         </DialogActions>
       </Dialog>
@@ -1898,7 +2118,7 @@ const MediaFolderViewer = ({
           <ListItemIcon>
             <UploadIcon sx={{ color: colors.primary }} />
           </ListItemIcon>
-          <ListItemText>Upload Files</ListItemText>
+          <ListItemText>Upload File</ListItemText>
         </MenuItem>
         <Divider sx={{ backgroundColor: colors.divider }} />
         <MenuItem onClick={handleDeleteFolder} sx={{ color: "#d32f2f" }}>

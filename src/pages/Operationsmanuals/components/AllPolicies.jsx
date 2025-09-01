@@ -55,7 +55,8 @@ const AllPolicies = () => {
   const [selected, setSelected] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(20);
+  const [total, setTotal] = useState(0);
   const [anchorEl, setAnchorEl] = useState(null);
   const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
@@ -75,22 +76,31 @@ const AllPolicies = () => {
   const showNotification = useNotification();
 
   // Fetch policies
-  const fetchPolicies = async () => {
+  const fetchPolicies = async (
+    currentPage = page,
+    currentRowsPerPage = rowsPerPage,
+    currentSearch = searchTerm
+  ) => {
     setIsLoading(true);
     try {
-      const response = await httpClient.get("policies");
+      const params = new URLSearchParams({
+        page: currentPage + 1,
+        per_page: currentRowsPerPage,
+      });
+
+      if (currentSearch) {
+        params.set("search", currentSearch);
+      }
+
+      const response = await httpClient.get(`policies?${params.toString()}`);
 
       const { data } = response;
 
       if (data.success) {
-        setPolicies(data.data);
-
-        // Filter based on current tab
-        const filtered = data.data.filter((policy) =>
-          tabValue === "active" ? !policy.archived : policy.archived
-        );
-
-        setFilteredPolicies(filtered);
+        setFilteredPolicies(data.data);
+        setTotal(data.pagination.total);
+        setPolicies(data.data); // Set policies to current page data
+        setPage(data.pagination.current_page - 1); // Sync page state with API response
         setSelected([]);
       } else {
         setError("Failed to fetch policies");
@@ -103,28 +113,13 @@ const AllPolicies = () => {
   };
 
   useEffect(() => {
-    fetchPolicies();
+    fetchPolicies(0, rowsPerPage, searchTerm);
   }, [tabValue]);
 
   // Filter policies based on search term
   useEffect(() => {
-    if (searchTerm.trim() === "") {
-      const filtered = policies.filter((policy) =>
-        tabValue === "active" ? !policy.archived : policy.archived
-      );
-      setFilteredPolicies(filtered);
-    } else {
-      const filtered = policies.filter(
-        (policy) =>
-          (tabValue === "active" ? !policy.archived : policy.archived) &&
-          (policy.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            policy.manuals?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            policy.updatedBy?.toLowerCase().includes(searchTerm.toLowerCase()))
-      );
-      setFilteredPolicies(filtered);
-    }
-    setPage(0);
-  }, [searchTerm, policies, tabValue]);
+    fetchPolicies(0, rowsPerPage, searchTerm);
+  }, [searchTerm]);
 
   // Handle tab change
   const handleTabChange = (event, newValue) => {
@@ -145,10 +140,15 @@ const AllPolicies = () => {
     );
   };
 
-  const handleChangePage = (_, newPage) => setPage(newPage);
+  const handleChangePage = (_, newPage) => {
+    setPage(newPage);
+    fetchPolicies(newPage, rowsPerPage, searchTerm);
+  };
   const handleChangeRowsPerPage = (e) => {
-    setRowsPerPage(parseInt(e.target.value, 10));
+    const newRowsPerPage = parseInt(e.target.value, 10);
+    setRowsPerPage(newRowsPerPage);
     setPage(0);
+    fetchPolicies(0, newRowsPerPage, searchTerm);
   };
 
   const handleEditClick = (id) => {
@@ -174,7 +174,7 @@ const AllPolicies = () => {
           message: "Policy archived successfully",
           severity: "success",
         });
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       setSnackbar({
@@ -205,7 +205,7 @@ const AllPolicies = () => {
           message: "Policy unarchived successfully",
           severity: "success",
         });
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       setSnackbar({
@@ -241,7 +241,7 @@ const AllPolicies = () => {
           message: `Successfully archived ${successfulArchives.length} policy(s)`,
           severity: "success",
         });
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       setSnackbar({
@@ -280,7 +280,7 @@ const AllPolicies = () => {
           message: `Successfully unarchived ${successfulUnarchives.length} policy(s)`,
           severity: "success",
         });
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       setSnackbar({
@@ -309,7 +309,7 @@ const AllPolicies = () => {
           message: "Policy cloned successfully",
           severity: "success",
         });
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       setSnackbar({
@@ -343,7 +343,7 @@ const AllPolicies = () => {
           data.message || "Policy deleted successfully"
         );
 
-        fetchPolicies();
+        fetchPolicies(page, rowsPerPage, searchTerm);
       }
     } catch (error) {
       showNotification("error", error.message || "Failed to delete policy");
@@ -363,7 +363,7 @@ const AllPolicies = () => {
       Version: policy.version,
       "Updated On": formatDate(policy.updated_at),
       "Updated By": policy.updatedBy,
-      Status: policy.archived ? "Archived" : "Active",
+      Status: policy.status === "PUBLISHED" ? "Active" : "Archived",
     }));
 
     const ws = XLSX.utils.json_to_sheet(data);
@@ -394,11 +394,11 @@ const AllPolicies = () => {
   };
 
   // Status chip component
-  const StatusChip = ({ archived }) => {
+  const StatusChip = ({ status }) => {
     return (
       <Chip
-        label={archived ? "Archived" : "Active"}
-        color={archived ? "default" : "success"}
+        label={status === "PUBLISHED" ? "Active" : "Archived"}
+        color={status === "PUBLISHED" ? "success" : "default"}
         size="small"
       />
     );
@@ -565,64 +565,62 @@ const AllPolicies = () => {
           {isLoading ? (
             renderSkeletonRows()
           ) : filteredPolicies.length > 0 ? (
-            filteredPolicies
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((policy) => (
-                <TableRow key={policy.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.includes(policy.id)}
-                      onChange={() => handleSelect(policy.id)}
-                      disabled={isActionLoading}
-                    />
-                  </TableCell>
-                  <TableCell>{policy.title}</TableCell>
-                  <TableCell>{policy.manuals}</TableCell>
-                  <TableCell>
-                    <a
-                      href={policy.publicURL}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      View
-                    </a>
-                  </TableCell>
-                  <TableCell>v{policy.version}</TableCell>
-                  <TableCell>{formatDate(policy.updated_at)}</TableCell>
-                  <TableCell>{policy.updatedBy}</TableCell>
-                  <TableCell>
-                    <StatusChip archived={policy.archived} />
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <Tooltip title="View" placement="top">
-                        <IconButton
-                          size="small"
-                          color="primary"
-                          onClick={() =>
-                            navigate(
-                              `/operations/manuals/policies/policy/${policy.id}`
-                            )
-                          }
-                          disabled={isActionLoading}
-                        >
-                          <Visibility fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
+            filteredPolicies.map((policy) => (
+              <TableRow key={policy.id}>
+                <TableCell>
+                  <Checkbox
+                    checked={selected.includes(policy.id)}
+                    onChange={() => handleSelect(policy.id)}
+                    disabled={isActionLoading}
+                  />
+                </TableCell>
+                <TableCell>{policy.title}</TableCell>
+                <TableCell>{policy.manuals}</TableCell>
+                <TableCell>
+                  <a
+                    href={policy.publicURL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    View
+                  </a>
+                </TableCell>
+                <TableCell>v{policy.version}</TableCell>
+                <TableCell>{formatDate(policy.updated_at)}</TableCell>
+                <TableCell>{policy.updatedBy}</TableCell>
+                <TableCell>
+                  <StatusChip status={policy.status} />
+                </TableCell>
+                <TableCell>
+                  <Box display="flex" alignItems="center" gap={1}>
+                    <Tooltip title="View" placement="top">
                       <IconButton
                         size="small"
-                        onClick={(e) => {
-                          setActiveRowId(policy.id);
-                          handleMenuOpen(setRowMenuAnchorEl)(e);
-                        }}
+                        color="primary"
+                        onClick={() =>
+                          navigate(
+                            `/operations/manuals/policies/policy/${policy.id}`
+                          )
+                        }
                         disabled={isActionLoading}
                       >
-                        <MoreVert fontSize="small" />
+                        <Visibility fontSize="small" />
                       </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
+                    </Tooltip>
+                    <IconButton
+                      size="small"
+                      onClick={(e) => {
+                        setActiveRowId(policy.id);
+                        handleMenuOpen(setRowMenuAnchorEl)(e);
+                      }}
+                      disabled={isActionLoading}
+                    >
+                      <MoreVert fontSize="small" />
+                    </IconButton>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            ))
           ) : (
             <TableRow>
               <TableCell colSpan={9} align="center">
@@ -636,9 +634,9 @@ const AllPolicies = () => {
 
       {/* Pagination */}
       <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
+        rowsPerPageOptions={[5, 10, 20, 25]}
         component="div"
-        count={filteredPolicies.length}
+        count={total}
         rowsPerPage={rowsPerPage}
         page={page}
         onPageChange={handleChangePage}
@@ -704,13 +702,15 @@ const AllPolicies = () => {
         >
           <Edit fontSize="small" sx={{ mr: 1 }} /> Edit
         </MenuItem>
-        <MenuItem
+        {/* <MenuItem
           onClick={() => handleClonePolicy(activeRowId)}
           disabled={isActionLoading}
         >
           <FileCopy fontSize="small" sx={{ mr: 1 }} /> Clone
-        </MenuItem>
-        {policies && policies.find((p) => p.id === activeRowId)?.archived ? (
+        </MenuItem> */}
+        {filteredPolicies &&
+        filteredPolicies.find((p) => p.id === activeRowId)?.status !==
+          "PUBLISHED" ? (
           <MenuItem
             onClick={() => {
               handleUnarchivePolicy(activeRowId);
@@ -732,7 +732,7 @@ const AllPolicies = () => {
             <Archive fontSize="small" sx={{ mr: 1 }} /> Archive
           </MenuItem>
         )}
-        <MenuItem
+        {/* <MenuItem
           onClick={() => handleDeleteClick(activeRowId)}
           disabled={isActionLoading}
         >
@@ -740,7 +740,7 @@ const AllPolicies = () => {
         </MenuItem>
         <MenuItem onClick={() => exportData("csv")} disabled={isActionLoading}>
           Export
-        </MenuItem>
+        </MenuItem> */}
       </Menu>
 
       {/* Archive Confirmation Dialog */}

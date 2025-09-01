@@ -268,11 +268,8 @@ const PolicyDetails = () => {
               return null;
             });
             const resolvedMappings = await Promise.all(navigationPromises);
-            // Only set mappedMappings from policy data if there's no navigationId
-            // (navigationId takes precedence for auto-mapping)
-            if (!navigationId) {
-              setMappedMappings(resolvedMappings.filter((m) => m !== null));
-            }
+            // Always set mappedMappings from policy data
+            setMappedMappings(resolvedMappings.filter((m) => m !== null));
           }
           setLoading(false);
         })
@@ -349,16 +346,32 @@ const PolicyDetails = () => {
       const initialExpandedItems = {};
       const traverseAndSetExpanded = (items) => {
         items.forEach((item) => {
-          if (item.children && item.children.length > 0) {
+          // Only expand items that are mapped or have mapped children
+          const isMappedItem = mappedMappings.some((m) => m.navId === item.id);
+          const hasMappedChildren =
+            item.children &&
+            item.children.some((child) =>
+              mappedMappings.some((m) => m.navId === child.id)
+            );
+
+          // Also expand items that are ancestors of mapped items
+          const isAncestorOfMapped = mappedMappings.some((mapping) => {
+            // Check if this item is in the path to a mapped item
+            return mapping.fullPath && mapping.fullPath.includes(item.title);
+          });
+
+          if (isMappedItem || hasMappedChildren || isAncestorOfMapped) {
             initialExpandedItems[item.id] = true;
+            if (item.children) {
+              traverseAndSetExpanded(item.children);
+            }
           }
-          traverseAndSetExpanded(item.children);
         });
       };
       traverseAndSetExpanded(navigationTree);
       setExpandedItems(initialExpandedItems);
     }
-  }, [navigationTree]);
+  }, [navigationTree, mappedMappings]);
 
   const fetchNavigations = async (colId) => {
     try {
@@ -587,7 +600,12 @@ const PolicyDetails = () => {
     setShowImageMediaViewer(false);
     if (selectedImageFiles.length > 0) {
       const selectedImage = selectedImageFiles[0];
-      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}`;
+
+      const urlPart = selectedImage.url.startsWith("/")
+        ? selectedImage.url
+        : "/" + selectedImage.url;
+
+      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}${urlPart}`;
 
       // Get the TinyMCE editor instance and insert the image
       const tinyMCEEditor = window.tinymce.activeEditor;
@@ -641,6 +659,8 @@ const PolicyDetails = () => {
   const renderMappingItem = (item, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
+    // Check if the item is a policy (similar to how it's done in ManualsContent.jsx)
+    const isPolicy = item.table !== null;
 
     return (
       <React.Fragment key={item.id}>
@@ -649,7 +669,7 @@ const PolicyDetails = () => {
             sx={{
               border: "1px solid #e0e0e0",
               borderRadius: 1,
-              backgroundColor: depth === 0 ? "#f5f5f5" : "#fafafa",
+              backgroundColor: depth === 0 ? "#eeeeee" : "#fafafa",
             }}
           >
             <ListItemText
@@ -663,7 +683,7 @@ const PolicyDetails = () => {
                 {isExpanded ? <ExpandLess /> : <ExpandMore />}
               </IconButton>
             )}
-            {!isMapped(item.id) && (
+            {!isMapped(item.id) && !isPolicy && (
               <Button
                 variant="outlined"
                 size="small"
@@ -733,8 +753,22 @@ const PolicyDetails = () => {
     if (embeddedPdf) {
       submitData.append("embeded_pdf", embeddedPdf.id);
     }
+    const findNavigationId = (tree, targetId) => {
+      for (let item of tree) {
+        if (item.id === targetId) {
+          // If it's a policy, send parent_id; otherwise, send its own id
+          return item.table === "policies" ? item.parent_id : item.id;
+        }
+        const childResult = findNavigationId(item.children, targetId);
+        if (childResult !== null) return childResult;
+      }
+      return null;
+    };
+
     mappedMappings.forEach((mapping, index) => {
-      submitData.append(`navigations[${index}]`, mapping.navId);
+      const navId = findNavigationId(navigationTree, mapping.navId);
+
+      submitData.append(`navigations[${index}]`, navId);
     });
 
     submitData.append("collection_id", id);
@@ -1161,7 +1195,12 @@ const PolicyDetails = () => {
                     mappedMappings.map((mapping) => (
                       <Box
                         key={mapping.navId}
-                        sx={{ display: "flex", alignItems: "center", my: 0.5 }}
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          my: 0.5,
+                        }}
                       >
                         <Breadcrumbs separator=" > " aria-label="breadcrumb">
                           {mapping.fullPath.map((title, index) => (
