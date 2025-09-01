@@ -600,7 +600,12 @@ const PolicyDetails = () => {
     setShowImageMediaViewer(false);
     if (selectedImageFiles.length > 0) {
       const selectedImage = selectedImageFiles[0];
-      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}`;
+
+      const urlPart = selectedImage.url.startsWith("/")
+        ? selectedImage.url
+        : "/" + selectedImage.url;
+
+      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}${urlPart}`;
 
       // Get the TinyMCE editor instance and insert the image
       const tinyMCEEditor = window.tinymce.activeEditor;
