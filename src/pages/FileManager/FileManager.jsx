@@ -187,7 +187,10 @@ const MediaFolderViewer = ({
     setLoadingContents(true);
     try {
       const id = currentFolder.id;
-      const url = id == null ? "/files" : `/files?parent_id=${id}`;
+      const url =
+        id == null
+          ? "/files?per_page=100"
+          : `/files?parent_id=${id}&per_page=100`;
       const response = await httpClient.get(url);
       const items = response.data.data;
       const subfolders = items
@@ -206,7 +209,7 @@ const MediaFolderViewer = ({
           company_id: i.company_id,
           name: i.original,
           type: i.file_type,
-          url: `/${i.path}`,
+          url: i.path.startsWith("/") ? `${i.path}` : `/${i.path}`, // Remove the extra slash since path already starts with /
         }));
       setCurrentContents({ subfolders, media });
     } catch (error) {
@@ -538,7 +541,8 @@ const MediaFolderViewer = ({
   };
 
   const handleDownload = async (media) => {
-    const url = `https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`;
+    const urlPart = media.url.startsWith("/") ? media.url : "/" + media.url;
+    const url = `https://opmanual.franchise.care/uploaded/${media.company_id}${urlPart}`;
     try {
       const response = await fetch(url, {
         method: "GET",
@@ -882,7 +886,9 @@ const MediaFolderViewer = ({
           <>
             <CardMedia
               component="img"
-              image={`https://opmanual.franchise.care/uploaded/${media.company_id}/${media.url}`}
+              image={`https://opmanual.franchise.care/uploaded/${
+                media.company_id
+              }${media.url.startsWith("/") ? media.url : "/" + media.url}`}
               alt={media.name}
               sx={{
                 width: "100%",
@@ -1263,7 +1269,13 @@ const MediaFolderViewer = ({
             {isPdf ? (
               // PDF Preview using iframe
               <iframe
-                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
+                src={`https://opmanual.franchise.care/uploaded/${
+                  selectedMedia.company_id
+                }${
+                  selectedMedia.url.startsWith("/")
+                    ? selectedMedia.url
+                    : "/" + selectedMedia.url
+                }`}
                 title={selectedMedia.name}
                 style={{
                   width: "100%",
@@ -1302,7 +1314,13 @@ const MediaFolderViewer = ({
                   startIcon={<DownloadIcon />}
                   onClick={() => {
                     const link = document.createElement("a");
-                    link.href = `https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`;
+                    link.href = `https://opmanual.franchise.care/uploaded/${
+                      selectedMedia.company_id
+                    }${
+                      selectedMedia.url.startsWith("/")
+                        ? selectedMedia.url
+                        : "/" + selectedMedia.url
+                    }`;
                     link.download = selectedMedia.name;
                     link.click();
                   }}
@@ -1330,7 +1348,13 @@ const MediaFolderViewer = ({
               </video>
             ) : (
               <img
-                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}/${selectedMedia.url}`}
+                src={`https://opmanual.franchise.care/uploaded/${
+                  selectedMedia.company_id
+                }${
+                  selectedMedia.url.startsWith("/")
+                    ? selectedMedia.url
+                    : "/" + selectedMedia.url
+                }`}
                 alt={selectedMedia.name}
                 style={{
                   maxWidth: "100%",
@@ -1364,6 +1388,7 @@ const MediaFolderViewer = ({
         elevation={3}
         sx={{
           maxWidth: { xs: "100%", md: 300 },
+          minWidth: { xs: "100%", md: 300 },
           width: "100%",
           p: 2,
           display: "flex",
@@ -1652,7 +1677,13 @@ const MediaFolderViewer = ({
                     }}
                   >
                     <img
-                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      src={`https://opmanual.franchise.care/uploaded/${
+                        fileDetails.company_id
+                      }${
+                        fileDetails.path.startsWith("/")
+                          ? fileDetails.path
+                          : "/" + fileDetails.path
+                      }`}
                       alt={fileDetails.name}
                       style={{
                         width: "100%",
@@ -1672,7 +1703,13 @@ const MediaFolderViewer = ({
                     }}
                   >
                     <video
-                      src={`https://opmanual.franchise.care/uploaded/${fileDetails.company_id}/${fileDetails.path}`}
+                      src={`https://opmanual.franchise.care/uploaded/${
+                        fileDetails.company_id
+                      }${
+                        fileDetails.path.startsWith("/")
+                          ? fileDetails.path
+                          : "/" + fileDetails.path
+                      }`}
                       controls
                       style={{
                         width: "100%",
@@ -1801,7 +1838,7 @@ const MediaFolderViewer = ({
                       fontSize: "0.85rem",
                     }}
                   >
-                    /{fileDetails.path}
+                    {fileDetails.path}
                   </Box>
                 </Box>
               </Box>
