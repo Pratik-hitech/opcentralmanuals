@@ -24,6 +24,8 @@ import {
   ExpandLess,
   Article,
   PlayCircle,
+  PauseCircle,
+  Stop,
   Link as LinkIcon,
   Edit as EditIcon,
   UnfoldMore as UnfoldMoreIcon,
@@ -47,6 +49,8 @@ const OperationsManual = () => {
   const [policyLoading, setPolicyLoading] = useState(false);
   const [loadingPolicyName, setLoadingPolicyName] = useState("");
   const [error, setError] = useState(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
 
   // Fetch manual data
   const fetchManual = async () => {
@@ -249,6 +253,62 @@ const OperationsManual = () => {
   const handleManualTitleClick = () => {
     setSelectedPolicy(null);
     setBreadcrumbPath([]);
+  };
+
+  // Text-to-speech functions
+  const speakPolicyContent = () => {
+    if (!selectedPolicy || !selectedPolicy.content) return;
+
+    // Stop any ongoing speech
+    window.speechSynthesis.cancel();
+
+    // Create a new speech utterance
+    const utterance = new SpeechSynthesisUtterance();
+
+    // Strip HTML tags from content for speech
+    const tempDiv = document.createElement("div");
+    tempDiv.innerHTML = selectedPolicy.content;
+    const textContent = tempDiv.textContent || tempDiv.innerText || "";
+
+    utterance.text = textContent;
+    utterance.rate = 1;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    utterance.onstart = () => {
+      setIsPlaying(true);
+      setIsPaused(false);
+    };
+
+    utterance.onend = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    utterance.onerror = () => {
+      setIsPlaying(false);
+      setIsPaused(false);
+    };
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const pauseSpeech = () => {
+    window.speechSynthesis.pause();
+    setIsPlaying(false);
+    setIsPaused(true);
+  };
+
+  const resumeSpeech = () => {
+    window.speechSynthesis.resume();
+    setIsPlaying(true);
+    setIsPaused(false);
+  };
+
+  const stopSpeech = () => {
+    window.speechSynthesis.cancel();
+    setIsPlaying(false);
+    setIsPaused(false);
   };
 
   // Render navigation item
@@ -708,17 +768,52 @@ const OperationsManual = () => {
                     )}
                   </Box>
 
-                  {/* Edit Button */}
+                  {/* Action Buttons */}
                   <Box sx={{ width: "25%", textAlign: "right" }}>
-                    <IconButton
-                      onClick={() => {
-                        // Navigate to edit page
-                        window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
-                      }}
-                      sx={{ border: "1px solid #ccc" }}
+                    {/* Play/Pause Button */}
+                    <Tooltip
+                      title={isPlaying ? "Pause" : isPaused ? "Resume" : "Play"}
                     >
-                      <EditIcon />
-                    </IconButton>
+                      <IconButton
+                        onClick={() => {
+                          if (isPlaying) {
+                            pauseSpeech();
+                          } else if (isPaused) {
+                            resumeSpeech();
+                          } else {
+                            speakPolicyContent();
+                          }
+                        }}
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isPlaying ? <PauseCircle /> : <PlayCircle />}
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* Stop Button */}
+                    {isPlaying || isPaused ? (
+                      <Tooltip title="Stop">
+                        <IconButton
+                          onClick={stopSpeech}
+                          sx={{ border: "1px solid #ccc", mr: 1 }}
+                        >
+                          <Stop />
+                        </IconButton>
+                      </Tooltip>
+                    ) : null}
+
+                    {/* Edit Button */}
+                    <Tooltip title="Edit">
+                      <IconButton
+                        onClick={() => {
+                          // Navigate to edit page
+                          window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
+                        }}
+                        sx={{ border: "1px solid #ccc" }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </Box>
 
