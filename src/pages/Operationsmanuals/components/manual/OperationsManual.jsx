@@ -31,6 +31,8 @@ import {
   UnfoldMore as UnfoldMoreIcon,
   UnfoldLess as UnfoldLessIcon,
 } from "@mui/icons-material";
+import ExpandIcon from "@mui/icons-material/Expand";
+import TocIcon from "@mui/icons-material/Toc";
 import { httpClient } from "../../../../utils/httpClientSetup";
 
 const OperationsManual = () => {
@@ -51,6 +53,7 @@ const OperationsManual = () => {
   const [error, setError] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
   // Fetch manual data
   const fetchManual = async () => {
@@ -565,69 +568,71 @@ const OperationsManual = () => {
     <Container maxWidth="xl" sx={{ py: 3 }}>
       <Grid container spacing={3}>
         {/* Left Column - Table of Contents */}
-        <Grid size={{ xs: 12, md: 3 }}>
-          <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                mb: 2,
-              }}
-            >
-              <Typography variant="h6" gutterBottom>
-                Table of Contents
-              </Typography>
-              <Tooltip
-                title={
-                  Object.values(expandedItems).every(Boolean)
-                    ? "Collapse All"
-                    : "Expand All"
-                }
+        {isSidebarExpanded && (
+          <Grid size={{ xs: 12, md: 3 }}>
+            <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 2,
+                }}
               >
-                <IconButton
-                  size="small"
-                  onClick={() => {
-                    const allExpanded =
-                      Object.values(expandedItems).every(Boolean);
-                    const newExpandedItems = {};
-                    const traverseAndSetExpanded = (items, expand) => {
-                      items.forEach((item) => {
-                        if (item.children && item.children.length > 0) {
-                          newExpandedItems[item.id] = !expand;
-                        }
-                        traverseAndSetExpanded(item.children || [], expand);
-                      });
-                    };
-                    traverseAndSetExpanded(navigationTree, allExpanded);
-                    setExpandedItems(newExpandedItems);
-                  }}
+                <Typography variant="h6" gutterBottom>
+                  Table of Contents
+                </Typography>
+                <Tooltip
+                  title={
+                    Object.values(expandedItems).every(Boolean)
+                      ? "Collapse All"
+                      : "Expand All"
+                  }
                 >
-                  {Object.values(expandedItems).every(Boolean) ? (
-                    <UnfoldLessIcon />
-                  ) : (
-                    <UnfoldMoreIcon />
-                  )}
-                </IconButton>
-              </Tooltip>
-            </Box>
-            <Divider sx={{ mb: 2 }} />
-            {navigationTree.length > 0 ? (
-              <List sx={{ width: "100%" }}>
-                {[...navigationTree]
-                  .sort((a, b) => (a.order || 0) - (b.order || 0))
-                  .map((item, index) =>
-                    renderNavigationItem(item, 0, [index + 1])
-                  )}
-              </List>
-            ) : (
-              <Typography>No navigation items found</Typography>
-            )}
-          </Paper>
-        </Grid>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      const allExpanded =
+                        Object.values(expandedItems).every(Boolean);
+                      const newExpandedItems = {};
+                      const traverseAndSetExpanded = (items, expand) => {
+                        items.forEach((item) => {
+                          if (item.children && item.children.length > 0) {
+                            newExpandedItems[item.id] = !expand;
+                          }
+                          traverseAndSetExpanded(item.children || [], expand);
+                        });
+                      };
+                      traverseAndSetExpanded(navigationTree, allExpanded);
+                      setExpandedItems(newExpandedItems);
+                    }}
+                  >
+                    {Object.values(expandedItems).every(Boolean) ? (
+                      <UnfoldLessIcon />
+                    ) : (
+                      <UnfoldMoreIcon />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Box>
+              <Divider sx={{ mb: 2 }} />
+              {navigationTree.length > 0 ? (
+                <List sx={{ width: "100%" }}>
+                  {[...navigationTree]
+                    .sort((a, b) => (a.order || 0) - (b.order || 0))
+                    .map((item, index) =>
+                      renderNavigationItem(item, 0, [index + 1])
+                    )}
+                </List>
+              ) : (
+                <Typography>No navigation items found</Typography>
+              )}
+            </Paper>
+          </Grid>
+        )}
 
         {/* Right Column - Content */}
-        <Grid size={{ xs: 12, md: 9 }}>
+        <Grid size={{ xs: 12, md: isSidebarExpanded ? 9 : 12 }}>
           <Paper elevation={3} sx={{ p: 3, minHeight: "70vh", height: "100%" }}>
             {policyLoading ? (
               <Box
@@ -801,6 +806,26 @@ const OperationsManual = () => {
                         </IconButton>
                       </Tooltip>
                     ) : null}
+
+                    {/* Expand Reading Area Button */}
+                    <Tooltip
+                      title={
+                        isSidebarExpanded
+                          ? "Expand Reading Area"
+                          : "Show Table of Contents"
+                      }
+                    >
+                      <IconButton
+                        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isSidebarExpanded ? (
+                          <ExpandIcon sx={{ transform: "rotate(-90deg)" }} />
+                        ) : (
+                          <TocIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
 
                     {/* Edit Button */}
                     <Tooltip title="Edit">
