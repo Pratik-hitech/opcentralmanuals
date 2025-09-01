@@ -220,10 +220,11 @@ const OperationsManual = () => {
   };
 
   // Render navigation item
-  const renderNavigationItem = (item, depth = 0) => {
+  const renderNavigationItem = (item, depth = 0, numberingPath = []) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
     const isPolicy = item.table === "policies";
+    const currentNumber = numberingPath.join(".");
 
     return (
       <React.Fragment key={item.id}>
@@ -251,7 +252,9 @@ const OperationsManual = () => {
               </ListItemIcon>
             )}
             <ListItemText
-              primary={item.title}
+              primary={`${currentNumber}${currentNumber ? ". " : ""}${
+                item.title
+              }`}
               sx={{
                 fontWeight: depth === 0 ? "bold" : "normal",
                 color: isPolicy ? "#1976d2" : "inherit",
@@ -273,9 +276,15 @@ const OperationsManual = () => {
         {hasChildren && (
           <Collapse in={isExpanded} timeout="auto" unmountOnExit>
             <List component="div" disablePadding>
-              {item.children.map((child) =>
-                renderNavigationItem(child, depth + 1)
-              )}
+              {item.children
+                .filter((child) => child && child.id)
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map((child, index) =>
+                  renderNavigationItem(child, depth + 1, [
+                    ...numberingPath,
+                    index + 1,
+                  ])
+                )}
             </List>
           </Collapse>
         )}
@@ -469,7 +478,11 @@ const OperationsManual = () => {
             <Divider sx={{ mb: 2 }} />
             {navigationTree.length > 0 ? (
               <List sx={{ width: "100%" }}>
-                {navigationTree.map((item) => renderNavigationItem(item))}
+                {[...navigationTree]
+                  .sort((a, b) => (a.order || 0) - (b.order || 0))
+                  .map((item, index) =>
+                    renderNavigationItem(item, 0, [index + 1])
+                  )}
               </List>
             ) : (
               <Typography>No navigation items found</Typography>

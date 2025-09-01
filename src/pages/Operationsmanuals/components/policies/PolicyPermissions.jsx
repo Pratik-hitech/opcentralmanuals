@@ -1,7 +1,7 @@
 import React from "react";
 
 const PolicyPermissions = () => {
-  return <>PolicyPermissions</>;
+  return <>Policy Permissions: WIP</>;
 };
 
 export default PolicyPermissions;

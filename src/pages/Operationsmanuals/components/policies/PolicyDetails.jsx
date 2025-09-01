@@ -134,12 +134,13 @@ const getVimeoVideoId = (url) => {
 const PolicyDetails = () => {
   const [formData, setFormData] = useState({
     title: "",
-    content: "<p>Hello Blue Wheelers!</p>",
+    content: "",
   });
   const [tags, setTags] = useState([]);
   const [isVideoEnabled, setIsVideoEnabled] = useState(false);
   const [tagInput, setTagInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
   const [videos, setVideos] = useState([]);
@@ -255,10 +256,9 @@ const PolicyDetails = () => {
               if (colRes.data.success) {
                 const col = colRes.data.data;
                 const treeRes = await httpClient.get(
-                  `/navigations?collection_id=${nav.collection_id}`
+                  `/navigations/tree/${nav.collection_id}`
                 );
-                const treeData = treeRes.data.data || [];
-                const tree = buildNavigationTree(treeData);
+                const tree = treeRes.data.data || [];
                 const pathTitles = getPathToItem(tree, nav.id);
                 if (pathTitles) {
                   const fullPath = [col.title, ...pathTitles];
@@ -362,10 +362,9 @@ const PolicyDetails = () => {
 
   const fetchNavigations = async (colId) => {
     try {
-      const res = await httpClient.get(`/navigations?collection_id=${colId}`);
+      const res = await httpClient.get(`/navigations/tree/${colId}`);
       if (res.data.success) {
-        const data = res.data.data;
-        const tree = buildNavigationTree(data);
+        const tree = res.data.data;
         setNavigationTree(tree);
         return tree;
       }
@@ -588,11 +587,13 @@ const PolicyDetails = () => {
     setShowImageMediaViewer(false);
     if (selectedImageFiles.length > 0) {
       const selectedImage = selectedImageFiles[0];
+      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}`;
+
       // Get the TinyMCE editor instance and insert the image
       const tinyMCEEditor = window.tinymce.activeEditor;
       if (tinyMCEEditor) {
         tinyMCEEditor.insertContent(
-          `<img src="https://opmanual.franchise.care/uploaded/${selectedImage.company_id}/${selectedImage.url}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
+          `<img src="${imageUrl}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
         );
       }
     }
@@ -600,32 +601,6 @@ const PolicyDetails = () => {
 
   const handleRemoveEmbeddedPdf = () => {
     setEmbeddedPdf(null);
-  };
-
-  const buildNavigationTree = (items) => {
-    const itemMap = {};
-    items.forEach((item) => {
-      if (item.table === null) {
-        itemMap[item.id] = { ...item, children: [] };
-      }
-    });
-    const rootItems = [];
-    items.forEach((item) => {
-      if (item.table === null && item.parent_id === null) {
-        rootItems.push(itemMap[item.id]);
-      } else if (item.table === null && itemMap[item.parent_id]) {
-        itemMap[item.parent_id].children.push(itemMap[item.id]);
-      }
-    });
-    const sortItems = (items) => {
-      return items
-        .sort((a, b) => a.order - b.order)
-        .map((item) => ({
-          ...item,
-          children: sortItems(item.children),
-        }));
-    };
-    return sortItems(rootItems);
   };
 
   const toggleExpand = (id) => {
@@ -765,7 +740,7 @@ const PolicyDetails = () => {
     submitData.append("collection_id", id);
 
     try {
-      setLoading(true);
+      setIsSubmitting(true);
       let response;
       if (isEdit) {
         response = await httpClient.post(`/policies/${policyId}`, submitData);
@@ -780,7 +755,7 @@ const PolicyDetails = () => {
             `Policy ${isEdit ? "updated" : "saved"} successfully`
         );
         if (!isEdit) {
-          setFormData({ title: "", content: "<p>Hello Blue Wheelers!</p>" });
+          setFormData({ title: "", content: "" });
           setTags([]);
           setSelectedLinks([]);
           setEmbeddedPdf(null);
@@ -790,6 +765,10 @@ const PolicyDetails = () => {
           setNavigationTree([]);
           setVideos([]);
         }
+
+        setTimeout(() => {
+          navigate(-1);
+        }, 1000);
       }
     } catch (err) {
       console.error("Error saving policy:", err);
@@ -797,9 +776,18 @@ const PolicyDetails = () => {
         err.response?.data?.message || err.message || `Failed to save policy`;
       showNotification("error", errorMessage);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
+
+  if (loading) {
+    return (
+      <Box sx={{ p: 3, textAlign: "center" }}>
+        <CircularProgress />
+        <Typography mt={2}>{"Loading details..."}</Typography>
+      </Box>
+    );
+  }
 
   return (
     <Container
@@ -1348,8 +1336,8 @@ const PolicyDetails = () => {
               </DialogActions>
             </Dialog>
             <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
-              <Button type="submit" variant="contained" disabled={loading}>
-                {loading ? (
+              <Button type="submit" variant="contained" disabled={isSubmitting}>
+                {isSubmitting ? (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircularProgress size={18} color="inherit" />
                     <Typography variant="body2" sx={{ ml: 1 }}>

@@ -64,7 +64,8 @@ import PolicyDetailsView from "../pages/Operationsmanuals/components/PolicyDetai
 import OperationsManual from "../pages/Operationsmanuals/components/manual/OperationsManual";
 import PolicyDetails from "../pages/Operationsmanuals/components/policies/PolicyDetails";
 import CreatePolicies from "../pages/Operationsmanuals/components/policies/CreatePolicies";
-import PolicyPermissions from "../pages/Operationsmanuals/components/policies/Permissions";
+import PolicyPermissions from "../pages/Operationsmanuals/components/policies/PolicyPermissions";
+import PolicyVerification from "../pages/Operationsmanuals/components/policies/PolicyVerification";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -278,7 +279,19 @@ children:[
           },
           {
             path: "edit/:policyId/verification",
-            element: <div>Verification Component</div>,
+            element: <PolicyVerification />,
+          },
+          {
+            path: "details",
+            element: <PolicyDetails />,
+          },
+          {
+            path: "permissions",
+            element: <PolicyPermissions />,
+          },
+          {
+            path: "verification",
+            element: <PolicyVerification />,
           },
         ],
       },

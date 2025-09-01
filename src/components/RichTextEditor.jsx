@@ -15,7 +15,7 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
       "insertdatetime media table help wordcount",
 
     toolbar:
-      "undo redo | blocks | bold italic forecolor | " +
+      "undo redo | blocks | bold italic underline forecolor | " +
       "alignleft aligncenter alignright alignjustify | " +
       "bullist numlist outdent indent | removeformat | " +
       "image link | code codesample | preview | fullscreen | help",
