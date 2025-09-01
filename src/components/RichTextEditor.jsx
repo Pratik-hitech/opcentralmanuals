@@ -5,7 +5,7 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
   const { value, onChange, onImageUpload, ...rest } = props;
 
   const defaultInit = {
-    height: 350,
+    height: 500,
     menubar: false,
     statusbar: false,
 
