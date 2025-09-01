@@ -131,6 +131,12 @@ const MediaFolderViewer = ({
     open: false,
     folderId: "",
   });
+  const [deleteFileDialog, setDeleteFileDialog] = useState({
+    open: false,
+    fileId: "",
+    fileName: "",
+  });
+  const [isDeleting, setIsDeleting] = useState(false);
   const [viewType, setViewType] = useState("grid"); // 'grid' or 'list'
   const [selectedFiles, setSelectedFiles] = useState([]);
   const [createParent, setCreateParent] = useState(null);
@@ -463,35 +469,72 @@ const MediaFolderViewer = ({
     }
   };
 
-  const confirmDeleteFolder = () => {
-    // Mock implementation - not synced with API
-    const { folderId } = deleteDialog;
+  const handleDeleteFile = (media) => {
+    setDeleteFileDialog({
+      open: true,
+      fileId: media.id,
+      fileName: media.name,
+    });
+  };
 
-    const deleteFolder = (foldersList, targetId) => {
-      return foldersList.reduce((acc, folder) => {
-        if (folder.id === targetId) return acc;
-        if (folder.subfolders?.length > 0) {
-          return [
-            ...acc,
-            {
-              ...folder,
-              subfolders: deleteFolder(folder.subfolders, targetId),
-            },
-          ];
-        }
-        return [...acc, folder];
-      }, []);
-    };
-
-    const updatedFolders = deleteFolder(folders, folderId);
-    setFolders(updatedFolders);
-
-    // If we deleted the current folder, go back to parent or root
-    if (currentFolder?.id === folderId) {
-      handleBack();
+  const confirmDeleteFile = async () => {
+    setIsDeleting(true);
+    const { fileId } = deleteFileDialog;
+    try {
+      await httpClient.delete(`/files/${fileId}`);
+      // Refresh contents after deletion
+      await loadContents();
+      setDeleteFileDialog({ open: false, fileId: "", fileName: "" });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      setDeleteFileDialog({ open: false, fileId: "", fileName: "" });
+    } finally {
+      setIsDeleting(false);
     }
+  };
 
-    setDeleteDialog({ open: false, folderId: "" });
+  const confirmDeleteFolder = async () => {
+    setIsDeleting(true);
+    const { folderId } = deleteDialog;
+    try {
+      // Make API call to delete folder
+      await httpClient.delete(`/files/${folderId}`);
+
+      // Update folder tree after successful deletion
+      const deleteFolder = (foldersList, targetId) => {
+        return foldersList.reduce((acc, folder) => {
+          if (folder.id === targetId) return acc;
+          if (folder.subfolders?.length > 0) {
+            return [
+              ...acc,
+              {
+                ...folder,
+                subfolders: deleteFolder(folder.subfolders, targetId),
+              },
+            ];
+          }
+          return [...acc, folder];
+        }, []);
+      };
+
+      const updatedFolders = deleteFolder(folders, folderId);
+      setFolders(updatedFolders);
+
+      // If we deleted the current folder, go back to parent or root
+      if (currentFolder?.id === folderId) {
+        handleBack();
+      } else {
+        // Reload contents of current folder to reflect changes
+        await loadContents();
+      }
+
+      setDeleteDialog({ open: false, folderId: "" });
+    } catch (error) {
+      console.error("Error deleting folder:", error);
+      setDeleteDialog({ open: false, folderId: "" });
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   const handleDownload = async (media) => {
@@ -741,6 +784,23 @@ const MediaFolderViewer = ({
                       <InfoIcon />
                     </IconButton>
                   </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
+                    </IconButton>
+                  </Tooltip>
                 </Box>
               </MediaCardOverlay>
             )}
@@ -795,6 +855,23 @@ const MediaFolderViewer = ({
                       sx={{ backgroundColor: colors.paper }}
                     >
                       <InfoIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -852,6 +929,23 @@ const MediaFolderViewer = ({
                       sx={{ backgroundColor: colors.paper }}
                     >
                       <InfoIcon />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete">
+                    <IconButton
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteFile(media);
+                      }}
+                      sx={{
+                        backgroundColor: colors.paper,
+                        color: "#d32f2f",
+                        "&:hover": {
+                          backgroundColor: "rgba(211, 47, 47, 0.1)",
+                        },
+                      }}
+                    >
+                      <DeleteIcon />
                     </IconButton>
                   </Tooltip>
                 </Box>
@@ -949,6 +1043,17 @@ const MediaFolderViewer = ({
                 }}
               >
                 <InfoIcon sx={{ color: colors.primary }} />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Delete">
+              <IconButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteFile(media);
+                }}
+                sx={{ color: "#d32f2f" }}
+              >
+                <DeleteIcon />
               </IconButton>
             </Tooltip>
           </>
@@ -1772,6 +1877,67 @@ const MediaFolderViewer = ({
         </DialogActions>
       </Dialog>
 
+      {/* Delete File Dialog */}
+      <Dialog
+        open={deleteFileDialog.open}
+        onClose={() =>
+          !isDeleting &&
+          setDeleteFileDialog({ ...deleteFileDialog, open: false })
+        }
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            backgroundColor: colors.paper,
+          },
+        }}
+      >
+        <DialogTitle sx={{ color: colors.text }}>Delete File</DialogTitle>
+        <DialogContent>
+          <Typography sx={{ color: colors.text }}>
+            Are you sure you want to delete the file "
+            {deleteFileDialog.fileName}"?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button
+            onClick={() =>
+              setDeleteFileDialog({ ...deleteFileDialog, open: false })
+            }
+            sx={{
+              borderRadius: 1,
+              color: colors.text,
+              borderColor: colors.divider,
+            }}
+            variant="outlined"
+            disabled={isDeleting}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDeleteFile}
+            variant="contained"
+            sx={{
+              borderRadius: 1,
+              backgroundColor: "#d32f2f",
+              "&:hover": { backgroundColor: "#b71c1c" },
+              minWidth: 100,
+            }}
+            disabled={isDeleting}
+          >
+            {isDeleting ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} sx={{ color: colors.paper }} />
+                <Typography sx={{ color: colors.paper }}>
+                  Deleting...
+                </Typography>
+              </Box>
+            ) : (
+              <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            )}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       {/* Rename Folder Dialog */}
       <Dialog
         open={renameDialog.open}
@@ -1828,7 +1994,9 @@ const MediaFolderViewer = ({
       {/* Delete Folder Dialog */}
       <Dialog
         open={deleteDialog.open}
-        onClose={() => setDeleteDialog({ ...deleteDialog, open: false })}
+        onClose={() =>
+          !isDeleting && setDeleteDialog({ ...deleteDialog, open: false })
+        }
         PaperProps={{
           sx: {
             borderRadius: 2,
@@ -1851,6 +2019,7 @@ const MediaFolderViewer = ({
               borderColor: colors.divider,
             }}
             variant="outlined"
+            disabled={isDeleting}
           >
             Cancel
           </Button>
@@ -1861,9 +2030,20 @@ const MediaFolderViewer = ({
               borderRadius: 1,
               backgroundColor: "#d32f2f",
               "&:hover": { backgroundColor: "#b71c1c" },
+              minWidth: 100,
             }}
+            disabled={isDeleting}
           >
-            <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            {isDeleting ? (
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <CircularProgress size={20} sx={{ color: colors.paper }} />
+                <Typography sx={{ color: colors.paper }}>
+                  Deleting...
+                </Typography>
+              </Box>
+            ) : (
+              <Typography sx={{ color: colors.paper }}>Delete</Typography>
+            )}
           </Button>
         </DialogActions>
       </Dialog>
