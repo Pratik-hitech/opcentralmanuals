@@ -762,8 +762,11 @@ const PolicyDetails = () => {
 
     mappedMappings.forEach((mapping, index) => {
       const navId = findNavigationId(navigationTree, mapping.navId);
-      submitData.append(`navigations[${index}]`, navId || mapping.navId);
+
+      submitData.append(`navigations[${index}]`, navId);
     });
+
+    submitData.append("collection_id", id);
 
     try {
       setIsSubmitting(true);
