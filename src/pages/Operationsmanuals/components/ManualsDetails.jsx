@@ -104,7 +104,7 @@ const ManualsDetails = () => {
 
       let response;
       if (isEditing) {
-        response = await httpClient.put(`/collections/${id}`, submitData);
+        response = await httpClient.post(`/collections/${id}`, submitData);
       } else {
         response = await httpClient.post("/collections", submitData);
       }
