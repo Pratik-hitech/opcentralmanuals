@@ -55,6 +55,8 @@ const OperationsManual = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
+  const user = JSON.parse(localStorage.getItem("user"));
+
   // Fetch manual data
   const fetchManual = async () => {
     try {
@@ -811,7 +813,7 @@ const OperationsManual = () => {
                     <Tooltip
                       title={
                         isSidebarExpanded
-                          ? "Expand Reading Area"
+                          ? "Hide Table of Contents"
                           : "Show Table of Contents"
                       }
                     >
