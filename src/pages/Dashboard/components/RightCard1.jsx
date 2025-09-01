@@ -215,7 +215,7 @@ function QuickLinksCard() {
         <Grid item xs={6} sm={6}>
           <Box
             component={Link}
-            to="/operations/manuals/docs"
+            to="/operations/manual/5"
             sx={{
               display: "flex",
               flexDirection: "column",

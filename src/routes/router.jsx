@@ -113,21 +113,34 @@ children:[
   {index:true, element:<SearchNav />}
 ]
 },
-
-{
+ {
   path : "/dashboardnews/:id",
   element :(
     <PrivateRoute>
-<PrivateLayout />
+ <PrivateLayout />
     </PrivateRoute>
   ),
    errorElement: <PermissionDenied />,
   children:[
     {index:true, element :<DashboardNews />,
-      loader : dashboardNewsLoader
+       loader : dashboardNewsLoader
     }
   ]
 },
+// {
+//   path : "/dashboardnews/:id",
+//   element :(
+//     <PrivateRoute>
+// <PrivateLayout />
+//     </PrivateRoute>
+//   ),
+//    errorElement: <PermissionDenied />,
+//   children:[
+//     {index:true, element :<DashboardNews />,
+//       // loader : dashboardNewsLoader
+//     }
+//   ]
+// },
 {
   path : "/file-manager",
   element :(

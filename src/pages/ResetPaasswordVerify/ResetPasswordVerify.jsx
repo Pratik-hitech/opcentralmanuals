@@ -117,7 +117,7 @@ const ResetPasswordVerify = () => {
               gutterBottom
             >
               {verified
-                ? "Your email has been verified!"
+                ? "Your reset password link has been verified."
                 : "Verification failed!"}
             </Typography>
 
@@ -127,7 +127,7 @@ const ResetPasswordVerify = () => {
               sx={{ mb: 3 }}
             >
               {verified
-                ? "You can now proceed to set your password or login."
+                ? "You can now proceed to reset your password and login."
                 : "The verification link is invalid or has expired."}
             </Typography>
 

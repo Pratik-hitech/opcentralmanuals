@@ -524,8 +524,8 @@ const UserForm = () => {
         last_name: formData.last_name,
         user_name: formData.user_name,
         email: formData.email,
-        phone_number: formData.phone_number, // Added phone number to payload
-        job_title: formData.job_title, // Added job title to payload
+        phone_number: formData.phone_number, 
+        job_title: formData.job_title, 
         role_id: formData.role_id,
         location_id: formData.location_id,
         // status: formData.status,

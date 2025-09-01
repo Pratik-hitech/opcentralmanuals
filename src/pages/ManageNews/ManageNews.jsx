@@ -2528,7 +2528,7 @@ const handleCategoriesUpdated = () => {
               Bulk Actions
             </Button>
           )}
-          <IconButton>
+          <IconButton onClick={()=>navigate("/reporting/news")}>
             <BarChart />
           </IconButton>
           <Button 
@@ -2582,9 +2582,9 @@ const handleCategoriesUpdated = () => {
           >
             <Download />
           </IconButton>
-          <IconButton disabled={isActionLoading}>
+          {/* <IconButton disabled={isActionLoading}>
             <FilterList />
-          </IconButton>
+          </IconButton> */}
           <IconButton 
             onClick={handleMenuOpen(setAnchorEl)}
             disabled={isActionLoading}
@@ -2656,7 +2656,7 @@ const handleCategoriesUpdated = () => {
                   <StatusChip status={article.status} />
                 </TableCell>
                 <TableCell>{formatDate(article.archived_at)}</TableCell>
-                <TableCell>{article.schedule || "-"}</TableCell>
+                <TableCell>{article.schedule_at || "-"}</TableCell>
                 <TableCell>
                   <Box display="flex" alignItems="center" gap={1}>
                     {article.status !== ARTICLE_STATUS.ARCHIVED && (

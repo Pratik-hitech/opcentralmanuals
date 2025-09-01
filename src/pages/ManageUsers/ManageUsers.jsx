@@ -347,9 +347,9 @@ useEffect(() => {
               Bulk Actions
             </Button>
           )}
-          <IconButton>
+          {/* <IconButton>
             <BarChart />
-          </IconButton>
+          </IconButton> */}
           <Button
             variant="contained"
             color="warning"
@@ -360,7 +360,7 @@ useEffect(() => {
 
           <Tabs value={tab} onChange={handleTabChange} sx={{ ml: 2 }}>
             <Tab label="Active" value="active" />
-            <Tab label="Archived" value="archived" />
+            <Tab label="Inactive" value="archived" />
           </Tabs>
         </Box>
 
@@ -381,9 +381,9 @@ useEffect(() => {
           <IconButton onClick={handleMenuOpen(setDownloadAnchorEl)}>
             <Download />
           </IconButton>
-          <IconButton>
+          {/* <IconButton>
             <FilterList />
-          </IconButton>
+          </IconButton> */}
           <IconButton onClick={handleMenuOpen(setAnchorEl)}>
             <MoreVert />
           </IconButton>
@@ -503,13 +503,13 @@ useEffect(() => {
           Delete Selected Users
         </MenuItem>
         <MenuItem>Change Roles</MenuItem>
-        <MenuItem onClick={() => handleBulkStatusChange(true)}>
+        {/* <MenuItem onClick={() => handleBulkStatusChange(true)}>
           Activate Selected
         </MenuItem>
         <MenuItem onClick={() => handleBulkStatusChange(false)}>
           Deactivate Selected
-        </MenuItem>
-        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
+        </MenuItem> */}
+        {/* <MenuItem onClick={() => exportData("csv")}>Export</MenuItem> */}
       </Menu>
 
       <Menu
@@ -517,7 +517,7 @@ useEffect(() => {
         open={Boolean(anchorEl)}
         onClose={handleMenuClose(setAnchorEl)}
       >
-        <MenuItem>Manage Roles</MenuItem>
+        <MenuItem onClick={()=>navigate("/general-settings/roles")}>Manage Roles</MenuItem>
         <MenuItem>Manage Brands</MenuItem>
       </Menu>
 
@@ -541,7 +541,7 @@ useEffect(() => {
         <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
           Delete
         </MenuItem>
-        <MenuItem>Reset Password</MenuItem>
+        {/* <MenuItem>Reset Password</MenuItem> */}
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
       </Menu>
 

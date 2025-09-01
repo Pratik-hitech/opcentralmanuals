@@ -798,9 +798,13 @@ const Navbar = () => {
       <Divider sx={{ my: 1, borderColor: "#444" }} />
 
       <List>
-        <ListItem button component={NavLink} to="/general-settings">
+         <ListItem button component={NavLink} style={navLinkStyle} to={`/users/profile/${user.id}`} >
+          <ListItemText primary="Profile" primaryTypographyProps={{ fontWeight: "bold" }} />
+        </ListItem>
+        <ListItem button component={NavLink} style={navLinkStyle} to="/general-settings">
           <ListItemText primary="General Settings" primaryTypographyProps={{ fontWeight: "bold" }} />
         </ListItem>
+        
         <ListItem button>
           <ListItemText primary="Support" primaryTypographyProps={{ fontWeight: "bold" }} />
         </ListItem>
@@ -1141,6 +1145,9 @@ const Navbar = () => {
                   open={openProfile} 
                   onClose={() => setProfileAnchorEl(null)}
                 >
+                  <MenuItem onClick={() => setProfileAnchorEl(null)} component={Link} to={`/users/profile/${user.id}`}>
+                    Profile
+                  </MenuItem>
                   <MenuItem onClick={() => setProfileAnchorEl(null)} component={Link} to="/general-settings">
                     General Settings
                   </MenuItem>

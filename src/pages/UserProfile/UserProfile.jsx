@@ -52,7 +52,7 @@ const UserProfile = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 2 }}>
       <Typography variant="h6" mb={2}>
-        User Profile - ID: {userid}
+        {/* User Profile - ID: {userid} */}
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>
@@ -91,18 +91,18 @@ const UserProfile = () => {
               component={Link}
               to={`/users/profile/${userid}/activitylog`}
             />
-            <EqualWidthTab
+            {/* <EqualWidthTab
               label="File Manager"
               value="filemanager"
               component={Link}
               to={`/users/profile/${userid}/filemanager`}
-            />
-            <EqualWidthTab
+            /> */}
+            {/* <EqualWidthTab
               label="Op Manuals"
               value="opmanuals"
               component={Link}
               to={`/users/profile/${userid}/opmanuals`}
-            />
+            /> */}
           </Tabs>
         </Paper>
       </Box>

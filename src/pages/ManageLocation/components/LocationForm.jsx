@@ -890,7 +890,7 @@ const LocationForm = () => {
                   <MenuItem key={type.id} value={type.id}>{type.name}</MenuItem>
                 ))}
               </TextField>
-              <TextField
+              {/* <TextField
                 fullWidth
                 name="Primary Contact"
                 label="Primary Contact"
@@ -898,7 +898,7 @@ const LocationForm = () => {
                 onChange={handleChange}
                 size="small"
                 placeholder="Contact Person"
-              />
+              /> */}
               <TextField
                 fullWidth
                 name="phone"

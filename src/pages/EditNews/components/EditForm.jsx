@@ -707,6 +707,17 @@ const handleCategoriesUpdated = () => {
 
           setIsScheduled(Boolean(data.schedule_at));
 
+           const processedAttachments = (data.attachments || []).map(attachment => ({
+          id: attachment.id,
+          file_id: attachment.file_id,
+          url: attachment.reference_url,
+          name: attachment.reference_url ? attachment.reference_url.split('/').pop() : 'Attachment',
+          // Add placeholder values for size and type
+          size: 0, // We don't have this info from API
+          type: 'application/octet-stream', // Default type
+          isNew: false // Mark as existing attachment
+        }));
+
           setFormData(prev => ({
             ...prev,
             title: data.title || "",
@@ -721,7 +732,7 @@ const handleCategoriesUpdated = () => {
             status: data.status || "DRAFT",
             schedule_at: formatDateForInput(data.schedule),
             videos: normalizedVideos,
-            attachments: data.attachments || [],
+            attachments: processedAttachments,
           }));
 
           setShowVideosSection((normalizedVideos?.length ?? 0) > 0);
@@ -804,13 +815,24 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
   };
 
   // Delete attachment
-  const handleDeleteAttachment = (idx) => {
-    setAttachmentFiles(prev => prev.filter((_, i) => i !== idx));
-    setFormData(prev => ({ 
-      ...prev, 
-      attachments: prev.attachments.filter((_, i) => i !== idx) 
-    }));
-  };
+  const handleDeleteAttachment = async (idx) => {
+  const attachment = formData.attachments[idx];
+  
+  // If it's an existing attachment (has an ID), make API call to delete it
+  if (attachment.id && !attachment.isNew) {
+    try {
+      await httpClient.delete(`news/attachments/${attachment.id}`);
+    } catch (error) {
+      showSnackbar("Failed to delete attachment", "error");
+      return;
+    }
+  }
+  
+  setFormData(prev => ({ 
+    ...prev, 
+    attachments: prev.attachments.filter((_, i) => i !== idx) 
+  }));
+};
 
   // Handle scheduled status change
   const handleScheduledChange = (e) => {
@@ -1106,20 +1128,20 @@ const displayCategories = categories.filter(c => formData.categories.includes(c.
           ) : (
             <Stack spacing={1.5}>
               {formData.attachments.map((attachment, idx) => (
-                <Paper key={idx} sx={{ p: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between" }} variant="outlined">
-                  <Box sx={{ pr: 2, overflow: "hidden" }}>
-                    <Typography variant="subtitle2" noWrap title={attachment.name}>
-                      {attachment.name}
-                    </Typography>
-                    <Typography variant="caption" color="text.secondary">
-                      {attachment.type} • {Math.round(attachment.size / 1024)} KB
-                    </Typography>
-                  </Box>
-                  <IconButton onClick={() => handleDeleteAttachment(idx)} color="error" size="small">
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
-                </Paper>
-              ))}
+  <Paper key={idx} sx={{ p: 1.5, display: "flex", alignItems: "center", justifyContent: "space-between" }} variant="outlined">
+    <Box sx={{ pr: 2, overflow: "hidden" }}>
+      <Typography variant="subtitle2" noWrap title={attachment.name}>
+        {attachment.name}
+      </Typography>
+      <Typography variant="caption" color="text.secondary">
+        {attachment.type} • {attachment.size > 0 ? `${Math.round(attachment.size / 1024)} KB` : 'Size unknown'}
+      </Typography>
+    </Box>
+    <IconButton onClick={() => handleDeleteAttachment(idx)} color="error" size="small">
+      <DeleteIcon fontSize="small" />
+    </IconButton>
+  </Paper>
+))}
             </Stack>
           )}
         </Paper>
