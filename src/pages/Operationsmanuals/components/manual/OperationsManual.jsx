@@ -99,27 +99,47 @@ const OperationsManual = () => {
         // Since the data is already nested, we don't need to build the tree
         setNavigationTree(navigationData);
 
-        // Set only the first section and its children as expanded by default
-        const initialExpandedItems = {};
-        const traverseAndSetExpanded = (items, isFirstLevel = false) => {
-          items.forEach((item, index) => {
-            // Expand first section and its children
-            if (isFirstLevel && index === 0) {
-              if (item.children && item.children.length > 0) {
-                initialExpandedItems[item.id] = true;
+        // Preserve manually expanded items and ensure the section containing the current policy is expanded
+        const updatedExpandedItems = { ...expandedItems };
+
+        // Function to check if an item or its children contain the current policy
+        const containsCurrentPolicy = (item) => {
+          if (
+            policyId &&
+            item.table === "policies" &&
+            item.primary_id === parseInt(policyId)
+          ) {
+            return true;
+          }
+          if (item.children) {
+            return item.children.some((child) => containsCurrentPolicy(child));
+          }
+          return false;
+        };
+
+        // Function to traverse and expand items as needed
+        const traverseAndSetExpanded = (items) => {
+          items.forEach((item) => {
+            // Expand sections that contain the current policy
+            if (item.children && item.children.length > 0) {
+              if (containsCurrentPolicy(item)) {
+                updatedExpandedItems[item.id] = true;
               }
-              traverseAndSetExpanded(item.children || [], false);
-            } else if (!isFirstLevel) {
-              // Expand all children of the first section
-              if (item.children && item.children.length > 0) {
-                initialExpandedItems[item.id] = true;
+              // Expand first section by default if no sections are expanded and we're not viewing a specific policy
+              if (
+                !policyId &&
+                Object.keys(updatedExpandedItems).length === 0 &&
+                items.indexOf(item) === 0
+              ) {
+                updatedExpandedItems[item.id] = true;
               }
-              traverseAndSetExpanded(item.children || [], false);
             }
+            traverseAndSetExpanded(item.children || []);
           });
         };
-        traverseAndSetExpanded(navigationData, true);
-        setExpandedItems(initialExpandedItems);
+
+        traverseAndSetExpanded(navigationData);
+        setExpandedItems(updatedExpandedItems);
 
         // Build policy navigation order
         const policyOrder = [];
@@ -237,6 +257,8 @@ const OperationsManual = () => {
     const isExpanded = expandedItems[item.id];
     const isPolicy = item.table === "policies";
     const currentNumber = numberingPath.join(".");
+    const isActivePolicy =
+      isPolicy && selectedPolicy && item.primary_id === selectedPolicy.id;
 
     return (
       <React.Fragment key={item.id}>
@@ -245,12 +267,13 @@ const OperationsManual = () => {
             sx={{
               border: "1px solid #e0e0e0",
               borderRadius: 1,
-              backgroundColor:
-                depth === 0
-                  ? "#f5f5f5"
-                  : depth > 0 && !isPolicy
-                  ? "#fafafa"
-                  : "white",
+              backgroundColor: isActivePolicy
+                ? "#e3f2fd" // Highlight color for active policy
+                : depth === 0
+                ? "#f5f5f5"
+                : depth > 0 && !isPolicy
+                ? "#fafafa"
+                : "white",
               cursor: isPolicy ? "pointer" : "default",
               "&:hover": {
                 backgroundColor: isPolicy ? "#e3f2fd" : "inherit",
