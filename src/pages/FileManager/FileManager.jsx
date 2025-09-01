@@ -195,7 +195,7 @@ const MediaFolderViewer = ({
         .map((i) => ({
           id: i.id,
           company_id: i.company_id,
-          name: i.name,
+          name: i.original,
           parent_id: i.parent_id,
           path: i.path,
         }));
@@ -204,7 +204,7 @@ const MediaFolderViewer = ({
         .map((i) => ({
           id: i.id,
           company_id: i.company_id,
-          name: i.name,
+          name: i.original,
           type: i.file_type,
           url: `/${i.path}`,
         }));
@@ -887,7 +887,7 @@ const MediaFolderViewer = ({
               sx={{
                 width: "100%",
                 height: "100%",
-                objectFit: "cover",
+                objectFit: "contain",
                 borderRadius: 2,
                 opacity: selectionMode && isSelected ? 0.7 : 1,
               }}
@@ -1618,7 +1618,7 @@ const MediaFolderViewer = ({
                     pr: 1,
                   }}
                 >
-                  {fileDetails.name}
+                  {fileDetails.original}
                 </Typography>
                 <IconButton
                   onClick={() => setInfoOpen(false)}
