@@ -753,23 +753,31 @@ const PolicyDetails = () => {
     if (embeddedPdf) {
       submitData.append("embeded_pdf", embeddedPdf.id);
     }
-    const findNavigationId = (tree, targetId) => {
+    const findNavigationItem = (tree, targetId) => {
       for (let item of tree) {
         if (item.id === targetId) {
-          // If it's a policy, send parent_id; otherwise, send its own id
-          return item.table === "policies" ? item.parent_id : item.id;
+          return item;
         }
-        const childResult = findNavigationId(item.children, targetId);
-        if (childResult !== null) return childResult;
+        const childResult = findNavigationItem(item.children, targetId);
+        if (childResult) return childResult;
       }
       return null;
     };
 
     mappedMappings.forEach((mapping, index) => {
-      const navId = findNavigationId(navigationTree, mapping.navId);
-
-      submitData.append(`navigations[${index}]`, navId);
+      const item = findNavigationItem(navigationTree, mapping.navId);
+      if (item) {
+        const navId = item.table === "policies" ? item.parent_id : item.id;
+        submitData.append(`navigations[${index}][id]`, navId);
+        if (isEdit) {
+          submitData.append(`navigations[${index}][order]`, item.order);
+        }
+      }
     });
+
+    for (let pair of submitData.entries()) {
+      console.log(pair[0] + ", " + pair[1]);
+    }
 
     submitData.append("collection_id", id);
 
