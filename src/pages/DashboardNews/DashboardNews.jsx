@@ -1290,7 +1290,7 @@ const DashboardNews = () => {
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
   const open = Boolean(anchorEl);
-
+const isAdmin = user?.role.name === "admin";
   // Fetch published news list once for navigation
   useEffect(() => {
     const fetchNewsList = async () => {
@@ -1454,11 +1454,26 @@ const DashboardNews = () => {
             <Typography variant="h3" sx={{ fontWeight: 800 }}>{article.title || "Untitled Article"}</Typography>
             <Box ref={controlsRef} display="flex">
               <IconButton onClick={handleExportPDF} sx={{ mr: 1 }}><PictureAsPdf /></IconButton>
-              <IconButton onClick={handleMenuClick}><MoreVert /></IconButton>
-              <Menu id="article-menu" anchorEl={anchorEl} open={open} onClose={handleMenuClose} anchorOrigin={{ vertical: "bottom", horizontal: "right" }} transformOrigin={{ vertical: "top", horizontal: "right" }}>
-                <MenuItem onClick={() => navigate(`/manage/newsarticle/${article.id}/details`)}>Edit</MenuItem>
-                <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
-              </Menu>
+              {isAdmin && (
+    <>
+      <IconButton onClick={handleMenuClick}>
+        <MoreVert />
+      </IconButton>
+      <Menu
+        id="article-menu"
+        anchorEl={anchorEl}
+        open={open}
+        onClose={handleMenuClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <MenuItem onClick={() => navigate(`/manage/newsarticle/${article.id}/details`)}>
+          Edit
+        </MenuItem>
+        <MenuItem onClick={handleDeleteClick}>Delete</MenuItem>
+      </Menu>
+    </>
+  )}
             </Box>
           </Box>
 

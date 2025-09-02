@@ -635,6 +635,8 @@ const Navbar = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const navigate = useNavigate();
+  const isAdmin = user?.role.name === "admin";
+
 
   const openAdmin = Boolean(adminAnchorEl);
   const openProfile = Boolean(profileAnchorEl);
@@ -777,22 +779,27 @@ const Navbar = () => {
           <ListItemText primary="Reporting" primaryTypographyProps={{ fontWeight: "bold" }} />
         </ListItem>
 
-        <ListItem disableGutters>
-          <ListItemText
-            primary="Admin"
-            primaryTypographyProps={{ fontWeight: "bold", pl: 2, pt: 1 }}
-          />
-        </ListItem>
+       {isAdmin && (
+  <>
+    <ListItem disableGutters>
+      <ListItemText
+        primary="Admin"
+        primaryTypographyProps={{ fontWeight: "bold", pl: 2, pt: 1 }}
+      />
+    </ListItem>
 
-        <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
-          <ListItemText primary="News Content" primaryTypographyProps={{ fontWeight: "bold" }} />
-        </ListItem>
-        <ListItem button component={NavLink} to="/manage/users" style={navLinkStyle} sx={{ pl: 4 }}>
-          <ListItemText primary="User Management" primaryTypographyProps={{ fontWeight: "bold" }} />
-        </ListItem>
-        <ListItem button component={NavLink} to="/location" style={navLinkStyle} sx={{ pl: 4 }}>
-          <ListItemText primary="Location Management" primaryTypographyProps={{ fontWeight: "bold" }} />
-        </ListItem>
+    <ListItem button component={NavLink} to="/manage/news" style={navLinkStyle} sx={{ pl: 4 }}>
+      <ListItemText primary="News Content" primaryTypographyProps={{ fontWeight: "bold" }} />
+    </ListItem>
+    <ListItem button component={NavLink} to="/manage/users" style={navLinkStyle} sx={{ pl: 4 }}>
+      <ListItemText primary="User Management" primaryTypographyProps={{ fontWeight: "bold" }} />
+    </ListItem>
+    <ListItem button component={NavLink} to="/location" style={navLinkStyle} sx={{ pl: 4 }}>
+      <ListItemText primary="Location Management" primaryTypographyProps={{ fontWeight: "bold" }} />
+    </ListItem>
+  </>
+)}
+
       </List>
 
       <Divider sx={{ my: 1, borderColor: "#444" }} />
@@ -1049,32 +1056,37 @@ const Navbar = () => {
                 >
                   Reporting
                 </Button>
-                <Button
-                  color="inherit"
-                  onClick={handleAdminClick}
-                  endIcon={<ArrowDropDownIcon />}
-                  component="span"
-                >
-                  Admin
-                </Button>
-                <Menu
-                  id="admin-menu"
-                  anchorEl={adminAnchorEl}
-                  open={openAdmin}
-                  onClose={() => setAdminAnchorEl(null)}
-                  PaperProps={{ onMouseLeave: () => setAdminAnchorEl(null) }}
-                  disableAutoFocusItem
-                >
-                  <MenuItem component={NavLink} to="/manage/news" onClick={() => setAdminAnchorEl(null)}>
-                    News Content
-                  </MenuItem>
-                  <MenuItem component={NavLink} to="/manage/users" onClick={() => setAdminAnchorEl(null)}>
-                    User Management
-                  </MenuItem>
-                  <MenuItem component={NavLink} to="/location" onClick={() => setAdminAnchorEl(null)}>
-                    Location Management
-                  </MenuItem>
-                </Menu>
+                {isAdmin && (
+  <>
+    <Button
+      color="inherit"
+      onClick={handleAdminClick}
+      endIcon={<ArrowDropDownIcon />}
+      component="span"
+    >
+      Admin
+    </Button>
+    <Menu
+      id="admin-menu"
+      anchorEl={adminAnchorEl}
+      open={openAdmin}
+      onClose={() => setAdminAnchorEl(null)}
+      PaperProps={{ onMouseLeave: () => setAdminAnchorEl(null) }}
+      disableAutoFocusItem
+    >
+      <MenuItem component={NavLink} to="/manage/news" onClick={() => setAdminAnchorEl(null)}>
+        News Content
+      </MenuItem>
+      <MenuItem component={NavLink} to="/manage/users" onClick={() => setAdminAnchorEl(null)}>
+        User Management
+      </MenuItem>
+      <MenuItem component={NavLink} to="/location" onClick={() => setAdminAnchorEl(null)}>
+        Location Management
+      </MenuItem>
+    </Menu>
+  </>
+)}
+
               </Box>
 
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -1148,9 +1160,11 @@ const Navbar = () => {
                   <MenuItem onClick={() => setProfileAnchorEl(null)} component={Link} to={`/users/profile/${user.id}`}>
                     Profile
                   </MenuItem>
-                  <MenuItem onClick={() => setProfileAnchorEl(null)} component={Link} to="/general-settings">
-                    General Settings
-                  </MenuItem>
+                 {isAdmin && (
+  <MenuItem onClick={() => setProfileAnchorEl(null)} component={Link} to="/general-settings">
+    General Settings
+  </MenuItem>
+)}
                   <MenuItem onClick={() => setProfileAnchorEl(null)}>Support</MenuItem>
                   <MenuItem onClick={handleLogout}>Logout</MenuItem>
                 </Menu>

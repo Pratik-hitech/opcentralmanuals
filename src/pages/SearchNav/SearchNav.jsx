@@ -1011,6 +1011,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import { httpClient } from "../../utils/httpClientSetup";
 import DOMPurify from 'dompurify';
+import { useAuth } from "../../context/AuthContext";
 
 // HTML Renderer Component
 const HtmlRenderer = ({ htmlContent, className = '' }) => {
@@ -1027,25 +1028,38 @@ const HtmlRenderer = ({ htmlContent, className = '' }) => {
   );
 };
 
-const categories = [
+// const categories = [
+//   { key: "policies", label: "Operations Manuals", icon: ArticleIcon, color: "#1976d2" },
+//   { key: "users", label: "Users", icon: PeopleIcon, color: "#d32f2f" },
+//   { key: "files", label: "File Manager", icon: FolderIcon, color: "#ed6c02" },
+//   { key: "news", label: "News", icon: FeedIcon, color: "#2e7d32" },
+//   // { key: "events", label: "Events", icon: DescriptionOutlinedIcon, color: "#9c27b0" },
+// ];
+const allCategories = [
   { key: "policies", label: "Operations Manuals", icon: ArticleIcon, color: "#1976d2" },
   { key: "users", label: "Users", icon: PeopleIcon, color: "#d32f2f" },
   { key: "files", label: "File Manager", icon: FolderIcon, color: "#ed6c02" },
   { key: "news", label: "News", icon: FeedIcon, color: "#2e7d32" },
-  // { key: "events", label: "Events", icon: DescriptionOutlinedIcon, color: "#9c27b0" },
 ];
+
 
 const SearchNav = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const query = new URLSearchParams(location.search).get("q") || "";
-
+const {user} = useAuth()
+const isAdmin = user?.role?.name === "admin";
   const [results, setResults] = useState({});
   const [loading, setLoading] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState("policies");
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+  return isAdmin ? allCategories[0].key : "policies";
+});
   const [currentPages, setCurrentPages] = useState({});
   const [loadingPages, setLoadingPages] = useState({});
 
+  const categories = isAdmin
+  ? allCategories
+  : allCategories.filter(cat => cat.key === "policies");
   // Modal states
   const [modalOpen, setModalOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState(null);
@@ -1062,6 +1076,8 @@ const SearchNav = () => {
 
   // Snackbar for feedback messages - MOVED OUTSIDE MODAL
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+
+  
 
   useEffect(() => {
     const fetchResults = async () => {
