@@ -41,6 +41,7 @@ import { useNavigate } from "react-router-dom";
 import BlueWheelersLogo from "../../assets/bluewheelerslogo-operationsmanuals.png";
 import { httpClient } from "../../utils/httpClientSetup";
 import { useNotification } from "../../hooks/useNotification";
+import { useAuth } from "../../context/AuthContext";
 
 const fetchManuals = async () => {
   return httpClient
@@ -62,6 +63,7 @@ const LogoCard = ({
   onDelete,
   onManualView,
   navigate,
+  isAdmin,
 }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -134,7 +136,7 @@ const LogoCard = ({
           left: 0,
           width: "100%",
           display: "flex",
-          justifyContent: "center",
+          justifyContent: "flex-end",
           gap: 1,
           opacity: 0,
           transform: "translateY(20px)",
@@ -146,7 +148,7 @@ const LogoCard = ({
           <IconButton
             size="small"
             color="primary"
-            sx={{ bgcolor: "white" }}
+            sx={{ bgcolor: "white", mr: 2 }}
             onClick={(e) => {
               e.preventDefault();
               handleViewClick();
@@ -161,16 +163,18 @@ const LogoCard = ({
             <VisibilityIcon fontSize="small" />
           </IconButton>
         </Tooltip>
-        <Tooltip title="More actions">
-          <IconButton
-            size="small"
-            color="secondary"
-            sx={{ bgcolor: "white" }}
-            onClick={handleMenuClick}
-          >
-            <MoreVertIcon fontSize="small" />
-          </IconButton>
-        </Tooltip>
+        {isAdmin && (
+          <Tooltip title="More actions">
+            <IconButton
+              size="small"
+              color="secondary"
+              sx={{ bgcolor: "white" }}
+              onClick={handleMenuClick}
+            >
+              <MoreVertIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       {/* Title at bottom */}
@@ -195,26 +199,28 @@ const LogoCard = ({
       </Box>
 
       {/* Action menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <MenuItem
-          component={Link}
-          to={`/manuals/edit/${id}`}
-          onClick={handleMenuClose}
+      {isAdmin && (
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
-          <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-          Delete
-        </MenuItem>
-      </Menu>
+          <MenuItem
+            component={Link}
+            to={`/manuals/edit/${id}`}
+            onClick={handleMenuClose}
+          >
+            <EditIcon fontSize="small" sx={{ mr: 1 }} />
+            Edit
+          </MenuItem>
+          <MenuItem onClick={handleDeleteClick}>
+            <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
+            Delete
+          </MenuItem>
+        </Menu>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog
@@ -265,6 +271,9 @@ const OperationsManuals = () => {
   const navigate = useNavigate();
   const showNotification = useNotification();
   const open = Boolean(anchorEl);
+
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name === "admin";
 
   const loadManuals = useCallback(async () => {
     try {
@@ -501,6 +510,7 @@ const OperationsManuals = () => {
                 onDelete={() => handleDeleteManual(manual)}
                 onManualView={handleManualView}
                 navigate={navigate}
+                isAdmin={isAdmin}
               />
             ))}
           </Box>
@@ -544,6 +554,7 @@ const OperationsManuals = () => {
                             onDelete={() => handleDeleteManual(manual)}
                             onManualView={handleManualView}
                             navigate={navigate}
+                            isAdmin={isAdmin}
                           />
                         </TableCell>
                       </TableRow>
@@ -592,7 +603,13 @@ const OperationsManuals = () => {
 };
 
 // Separate component for table row actions
-const TableActions = ({ manual, onDelete, onManualView, navigate }) => {
+const TableActions = ({
+  manual,
+  onDelete,
+  onManualView,
+  navigate,
+  isAdmin,
+}) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const open = Boolean(anchorEl);
@@ -642,26 +659,28 @@ const TableActions = ({ manual, onDelete, onManualView, navigate }) => {
       </Stack>
 
       {/* Action menu */}
-      <Menu
-        anchorEl={anchorEl}
-        open={open}
-        onClose={handleMenuClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-        transformOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <MenuItem
-          component={Link}
-          to={`/manuals/edit/${manual.id}`}
-          onClick={handleMenuClose}
+      {isAdmin && (
+        <Menu
+          anchorEl={anchorEl}
+          open={open}
+          onClose={handleMenuClose}
+          anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+          transformOrigin={{ vertical: "top", horizontal: "right" }}
         >
-          <EditIcon fontSize="small" sx={{ mr: 1 }} />
-          Edit
-        </MenuItem>
-        <MenuItem onClick={handleDeleteClick}>
-          <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
-          Delete
-        </MenuItem>
-      </Menu>
+          <MenuItem
+            component={Link}
+            to={`/manuals/edit/${manual.id}`}
+            onClick={handleMenuClose}
+          >
+            <EditIcon fontSize="small" sx={{ mr: 1 }} />
+            Edit
+          </MenuItem>
+          <MenuItem onClick={handleDeleteClick}>
+            <DeleteIcon fontSize="small" sx={{ mr: 1, color: "error.main" }} />
+            Delete
+          </MenuItem>
+        </Menu>
+      )}
 
       {/* Delete confirmation dialog */}
       <Dialog
