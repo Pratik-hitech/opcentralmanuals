@@ -835,8 +835,39 @@ const OperationsManual = () => {
                       <Tooltip title="Edit">
                         <IconButton
                           onClick={() => {
-                            // Navigate to edit page
-                            window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
+                            // Find the navigation item for the selected policy
+                            let policyNavigationItem = null;
+                            const findPolicyNavigationItem = (items) => {
+                              for (const item of items) {
+                                if (
+                                  item.table === "policies" &&
+                                  item.primary_id === selectedPolicy.id
+                                ) {
+                                  policyNavigationItem = item;
+                                  return true;
+                                }
+                                if (
+                                  item.children &&
+                                  findPolicyNavigationItem(item.children)
+                                ) {
+                                  return true;
+                                }
+                              }
+                              return false;
+                            };
+                            findPolicyNavigationItem(navigationTree);
+
+                            // Navigate to edit page with navigationId
+                            const navigationId = policyNavigationItem
+                              ? policyNavigationItem.parent_id
+                              : "";
+                            window.location.href = `/manuals/edit/${id}/policies/edit/${
+                              selectedPolicy.id
+                            }/details${
+                              navigationId
+                                ? `?navigationId=${navigationId}`
+                                : ""
+                            }`;
                           }}
                           sx={{ border: "1px solid #ccc" }}
                         >
