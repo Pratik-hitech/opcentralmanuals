@@ -34,6 +34,7 @@ import {
 import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
 import { httpClient } from "../../../../utils/httpClientSetup";
+import { useAuth } from "../../../../context/AuthContext";
 
 const OperationsManual = () => {
   const { id, policyId } = useParams();
@@ -55,8 +56,8 @@ const OperationsManual = () => {
   const [isPaused, setIsPaused] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
 
-  const user = JSON.parse(localStorage.getItem("user"));
-
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name === "admin";
   // Fetch manual data
   const fetchManual = async () => {
     try {
@@ -830,17 +831,19 @@ const OperationsManual = () => {
                     </Tooltip>
 
                     {/* Edit Button */}
-                    <Tooltip title="Edit">
-                      <IconButton
-                        onClick={() => {
-                          // Navigate to edit page
-                          window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
-                        }}
-                        sx={{ border: "1px solid #ccc" }}
-                      >
-                        <EditIcon />
-                      </IconButton>
-                    </Tooltip>
+                    {isAdmin && (
+                      <Tooltip title="Edit">
+                        <IconButton
+                          onClick={() => {
+                            // Navigate to edit page
+                            window.location.href = `/manuals/edit/${id}/policies/edit/${selectedPolicy.id}/details`;
+                          }}
+                          sx={{ border: "1px solid #ccc" }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                      </Tooltip>
+                    )}
                   </Box>
                 </Box>
 
