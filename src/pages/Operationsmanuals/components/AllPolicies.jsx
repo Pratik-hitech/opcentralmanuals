@@ -44,6 +44,7 @@ import { httpClient } from "../../../utils/httpClientSetup";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useNotification } from "../../../hooks/useNotification";
+import { useAuth } from "../../../context/AuthContext";
 
 const AllPolicies = () => {
   // State declarations
@@ -74,6 +75,9 @@ const AllPolicies = () => {
 
   const navigate = useNavigate();
   const showNotification = useNotification();
+
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name === "admin";
 
   // Fetch policies
   const fetchPolicies = async (
@@ -486,18 +490,23 @@ const AllPolicies = () => {
               ),
             }}
           />
-          <IconButton
-            onClick={handleMenuOpen(setDownloadAnchorEl)}
-            disabled={isActionLoading}
-          >
-            <Download />
-          </IconButton>
-          <IconButton
-            onClick={handleMenuOpen(setAnchorEl)}
-            disabled={isActionLoading}
-          >
-            <MoreVert />
-          </IconButton>
+          {isAdmin && (
+            <>
+              <IconButton
+                onClick={handleMenuOpen(setDownloadAnchorEl)}
+                disabled={isActionLoading}
+              >
+                <Download />
+              </IconButton>
+
+              <IconButton
+                onClick={handleMenuOpen(setAnchorEl)}
+                disabled={isActionLoading}
+              >
+                <MoreVert />
+              </IconButton>
+            </>
+          )}
         </Box>
       </Box>
 
@@ -607,16 +616,18 @@ const AllPolicies = () => {
                         <Visibility fontSize="small" />
                       </IconButton>
                     </Tooltip>
-                    <IconButton
-                      size="small"
-                      onClick={(e) => {
-                        setActiveRowId(policy.id);
-                        handleMenuOpen(setRowMenuAnchorEl)(e);
-                      }}
-                      disabled={isActionLoading}
-                    >
-                      <MoreVert fontSize="small" />
-                    </IconButton>
+                    {isAdmin && (
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          setActiveRowId(policy.id);
+                          handleMenuOpen(setRowMenuAnchorEl)(e);
+                        }}
+                        disabled={isActionLoading}
+                      >
+                        <MoreVert fontSize="small" />
+                      </IconButton>
+                    )}
                   </Box>
                 </TableCell>
               </TableRow>

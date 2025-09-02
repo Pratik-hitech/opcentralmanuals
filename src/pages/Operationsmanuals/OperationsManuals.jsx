@@ -168,7 +168,7 @@ const LogoCard = ({
             <IconButton
               size="small"
               color="secondary"
-              sx={{ bgcolor: "white" }}
+              sx={{ bgcolor: "white", mr: 2 }}
               onClick={handleMenuClick}
             >
               <MoreVertIcon fontSize="small" />
@@ -421,31 +421,35 @@ const OperationsManuals = () => {
               </IconButton>
             </Tooltip>
 
-            <Button
-              component={Link}
-              to="/manuals/create"
-              variant="contained"
-              sx={{
-                bgcolor: "#E0CD00",
-                "&:hover": { bgcolor: "#c7b800" },
-                color: "white",
-                fontWeight: "bold",
-              }}
-            >
-              Create Manual
-            </Button>
+            {isAdmin && (
+              <>
+                <Button
+                  component={Link}
+                  to="/manuals/create"
+                  variant="contained"
+                  sx={{
+                    bgcolor: "#E0CD00",
+                    "&:hover": { bgcolor: "#c7b800" },
+                    color: "white",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Create Manual
+                </Button>
 
-            <IconButton
-              component={Link}
-              to="/file-manager"
-              sx={{
-                bgcolor: "#E0CD00",
-                color: "white",
-                "&:hover": { bgcolor: "#c7b800" },
-              }}
-            >
-              <FolderIcon />
-            </IconButton>
+                <IconButton
+                  component={Link}
+                  to="/file-manager"
+                  sx={{
+                    bgcolor: "#E0CD00",
+                    color: "white",
+                    "&:hover": { bgcolor: "#c7b800" },
+                  }}
+                >
+                  <FolderIcon />
+                </IconButton>
+              </>
+            )}
 
             <IconButton onClick={handleMenuClick}>
               <MoreVertIcon />
@@ -465,27 +469,33 @@ const OperationsManuals = () => {
               >
                 All Policies
               </MenuItem>
-              <MenuItem
-                onClick={() => handleMenuItemClick("/operations/manuals/")}
-              >
-                Manage Drafts
-              </MenuItem>
-              <MenuItem
-                onClick={() => handleMenuItemClick("/operations/manuals/")}
-              >
-                Manage Tags
-              </MenuItem>
-              <MenuItem
-                onClick={() => handleMenuItemClick("/operations/manuals/")}
-              >
-                Manage Order
-              </MenuItem>
-              <Divider sx={{ height: "1px", bgcolor: "rgba(0, 0, 0, 0.1)" }} />
-              <MenuItem
-                onClick={() => handleMenuItemClick("/operations/manuals/")}
-              >
-                Settings
-              </MenuItem>
+              {isAdmin && (
+                <>
+                  <MenuItem
+                    onClick={() => handleMenuItemClick("/operations/manuals/")}
+                  >
+                    Manage Drafts
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => handleMenuItemClick("/operations/manuals/")}
+                  >
+                    Manage Tags
+                  </MenuItem>
+                  <MenuItem
+                    onClick={() => handleMenuItemClick("/operations/manuals/")}
+                  >
+                    Manage Order
+                  </MenuItem>
+                  <Divider
+                    sx={{ height: "1px", bgcolor: "rgba(0, 0, 0, 0.1)" }}
+                  />
+                  <MenuItem
+                    onClick={() => handleMenuItemClick("/operations/manuals/")}
+                  >
+                    Settings
+                  </MenuItem>
+                </>
+              )}
             </Menu>
           </Stack>
         </Box>
