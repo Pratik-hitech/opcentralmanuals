@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Box,
   Grid,
@@ -30,6 +32,7 @@ import {
   Edit as EditIcon,
   UnfoldMore as UnfoldMoreIcon,
   UnfoldLess as UnfoldLessIcon,
+  PictureAsPdf,
 } from "@mui/icons-material";
 import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
@@ -55,6 +58,7 @@ const OperationsManual = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
 
   const { user } = useAuth();
   const isAdmin = user?.role?.name === "admin";
@@ -315,6 +319,263 @@ const OperationsManual = () => {
     window.speechSynthesis.cancel();
     setIsPlaying(false);
     setIsPaused(false);
+  };
+
+  // Handle PDF export
+  const handleExportPDF = async () => {
+    if (!selectedPolicy) return;
+
+    setIsExportingPDF(true);
+
+    try {
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+      const contentWidth = pdfWidth - margin * 2;
+      // Update the topMargin to prevent logo overlap
+      const topMargin = 100; // Increased from 80 to prevent logo overlap
+      const bottomMargin = 50;
+      const contentHeight = pdfHeight - topMargin - bottomMargin;
+
+      let currentY = topMargin;
+
+      const logoSrc =
+        "https://opmanual.franchise.care/uploaded/1/collections/68b6a2359cd28-1-1756799541.png";
+
+      // Load logo image and get dimensions
+      const { logoData, logoWidth, logoHeight } = await new Promise(
+        (resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = logoSrc;
+          img.onload = () => {
+            const aspectRatio = img.width / img.height;
+            const desiredHeight = 60;
+            const calculatedWidth = desiredHeight * aspectRatio;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = calculatedWidth * 2; // Double for better resolution
+            canvas.height = desiredHeight * 2;
+            const ctx = canvas.getContext("2d");
+            ctx.scale(2, 2);
+            ctx.drawImage(img, 0, 0, calculatedWidth, desiredHeight);
+            resolve({
+              logoData: canvas.toDataURL("image/png"),
+              logoWidth: calculatedWidth,
+              logoHeight: desiredHeight,
+            });
+          };
+          img.onerror = reject;
+        }
+      );
+
+      const addElementToPdf = async (htmlString) => {
+        const isHrElement = htmlString.trim().startsWith("<hr");
+
+        if (isHrElement) {
+          let lineY = currentY + 10;
+
+          if (lineY > pdfHeight - bottomMargin) {
+            pdf.addPage();
+            currentY = topMargin;
+            lineY = currentY + 10;
+          }
+
+          pdf.setDrawColor(204, 204, 204);
+          pdf.setLineWidth(1);
+          pdf.line(margin, lineY, pdfWidth - margin, lineY);
+
+          currentY = lineY + 20; // Add spacing after the line
+          return;
+        }
+
+        const tempDiv = document.createElement("div");
+        tempDiv.style.width = `${contentWidth}px`;
+        tempDiv.style.backgroundColor = "#ffffff";
+        tempDiv.style.fontFamily = "Arial, sans-serif";
+        tempDiv.style.fontSize = "8pt";
+        tempDiv.style.padding = "0";
+        tempDiv.innerHTML = htmlString;
+
+        const images = tempDiv.getElementsByTagName("img");
+        for (let img of images) {
+          img.crossOrigin = "anonymous";
+        }
+
+        document.body.appendChild(tempDiv);
+
+        const promises = Array.from(images).map(
+          (img) =>
+            new Promise((resolve) => {
+              const originalSrc = img.src;
+              img.src = "";
+              img.src = originalSrc;
+              if (img.complete) {
+                resolve();
+              } else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        );
+        await Promise.all(promises);
+
+        const scale = 2;
+        const canvas = await html2canvas(tempDiv, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+        });
+
+        let elemHeight = canvas.height / scale;
+        let elemWidth = canvas.width / scale;
+        const imgData = canvas.toDataURL("image/png");
+
+        document.body.removeChild(tempDiv);
+
+        let finalWidth = elemWidth;
+        let finalHeight = elemHeight;
+
+        if (elemHeight > contentHeight) {
+          finalHeight = contentHeight;
+          finalWidth = elemWidth * (contentHeight / elemHeight);
+        }
+
+        if (currentY + finalHeight > pdfHeight - bottomMargin) {
+          pdf.addPage();
+          currentY = topMargin;
+        }
+
+        pdf.addImage(
+          imgData,
+          "PNG",
+          margin + (contentWidth - finalWidth) / 2,
+          currentY,
+          finalWidth,
+          finalHeight
+        );
+
+        currentY += finalHeight;
+      };
+
+      await addElementToPdf("<hr>");
+
+      // Add breadcrumb
+      const breadcrumbHTML = `<div style="font-style: italic; font-size: 10px;">${breadcrumbPath
+        .map((item) => item.title)
+        .join(" > ")}</div>`;
+      await addElementToPdf(breadcrumbHTML);
+
+      await addElementToPdf("<hr>");
+
+      // Add title
+      const titleHTML = `<h1 style="margin-bottom: 20px; font-size: 18px;">${selectedPolicy.title}</h1>`;
+      await addElementToPdf(titleHTML);
+
+      // Add HR
+      await addElementToPdf(
+        '<hr style="border: 0; height: 1px; background-color: #ccc; margin: 20px 0;">'
+      );
+
+      // Add policy content elements one by one
+      const tempContent = document.createElement("div");
+      tempContent.innerHTML = selectedPolicy.content;
+      const contentElements = Array.from(tempContent.children);
+      for (const el of contentElements) {
+        await addElementToPdf(el.outerHTML);
+      }
+
+      // Add videos if any
+      if (selectedPolicy.videos && selectedPolicy.videos.length > 0) {
+        await addElementToPdf('<h2 style="margin-top: 20px;">Videos</h2>');
+        for (const video of selectedPolicy.videos) {
+          const videoHTML = `
+            <div style="margin-bottom: 10px;">
+              <div><strong>${video.title}</strong></div>
+              <div>${video.description || ""}</div>
+              <div>URL: ${video.reference_url}</div>
+            </div>`;
+          await addElementToPdf(videoHTML);
+        }
+      }
+
+      // Add links if any
+      if (selectedPolicy.links && selectedPolicy.links.length > 0) {
+        await addElementToPdf('<h2 style="margin-top: 20px;">Links</h2>');
+        for (const link of selectedPolicy.links) {
+          const linkHTML = `<div style="margin-bottom: 10px;">URL: ${link.url}</div>`;
+          await addElementToPdf(linkHTML);
+        }
+      }
+
+      // Add headers, footers, and watermarks to all pages
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+
+        // Reset font state for each page
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor("#666");
+
+        // Header - adjust positioning to prevent overlap
+        pdf.addImage(
+          logoData,
+          "PNG",
+          margin,
+          margin - 5,
+          logoWidth,
+          logoHeight
+        );
+        pdf.text(
+          `Exported by: ${user?.name || "Unknown User"}`,
+          pdfWidth - margin,
+          margin + 5,
+          { align: "right", baseline: "top" }
+        );
+        pdf.text(
+          `Exported Date: ${new Date().toLocaleDateString()}`,
+          pdfWidth - margin,
+          margin + 17,
+          { align: "right", baseline: "top" }
+        );
+
+        // Footer
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor("#666");
+        pdf.text("Content owned by Blue Wheelers", margin, pdfHeight - 20);
+        pdf.text("Version 1.1", pdfWidth / 2, pdfHeight - 20, {
+          align: "center",
+        });
+        pdf.text(
+          `Page ${i} of ${pageCount}`,
+          pdfWidth - margin,
+          pdfHeight - 20,
+          { align: "right" }
+        );
+
+        // Watermark
+        pdf.setGState(new pdf.GState({ opacity: 0.07 }));
+        pdf.setTextColor(10, 100, 100);
+        pdf.setFontSize(60);
+        pdf.setFont("helvetica", "bold");
+        const watermarkText = user?.name || "Exported Document";
+        const textMetrics = pdf.getTextDimensions(watermarkText);
+        const x = (pdfWidth - textMetrics.w) / 2;
+        const y = pdfHeight / 2;
+        pdf.text(watermarkText, x, y, { angle: 30 });
+        pdf.setGState(new pdf.GState({ opacity: 1.0 }));
+      }
+
+      pdf.save(`${selectedPolicy.title || "Policy"}.pdf`);
+    } catch (err) {
+      console.error("Error exporting PDF:", err);
+    } finally {
+      setIsExportingPDF(false);
+    }
   };
 
   // Render navigation item
@@ -826,6 +1087,21 @@ const OperationsManual = () => {
                           <ExpandIcon sx={{ transform: "rotate(-90deg)" }} />
                         ) : (
                           <TocIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+
+                    {/* PDF Export Button */}
+                    <Tooltip title="Export to PDF">
+                      <IconButton
+                        onClick={handleExportPDF}
+                        disabled={isExportingPDF}
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isExportingPDF ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <PictureAsPdf />
                         )}
                       </IconButton>
                     </Tooltip>
