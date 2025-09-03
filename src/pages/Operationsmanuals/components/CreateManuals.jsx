@@ -24,13 +24,15 @@ const EqualWidthTab = styled(Tab)(({ theme }) => ({
 const CreateManuals = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  
+
   // Extract the current tab from URL
-  const pathSegments = location.pathname.split('/');
+  const pathSegments = location.pathname.split("/");
   const currentTab = pathSegments[pathSegments.length - 1];
 
   // Define valid tabs
-  const validTabs = ["details", "content", "permission"];
+  // const validTabs = ["details", "content", "permission"]; // permission to be implemented later.
+
+  const validTabs = ["details", "content"];
 
   // Redirect to details if no valid tab is active
   React.useEffect(() => {
@@ -79,6 +81,7 @@ const CreateManuals = () => {
               value="permission"
               component={Link}
               to="permission"
+              sx={{ opacity: 0, pointerEvents: "none" }}
             />
           </Tabs>
         </Paper>

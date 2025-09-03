@@ -30,7 +30,8 @@ const CreatePolicies = () => {
   const currentTab = pathSegments[pathSegments.length - 1];
 
   // Define valid tabs
-  const validTabs = ["details", "permissions", "verification"];
+  // const validTabs = ["details", "permissions", "verification"];
+  const validTabs = ["details"];
 
   // Redirect to details if no valid tab is active
   React.useEffect(() => {
@@ -73,12 +74,14 @@ const CreatePolicies = () => {
               value="permissions"
               component={Link}
               to="permissions"
+              sx={{ opacity: 0, pointerEvents: "none" }}
             />
             <EqualWidthTab
               label="Verification"
               value="verification"
               component={Link}
               to="verification"
+              sx={{ opacity: 0, pointerEvents: "none" }}
             />
           </Tabs>
         </Paper>
