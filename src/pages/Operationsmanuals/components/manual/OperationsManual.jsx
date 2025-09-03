@@ -392,15 +392,27 @@ const OperationsManual = () => {
 
         const tempDiv = document.createElement("div");
         tempDiv.style.width = `${contentWidth}px`;
+        tempDiv.style.maxWidth = `${contentWidth}px`;
         tempDiv.style.backgroundColor = "#ffffff";
         tempDiv.style.fontFamily = "Arial, sans-serif";
         tempDiv.style.fontSize = "8pt";
-        tempDiv.style.padding = "0";
+        tempDiv.style.wordWrap = "break-word";
+        tempDiv.style.overflowWrap = "break-word";
         tempDiv.innerHTML = htmlString;
 
+        // Ensure all images are constrained
         const images = tempDiv.getElementsByTagName("img");
         for (let img of images) {
           img.crossOrigin = "anonymous";
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        }
+
+        // Ensure tables don't overflow
+        const tables = tempDiv.getElementsByTagName("table");
+        for (let table of tables) {
+          table.style.maxWidth = "100%";
+          table.style.tableLayout = "fixed";
         }
 
         document.body.appendChild(tempDiv);
@@ -482,11 +494,50 @@ const OperationsManual = () => {
       // Add policy content elements one by one
       const tempContent = document.createElement("div");
       tempContent.innerHTML = selectedPolicy.content;
-      const contentElements = Array.from(tempContent.children);
-      for (const el of contentElements) {
-        await addElementToPdf(el.outerHTML);
-      }
 
+      // Set max width for content to prevent cutting
+      tempContent.style.maxWidth = `${contentWidth}px`;
+      tempContent.style.wordWrap = "break-word";
+      tempContent.style.overflowWrap = "break-word";
+
+      const contentElements = Array.from(tempContent.children);
+
+      // Process each element with proper width constraints
+      for (const el of contentElements) {
+        const elementWrapper = document.createElement("div");
+        elementWrapper.style.width = `${contentWidth}px`;
+        elementWrapper.style.maxWidth = `${contentWidth}px`;
+        elementWrapper.style.wordWrap = "break-word";
+        elementWrapper.style.overflowWrap = "break-word";
+        elementWrapper.style.padding = "0";
+        elementWrapper.style.margin = "0";
+
+        // Clone the element to the wrapper
+        elementWrapper.innerHTML = el.outerHTML;
+
+        // Handle tables specifically to prevent overflow
+        const tables = elementWrapper.getElementsByTagName("table");
+        for (let table of tables) {
+          table.style.maxWidth = "100%";
+          table.style.tableLayout = "fixed";
+
+          // Ensure table cells don't overflow
+          const cells = table.getElementsByTagName("td");
+          for (let cell of cells) {
+            cell.style.maxWidth = `${contentWidth - 40}px`;
+            cell.style.wordWrap = "break-word";
+          }
+        }
+
+        // Handle images to ensure they fit
+        const images = elementWrapper.getElementsByTagName("img");
+        for (let img of images) {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        }
+
+        await addElementToPdf(elementWrapper.innerHTML);
+      }
       // Add videos if any
       if (selectedPolicy.videos && selectedPolicy.videos.length > 0) {
         await addElementToPdf('<h2 style="margin-top: 20px;">Videos</h2>');
