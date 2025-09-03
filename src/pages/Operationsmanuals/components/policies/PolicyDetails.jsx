@@ -750,9 +750,9 @@ const PolicyDetails = () => {
         );
       }
     });
-    if (embeddedPdf) {
-      submitData.append("embeded_pdf", embeddedPdf.id);
-    }
+    // if (embeddedPdf) {
+    //   submitData.append("embeded_pdf", embeddedPdf.id);
+    // }
     const findNavigationItem = (tree, targetId) => {
       for (let item of tree) {
         if (item.id === targetId) {
@@ -800,7 +800,7 @@ const PolicyDetails = () => {
           setFormData({ title: "", content: "" });
           setTags([]);
           setSelectedLinks([]);
-          setEmbeddedPdf(null);
+          // setEmbeddedPdf(null);
           setIsVideoEnabled(false);
           setMappedMappings([]);
           setSelectedCollection(null);
@@ -1092,7 +1092,7 @@ const PolicyDetails = () => {
                 </TableContainer>
               </LinkTableContainer>
             )}
-            <FormFieldContainer>
+            {/* <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
                   Embed PDF
@@ -1143,7 +1143,7 @@ const PolicyDetails = () => {
                   </Button>
                 </Box>
               )}
-            </FormFieldContainer>
+            </FormFieldContainer> */}
             <FormGrid size={{ xs: 12 }}>
               <Box sx={{ display: "flex", alignItems: "center" }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
