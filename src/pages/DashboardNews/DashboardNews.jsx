@@ -1520,23 +1520,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useLoaderData, useNavigate, useParams, useLocation } from "react-router-dom";
 import {
-  Box,
-  Typography,
-  IconButton,
-  Divider,
-  Avatar,
-  Paper,
-  Menu,
-  MenuItem,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Button,
-  Snackbar,
-  Alert,
-  Skeleton,
+  Box, Typography, IconButton, Divider, Avatar, Paper,
+  Menu, MenuItem, Dialog, DialogTitle, DialogContent,
+  DialogContentText, DialogActions, Button, Snackbar, Alert, Skeleton
 } from "@mui/material";
 import { PictureAsPdf, MoreVert, ArrowBack, NavigateBefore, NavigateNext } from "@mui/icons-material";
 import moment from "moment";
@@ -1545,6 +1531,7 @@ import html2canvas from "html2canvas";
 import { httpClient } from "../../utils/httpClientSetup";
 import { useAuth } from "../../context/AuthContext";
 
+// Loader
 export async function dashboardNewsLoader({ params }) {
   try {
     const articleResponse = await httpClient.get(`news/${params.id}`);
@@ -1573,15 +1560,15 @@ const DashboardNews = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
 
+  const [viewTracked, setViewTracked] = useState(false); // <-- Prevent multiple view creations
   const open = Boolean(anchorEl);
-  const isAdmin = user?.role.name === "admin";
+  const isAdmin = user?.role?.name === "admin";
 
-  // --- Tracking function ---
-  const trackNewsActivity = async ({ id, isClosed = 0, redirectUrl = null }) => {
-    if (!id) return;
+  // --- Track views using view_id ---
+  const trackNewsActivity = async ({ isClosed = 0, redirectUrl = null }) => {
+    if (!article?.view_id) return;
     try {
-      await httpClient.post("views", {
-      
+      await httpClient.put(`views/${article.view_id}`, {
         is_closed: isClosed,
         redirect_url: redirectUrl,
       });
@@ -1590,35 +1577,45 @@ const DashboardNews = () => {
     }
   };
 
-  // Track viewed_at on first load
+  // Track first view once per article load
   useEffect(() => {
-    if (article?.id) {
-      trackNewsActivity({ id: article.id });
+    if (article?.view_id && !viewTracked) {
+      trackNewsActivity({ isClosed: 0 });
+      setViewTracked(true);
     }
-  }, [article]);
+  }, [article, viewTracked]);
 
-  // Track closed_at when tab closes
+  // Track tab close with alert + 3-second delay
   useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (!article?.id) return;
-      trackNewsActivity({ id: article.id, isClosed: 1 });
+    const handleBeforeUnload = (event) => {
+      if (!article?.view_id) return;
+
+      event.preventDefault();
+      alert("is_closed = 1"); // Alert first
+
+      trackNewsActivity({ isClosed: 1 });
+
+      const start = Date.now();
+      while (Date.now() - start < 3000) {} // wait 3 seconds
     };
+
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [article]);
 
-  // Track redirect_url when navigating away
+  // Track SPA navigation (redirect_url)
   const prevUrlRef = useRef(window.location.href);
   useEffect(() => {
-    if (!article?.id) return;
+    if (!article?.view_id) return;
+
     const fromUrl = prevUrlRef.current;
     if (fromUrl !== window.location.href) {
-      trackNewsActivity({ id: article.id, redirectUrl: fromUrl });
+      trackNewsActivity({ redirectUrl: fromUrl });
       prevUrlRef.current = window.location.href;
     }
   }, [location, article]);
 
-  // Fetch published news list once for navigation
+  // Fetch published news list for navigation
   useEffect(() => {
     const fetchNewsList = async () => {
       try {
@@ -1626,7 +1623,6 @@ const DashboardNews = () => {
         if (response.data.success) {
           const sortedNews = [...response.data.data];
           setNewsList(sortedNews);
-
           const index = sortedNews.findIndex(news => news.id === parseInt(id));
           setCurrentIndex(index);
         }
@@ -1648,6 +1644,7 @@ const DashboardNews = () => {
           const articleData = response.data.data;
           let userName = "Blue Wheelers Admin";
           let userInitial = "B";
+
           if (articleData.created_by) {
             try {
               const userResponse = await httpClient.get(`users/${articleData.created_by}`);
@@ -1659,7 +1656,10 @@ const DashboardNews = () => {
               console.error("Error fetching user:", err);
             }
           }
+
           setArticle({ ...articleData, authorName: userName, authorInitial: userInitial });
+          setViewTracked(false); // reset for new article
+
           if (newsList.length > 0) {
             const index = newsList.findIndex(news => news.id === parseInt(id));
             setCurrentIndex(index);
@@ -1674,9 +1674,11 @@ const DashboardNews = () => {
     fetchArticle();
   }, [id, newsList]);
 
+  // Menu handlers
   const handleMenuClick = (event) => setAnchorEl(event.currentTarget);
   const handleMenuClose = () => setAnchorEl(null);
 
+  // Delete handlers
   const handleDeleteClick = () => {
     handleMenuClose();
     setOpenDeleteModal(true);
@@ -1695,6 +1697,7 @@ const DashboardNews = () => {
     }
   };
 
+  // Export PDF
   const handleExportPDF = async () => {
     if (!articleRef.current) return;
     if (controlsRef.current) controlsRef.current.style.display = "none";
@@ -1727,6 +1730,7 @@ const DashboardNews = () => {
     }
   };
 
+  // Navigate next/prev
   const navigateToArticle = (direction) => {
     if (newsList.length <= 1 || currentIndex === -1) return;
 
@@ -1829,6 +1833,4 @@ const DashboardNews = () => {
 };
 
 export default DashboardNews;
-
-
 
