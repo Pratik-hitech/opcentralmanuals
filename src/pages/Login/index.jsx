@@ -702,7 +702,7 @@ import {
   InputAdornment,
   IconButton,
 } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import LoginImage from "../../assets/bluewheelerslogo-operationsmanuals.png";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -711,7 +711,6 @@ import ForgotPassword from "./components/ForgotPassword";
 
 export default function Login() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { login } = useAuth();
 
   const [email, setEmail] = useState("");
@@ -725,10 +724,13 @@ export default function Login() {
     severity: "success",
   });
   const [forgotOpen, setForgotOpen] = useState(false);
-  const [hideForm, setHideForm] = useState(false); // ✅ NEW — Hide login form in franchise system
-
+  const [hideForm, setHideForm] = useState(false);
+console.log("push test 2")
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
- console.log("push update test")
+
+  const handleCloseSnackbar = () =>
+    setSnackbar((prev) => ({ ...prev, open: false }));
+
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
@@ -737,44 +739,34 @@ export default function Login() {
 
   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
 
-  const handleCloseSnackbar = () =>
-    setSnackbar((prev) => ({ ...prev, open: false }));
-
   /**
-   * 🔹 Auto login when inside franchise system (/app/manual/manual)
+   * 🔹 Auto Login if inside Franchise System
    */
   useEffect(() => {
-    const currentPath = location.pathname;
+    const isIframe = window.self !== window.top;
 
-    // ✅ Check if we're inside Mate (franchise system)
-    if (currentPath.includes("/app/manual/manual")) {
-      console.log("✅ Detected Franchise Environment → Auto Login Enabled");
-      setHideForm(true); // Hide login UI
+    // ✅ Check if we are inside the franchise system iframe
+    if (isIframe) {
+      console.log("✅ Franchise iframe detected → Auto Login");
 
-      const loginOBJ = localStorage.getItem("login");
+      setHideForm(true);
 
-      if (loginOBJ) {
-        const logindetail = JSON.parse(loginOBJ);
-        const { aid, uid, cid } = logindetail;
+      const franchiseLogin = localStorage.getItem("login");
 
+      if (franchiseLogin) {
+        const { aid, uid, cid } = JSON.parse(franchiseLogin);
         if (aid && uid && cid) {
           handleMateLogin(aid, uid, cid);
         } else {
-          setSnackbar({
-            open: true,
-            message: "Missing required authentication data",
-            severity: "error",
-          });
+          console.warn("⚠️ Missing franchise login data, showing login form.");
+          setHideForm(false);
         }
       } else {
-        setSnackbar({
-          open: true,
-          message: "No login data found in storage",
-          severity: "error",
-        });
+        console.warn("⚠️ No franchise credentials found → showing login form");
+        setHideForm(false);
       }
     }
-  }, [location]);
+  }, []);
 
   const handleMateLogin = async (aid, uid, cid) => {
     setIsSubmitting(true);
@@ -788,9 +780,9 @@ export default function Login() {
 
       if (response.data?.success && response.data.token) {
         login(response.data.token, response.data.data);
+        localStorage.setItem("manual_token", response.data.token);
 
-        // Navigate straight to dashboard after successful login
-        setTimeout(() => navigate("/dashboard"), 100);
+        navigate("/dashboard", { replace: true });
       } else {
         throw new Error(response.data?.message || "Mate login failed");
       }
@@ -802,14 +794,14 @@ export default function Login() {
           error.response?.data?.message || error.message || "Mate login failed",
         severity: "error",
       });
-      setHideForm(false); // Show form if auto-login fails
+      setHideForm(false);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   /**
-   * 🔹 Manual Login (External Users)
+   * 🔹 Normal External Login
    */
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -836,6 +828,7 @@ export default function Login() {
 
       if (response.data?.success && response.data.token) {
         login(response.data.token, response.data.data);
+        localStorage.setItem("manual_token", response.data.token);
 
         setSnackbar({
           open: true,
@@ -843,7 +836,7 @@ export default function Login() {
           severity: "success",
         });
 
-        setTimeout(() => navigate("/dashboard"), 1000);
+        setTimeout(() => navigate("/dashboard"), 500);
       } else {
         throw new Error(response.data?.message || "Invalid credentials");
       }
@@ -859,7 +852,16 @@ export default function Login() {
     }
   };
 
-  // 🔹 If in Mate system, don't render login UI at all
+  // ✅ If token exists, skip login immediately
+  useEffect(() => {
+    const token = localStorage.getItem("manual_token");
+    if (token) {
+      console.log("✅ Token found → skipping login");
+      navigate("/dashboard", { replace: true });
+    }
+  }, [navigate]);
+
+  // 🔹 If auto-login in progress, show loading text
   if (hideForm) {
     return (
       <Grid
