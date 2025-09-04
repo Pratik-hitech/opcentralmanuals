@@ -32,6 +32,8 @@ import {
   ListItem,
   ListItemText,
   Collapse,
+  FormControlLabel,
+  Checkbox,
 } from "@mui/material";
 import {
   InfoOutlined as InfoIcon,
@@ -162,6 +164,10 @@ const PolicyDetails = () => {
   const [showVideoPreview, setShowVideoPreview] = useState(false);
   const [editingVideo, setEditingVideo] = useState(null);
   const [showImageMediaViewer, setShowImageMediaViewer] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [updateToVersion, setUpdateToVersion] = useState(false);
+  const [versionNotes, setVersionNotes] = useState("");
+  const [nextVersion, setNextVersion] = useState("");
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
@@ -270,6 +276,12 @@ const PolicyDetails = () => {
             const resolvedMappings = await Promise.all(navigationPromises);
             // Always set mappedMappings from policy data
             setMappedMappings(resolvedMappings.filter((m) => m !== null));
+
+            // Calculate next version
+            if (data.versions && data.versions.length > 0) {
+              const nextVer = (1.0 + data.versions.length * 0.1).toFixed(1);
+              setNextVersion(nextVer);
+            }
           }
           setLoading(false);
         })
@@ -656,6 +668,22 @@ const PolicyDetails = () => {
 
   const isMapped = (id) => mappedMappings.some((m) => m.navId === id);
 
+  const handleUpdateClick = (e) => {
+    e.preventDefault();
+    setUpdateDialogOpen(true);
+  };
+
+  const handleUpdateConfirm = () => {
+    setUpdateDialogOpen(false);
+    handleSubmit({ preventDefault: () => {} });
+  };
+
+  const handleUpdateCancel = () => {
+    setUpdateDialogOpen(false);
+    setUpdateToVersion(false);
+    setVersionNotes("");
+  };
+
   const renderMappingItem = (item, depth = 0) => {
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedItems[item.id];
@@ -780,6 +808,11 @@ const PolicyDetails = () => {
     }
 
     submitData.append("collection_id", id);
+
+    // Add version update data if selected
+    if (isEdit && updateToVersion) {
+      submitData.append("notes", versionNotes);
+    }
 
     try {
       setIsSubmitting(true);
@@ -1383,7 +1416,11 @@ const PolicyDetails = () => {
               </DialogActions>
             </Dialog>
             <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
-              <Button type="submit" variant="contained" disabled={isSubmitting}>
+              <Button
+                variant="contained"
+                disabled={isSubmitting}
+                onClick={isEdit ? handleUpdateClick : handleSubmit}
+              >
                 {isSubmitting ? (
                   <Box sx={{ display: "flex", alignItems: "center" }}>
                     <CircularProgress size={18} color="inherit" />
@@ -1401,6 +1438,46 @@ const PolicyDetails = () => {
           </Box>
         </Paper>
       </Box>
+      <Dialog
+        open={updateDialogOpen}
+        onClose={handleUpdateCancel}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Update Policy</DialogTitle>
+        <DialogContent>
+          <Box sx={{ mt: 2 }}>
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={updateToVersion}
+                  onChange={(e) => setUpdateToVersion(e.target.checked)}
+                />
+              }
+              label={`Update policy to version ${nextVersion}`}
+            />
+            {updateToVersion && (
+              <TextField
+                label="Notes"
+                multiline
+                rows={3}
+                value={versionNotes}
+                onChange={(e) => setVersionNotes(e.target.value)}
+                fullWidth
+                sx={{ mt: 2 }}
+                inputProps={{ maxLength: 200 }}
+                helperText={`${versionNotes.length}/200 characters`}
+              />
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleUpdateCancel}>Cancel</Button>
+          <Button onClick={handleUpdateConfirm} variant="contained">
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={showVideoPreview}
         onClose={() => setShowVideoPreview(false)}
