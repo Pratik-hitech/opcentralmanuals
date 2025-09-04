@@ -1163,11 +1163,20 @@ const OperationsManual = () => {
                           <Button
                             variant="outlined"
                             size="small"
-                            sx={{ mr: 1, height: "40px" }}
+                            sx={{
+                              mr: 1,
+                              border: "1px solid #ccc",
+                              height: "40px",
+                            }}
                             onClick={() => setIsVersionDialogOpen(true)}
                           >
-                            Version{" "}
-                            {calculateCurrentVersion(selectedPolicy.versions)}
+                            <Typography
+                              variant="body1"
+                              sx={{ color: "#636363" }}
+                            >
+                              Version{" "}
+                              {calculateCurrentVersion(selectedPolicy.versions)}
+                            </Typography>
                           </Button>
                         )}
 
