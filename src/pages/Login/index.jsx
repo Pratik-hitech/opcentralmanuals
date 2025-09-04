@@ -728,7 +728,7 @@ export default function Login() {
   const [hideForm, setHideForm] = useState(false); // ✅ NEW — Hide login form in franchise system
 
   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-
+ console.log("push update test")
   const handleEmailChange = (e) => {
     const value = e.target.value;
     setEmail(value);
