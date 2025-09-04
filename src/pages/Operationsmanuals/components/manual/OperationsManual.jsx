@@ -71,6 +71,8 @@ const OperationsManual = () => {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false);
+  const [isViewNotesDialogOpen, setIsViewNotesDialogOpen] = useState(false);
+  const [viewNotesData, setViewNotesData] = useState(null);
   const [versionDownloadLoading, setVersionDownloadLoading] = useState({});
 
   const { user } = useAuth();
@@ -1180,6 +1182,27 @@ const OperationsManual = () => {
                           </Button>
                         )}
 
+                      {/* View Notes Button */}
+                      {selectedPolicy && (
+                        <Tooltip title="View Notes">
+                          <IconButton
+                            onClick={() => {
+                              setViewNotesData({
+                                created_by: selectedPolicy.created_by,
+                                created_at: selectedPolicy.created_at,
+                                updated_by: selectedPolicy.updated_by,
+                                updated_at: selectedPolicy.updated_at,
+                                notes: selectedPolicy.notes,
+                              });
+                              setIsViewNotesDialogOpen(true);
+                            }}
+                            sx={{ border: "1px solid #ccc", mr: 1 }}
+                          >
+                            <Article sx={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
                       {/* Play/Pause Button */}
                       <Tooltip
                         title={
@@ -1196,6 +1219,7 @@ const OperationsManual = () => {
                               speakPolicyContent();
                             }
                           }}
+                          size="small"
                           sx={{ border: "1px solid #ccc", mr: 1 }}
                         >
                           {isPlaying ? <PauseCircle /> : <PlayCircle />}
@@ -1208,6 +1232,7 @@ const OperationsManual = () => {
                           <IconButton
                             onClick={stopSpeech}
                             sx={{ border: "1px solid #ccc", mr: 1 }}
+                            size="small"
                           >
                             <Stop />
                           </IconButton>
@@ -1226,6 +1251,7 @@ const OperationsManual = () => {
                           onClick={() =>
                             setIsSidebarExpanded(!isSidebarExpanded)
                           }
+                          size="small"
                           sx={{ border: "1px solid #ccc", mr: 1 }}
                         >
                           {isSidebarExpanded ? (
@@ -1246,6 +1272,7 @@ const OperationsManual = () => {
                             )
                           }
                           disabled={isExportingPDF}
+                          size="small"
                           sx={{ border: "1px solid #ccc", mr: 1 }}
                         >
                           {isExportingPDF ? (
@@ -1295,6 +1322,7 @@ const OperationsManual = () => {
                                   : ""
                               }`;
                             }}
+                            size="small"
                             sx={{ border: "1px solid #ccc" }}
                           >
                             <EditIcon />
@@ -1420,6 +1448,21 @@ const OperationsManual = () => {
         onDownload={handleExportPDF}
         selectedPolicy={selectedPolicy}
         versionDownloadLoading={versionDownloadLoading}
+        onViewNotes={(version) => {
+          setViewNotesData({
+            created_by: version.created_by,
+            created_at: version.created_at,
+            updated_by: version.updated_by,
+            updated_at: version.updated_at,
+            notes: version.notes,
+          });
+          setIsViewNotesDialogOpen(true);
+        }}
+      />
+      <ViewNotesDialog
+        open={isViewNotesDialogOpen}
+        onClose={() => setIsViewNotesDialogOpen(false)}
+        notesData={viewNotesData}
       />
     </>
   );
@@ -1433,6 +1476,7 @@ const VersionHistoryDialog = ({
   onDownload,
   selectedPolicy,
   versionDownloadLoading,
+  onViewNotes,
 }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
@@ -1475,8 +1519,7 @@ const VersionHistoryDialog = ({
 
   // Handle view notes
   const handleViewNotes = (version) => {
-    console.log("View notes for version", version);
-    // TODO: Implement view notes functionality
+    onViewNotes(version);
   };
 
   return (
@@ -1533,13 +1576,13 @@ const VersionHistoryDialog = ({
                           <CircularProgress size={16} sx={{ ml: 1 }} />
                         )}
                       </Button>
-                      {/* <Button
+                      <Button
                         size="small"
                         variant="outlined"
                         onClick={() => handleViewNotes(version)}
                       >
                         View Notes
-                      </Button> */}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
@@ -1555,6 +1598,135 @@ const VersionHistoryDialog = ({
           page={page}
           onPageChange={handleChangePage}
         />
+      </DialogContent>
+      <DialogActions>
+        <Button variant="contained" onClick={onClose}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// View Notes Dialog
+const ViewNotesDialog = ({ open, onClose, notesData }) => {
+  if (!notesData) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Policy Notes</DialogTitle>
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          {/* Combined Information Group */}
+          <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: "#f8f9fa" }}>
+            {/* <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ color: "#1976d2", fontSize: "1rem", mb: 2 }}
+            >
+              Policy Information
+            </Typography> */}
+
+            {/* Published Information Section */}
+            <Box sx={{ mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Published By:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.created_by || "N/A"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Published Date:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.created_at
+                    ? new Date(notesData.created_at).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider sx={{ my: 2, borderColor: "#e0e0e0" }} />
+
+            {/* Last Updated Information Section */}
+            <Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated Date:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.updated_at
+                    ? new Date(notesData.updated_at).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated By:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.updated_by || "N/A"}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Notes Group */}
+          <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f8f9fa" }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ color: "#1976d2", fontSize: "1rem" }}
+            >
+              Notes
+            </Typography>
+            <Box
+              sx={{
+                backgroundColor: "white",
+                p: 2,
+                borderRadius: 1,
+                border: "1px solid #e0e0e0",
+                minHeight: "60px",
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{ whiteSpace: "pre-wrap", color: "text.primary" }}
+              >
+                {notesData.notes || "No notes available"}
+              </Typography>
+            </Box>
+          </Paper>
+        </Box>
       </DialogContent>
       <DialogActions>
         <Button variant="contained" onClick={onClose}>
