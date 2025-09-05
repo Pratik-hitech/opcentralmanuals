@@ -607,7 +607,7 @@ const AddVideo = ({
             variant="contained"
             disabled={
               !videoData.title ||
-              (selectedVideoType === "upload" && !videoData.file) ||
+              (selectedVideoType === "upload" && !videoData.file && !videoData.url) ||
               ((selectedVideoType === "youtube" ||
                 selectedVideoType === "vimeo") &&
                 !videoData.url)

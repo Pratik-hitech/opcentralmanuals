@@ -727,7 +727,11 @@ const ManualsContent = () => {
         >
           Content
         </Typography>
-        <Grid container spacing={3}>
+        <Grid
+          container
+          spacing={3}
+          sx={{ display: "flex", justifyContent: "center" }}
+        >
           <Grid size={{ xs: 12, md: 9 }}>
             <Paper elevation={3} sx={{ p: 4 }}>
               <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
@@ -862,12 +866,12 @@ const ManualsContent = () => {
               </Box>
             </Paper>
           </Grid>
-          <Grid size={{ xs: 12, md: 3 }}>
+          {/* <Grid size={{ xs: 12, md: 3 }}>
             <Paper elevation={3} sx={{ p: 4, height: "100%" }}>
               <h3>Document library</h3>
               <p>WIP</p>
             </Paper>
-          </Grid>
+          </Grid> */}
         </Grid>
       </Box>
       <CreateSectionDialog

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 import {
   Box,
   Grid,
@@ -18,6 +20,17 @@ import {
   Container,
   CircularProgress,
   Tooltip,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
 } from "@mui/material";
 import {
   ExpandMore,
@@ -30,6 +43,7 @@ import {
   Edit as EditIcon,
   UnfoldMore as UnfoldMoreIcon,
   UnfoldLess as UnfoldLessIcon,
+  PictureAsPdf,
 } from "@mui/icons-material";
 import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
@@ -55,9 +69,26 @@ const OperationsManual = () => {
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [isSidebarExpanded, setIsSidebarExpanded] = useState(true);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isVersionDialogOpen, setIsVersionDialogOpen] = useState(false);
+  const [isViewNotesDialogOpen, setIsViewNotesDialogOpen] = useState(false);
+  const [viewNotesData, setViewNotesData] = useState(null);
+  const [versionDownloadLoading, setVersionDownloadLoading] = useState({});
 
   const { user } = useAuth();
   const isAdmin = user?.role?.name === "admin";
+
+  // Calculate current version based on versions array
+  const calculateCurrentVersion = (versions) => {
+    if (!versions || versions.length === 0) return "1.0";
+
+    const numVersions = versions.length;
+    const major = 1 + Math.floor((numVersions - 1) / 10);
+    const minor = (numVersions - 1) % 10;
+
+    return `${major}.${minor}`;
+  };
+
   // Fetch manual data
   const fetchManual = async () => {
     try {
@@ -317,6 +348,348 @@ const OperationsManual = () => {
     setIsPaused(false);
   };
 
+  // Handle PDF export
+  const handleExportPDF = async (
+    policy = null,
+    version = null,
+    isVersionHistory = false,
+    versionNumber = null
+  ) => {
+    const policyToExport = policy || selectedPolicy;
+
+    if (!policyToExport) return;
+
+    // Set loading state based on export type
+    if (isVersionHistory) {
+      setVersionDownloadLoading((prev) => ({
+        ...prev,
+        [version.id]: true,
+      }));
+    } else {
+      setIsExportingPDF(true);
+    }
+
+    try {
+      const pdf = new jsPDF("p", "pt", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const margin = 40;
+      const contentWidth = pdfWidth - margin * 2;
+
+      const topMargin = 100;
+      const bottomMargin = 50;
+      const contentHeight = pdfHeight - topMargin - bottomMargin;
+
+      let currentY = topMargin;
+
+      const logoSrc =
+        "https://opmanual.franchise.care/uploaded/1/collections/68b6a2359cd28-1-1756799541.png";
+
+      const { logoData, logoWidth, logoHeight } = await new Promise(
+        (resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.src = logoSrc;
+          img.onload = () => {
+            const aspectRatio = img.width / img.height;
+            const desiredHeight = 60;
+            const calculatedWidth = desiredHeight * aspectRatio;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = calculatedWidth * 2; // Double for better resolution
+            canvas.height = desiredHeight * 2;
+            const ctx = canvas.getContext("2d");
+            ctx.scale(2, 2);
+            ctx.drawImage(img, 0, 0, calculatedWidth, desiredHeight);
+            resolve({
+              logoData: canvas.toDataURL("image/png"),
+              logoWidth: calculatedWidth,
+              logoHeight: desiredHeight,
+            });
+          };
+          img.onerror = reject;
+        }
+      );
+
+      const addElementToPdf = async (htmlString) => {
+        const isHrElement = htmlString.trim().startsWith("<hr");
+
+        if (isHrElement) {
+          let lineY = currentY + 10;
+
+          if (lineY > pdfHeight - bottomMargin) {
+            pdf.addPage();
+            currentY = topMargin;
+            lineY = currentY + 10;
+          }
+
+          pdf.setDrawColor(204, 204, 204);
+          pdf.setLineWidth(1);
+          pdf.line(margin, lineY, pdfWidth - margin, lineY);
+
+          currentY = lineY + 20; // Add spacing after the line
+          return;
+        }
+
+        const tempDiv = document.createElement("div");
+        tempDiv.style.width = `${contentWidth}px`;
+        tempDiv.style.maxWidth = `${contentWidth}px`;
+        tempDiv.style.backgroundColor = "#ffffff";
+        tempDiv.style.fontFamily = "Arial, sans-serif";
+        tempDiv.style.fontSize = "8pt";
+        tempDiv.style.wordWrap = "break-word";
+        tempDiv.style.overflowWrap = "break-word";
+        tempDiv.innerHTML = htmlString;
+
+        // Ensure all images are constrained
+        const images = tempDiv.getElementsByTagName("img");
+        for (let img of images) {
+          img.crossOrigin = "anonymous";
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        }
+
+        // Ensure tables don't overflow
+        const tables = tempDiv.getElementsByTagName("table");
+        for (let table of tables) {
+          table.style.maxWidth = "100%";
+          table.style.tableLayout = "fixed";
+        }
+
+        document.body.appendChild(tempDiv);
+
+        const promises = Array.from(images).map(
+          (img) =>
+            new Promise((resolve) => {
+              const originalSrc = img.src;
+              img.src = "";
+              img.src = originalSrc;
+              if (img.complete) {
+                resolve();
+              } else {
+                img.onload = resolve;
+                img.onerror = resolve;
+              }
+            })
+        );
+        await Promise.all(promises);
+
+        const scale = 2;
+        const canvas = await html2canvas(tempDiv, {
+          scale,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: "#ffffff",
+        });
+
+        let elemHeight = canvas.height / scale;
+        let elemWidth = canvas.width / scale;
+        const imgData = canvas.toDataURL("image/png");
+
+        document.body.removeChild(tempDiv);
+
+        let finalWidth = elemWidth;
+        let finalHeight = elemHeight;
+
+        if (elemHeight > contentHeight) {
+          finalHeight = contentHeight;
+          finalWidth = elemWidth * (contentHeight / elemHeight);
+        }
+
+        if (currentY + finalHeight > pdfHeight - bottomMargin) {
+          pdf.addPage();
+          currentY = topMargin;
+        }
+
+        pdf.addImage(
+          imgData,
+          "PNG",
+          margin + (contentWidth - finalWidth) / 2,
+          currentY,
+          finalWidth,
+          finalHeight
+        );
+
+        currentY += finalHeight;
+      };
+
+      await addElementToPdf("<hr>");
+
+      // Add breadcrumb
+      const breadcrumbHTML = `<div style="font-style: italic; font-size: 10px;">${breadcrumbPath
+        .map((item) => item.title)
+        .join(" > ")}</div>`;
+      await addElementToPdf(breadcrumbHTML);
+
+      await addElementToPdf("<hr>");
+
+      // Add title
+      const titleHTML = `<h1 style="margin-bottom: 20px; font-size: 18px;">${policyToExport.title}</h1>`;
+      await addElementToPdf(titleHTML);
+
+      // Add HR
+      await addElementToPdf(
+        '<hr style="border: 0; height: 1px; background-color: #ccc; margin: 20px 0;">'
+      );
+
+      // Add policy content elements one by one
+      const tempContent = document.createElement("div");
+      tempContent.innerHTML = policyToExport.content || "";
+
+      // Set max width for content to prevent cutting
+      tempContent.style.maxWidth = `${contentWidth}px`;
+      tempContent.style.wordWrap = "break-word";
+      tempContent.style.overflowWrap = "break-word";
+
+      const contentElements = Array.from(tempContent.children);
+
+      // Process each element with proper width constraints
+      for (const el of contentElements) {
+        const elementWrapper = document.createElement("div");
+        elementWrapper.style.width = `${contentWidth}px`;
+        elementWrapper.style.maxWidth = `${contentWidth}px`;
+        elementWrapper.style.wordWrap = "break-word";
+        elementWrapper.style.overflowWrap = "break-word";
+        elementWrapper.style.padding = "0";
+        elementWrapper.style.margin = "0";
+
+        // Clone the element to the wrapper
+        elementWrapper.innerHTML = el.outerHTML;
+
+        // Handle tables specifically to prevent overflow
+        const tables = elementWrapper.getElementsByTagName("table");
+        for (let table of tables) {
+          table.style.maxWidth = "100%";
+          table.style.tableLayout = "fixed";
+
+          // Ensure table cells don't overflow
+          const cells = table.getElementsByTagName("td");
+          for (let cell of cells) {
+            cell.style.maxWidth = `${contentWidth - 40}px`;
+            cell.style.wordWrap = "break-word";
+          }
+        }
+
+        // Handle images to ensure they fit
+        const images = elementWrapper.getElementsByTagName("img");
+        for (let img of images) {
+          img.style.maxWidth = "100%";
+          img.style.height = "auto";
+        }
+
+        await addElementToPdf(elementWrapper.innerHTML);
+      }
+      // Add videos if any
+      if (policyToExport.videos && policyToExport.videos.length > 0) {
+        await addElementToPdf('<h2 style="margin-top: 20px;">Videos</h2>');
+        for (const video of policyToExport.videos) {
+          const videoHTML = `
+            <div style="margin-bottom: 10px;">
+              <div><strong>${video.title}</strong></div>
+              <div>${video.description || ""}</div>
+              <div>URL: ${video.reference_url}</div>
+            </div>`;
+          await addElementToPdf(videoHTML);
+        }
+      }
+
+      // Add links if any
+      if (policyToExport.links && policyToExport.links.length > 0) {
+        await addElementToPdf('<h2 style="margin-top: 20px;">Links</h2>');
+        for (const link of policyToExport.links) {
+          const linkHTML = `<div style="margin-bottom: 10px;">URL: ${link.url}</div>`;
+          await addElementToPdf(linkHTML);
+        }
+      }
+
+      // Add headers, footers, and watermarks to all pages
+      const pageCount = pdf.internal.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        pdf.setPage(i);
+
+        // Reset font state for each page
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor("#666");
+
+        // Header - adjust positioning to prevent overlap
+        pdf.addImage(
+          logoData,
+          "PNG",
+          margin,
+          margin - 5,
+          logoWidth,
+          logoHeight
+        );
+        pdf.text(
+          `Exported by: ${user?.name || "Unknown User"}`,
+          pdfWidth - margin,
+          margin + 5,
+          { align: "right", baseline: "top" }
+        );
+        pdf.text(
+          `Exported Date: ${new Date().toLocaleDateString()}`,
+          pdfWidth - margin,
+          margin + 17,
+          { align: "right", baseline: "top" }
+        );
+
+        // Footer
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(10);
+        pdf.setTextColor("#666");
+        pdf.text("Content owned by Blue Wheelers", margin, pdfHeight - 20);
+
+        // Use dynamic version number
+        let versionText = "Version 1.0";
+        if (isVersionHistory) {
+          // For version exports, use the version number
+          versionText = `Version ${versionNumber}`;
+        } else if (policyToExport && policyToExport.versions) {
+          // For main export, use current policy version
+          versionText = `Version ${calculateCurrentVersion(
+            policyToExport.versions
+          )}`;
+        }
+        pdf.text(versionText, pdfWidth / 2, pdfHeight - 20, {
+          align: "center",
+        });
+        pdf.text(
+          `Page ${i} of ${pageCount}`,
+          pdfWidth - margin,
+          pdfHeight - 20,
+          { align: "right" }
+        );
+
+        // Watermark
+        pdf.setGState(new pdf.GState({ opacity: 0.07 }));
+        pdf.setTextColor(10, 100, 100);
+        pdf.setFontSize(60);
+        pdf.setFont("helvetica", "bold");
+        const watermarkText = user?.name || "Exported Document";
+        const textMetrics = pdf.getTextDimensions(watermarkText);
+        const x = (pdfWidth - textMetrics.w) / 2;
+        const y = pdfHeight / 2;
+        pdf.text(watermarkText, x, y, { angle: 30 });
+        pdf.setGState(new pdf.GState({ opacity: 1.0 }));
+      }
+
+      pdf.save(`${policyToExport.title || "Policy"}.pdf`);
+    } catch (err) {
+      console.error("Error exporting PDF:", err);
+    } finally {
+      // Reset loading state based on export type
+      if (isVersionHistory) {
+        setVersionDownloadLoading((prev) => ({
+          ...prev,
+          [version.id]: false,
+        }));
+      } else {
+        setIsExportingPDF(false);
+      }
+    }
+  };
+
   // Render navigation item
   const renderNavigationItem = (item, depth = 0, numberingPath = []) => {
     const hasChildren = item.children && item.children.length > 0;
@@ -568,420 +941,799 @@ const OperationsManual = () => {
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 3 }}>
-      <Grid container spacing={3}>
-        {/* Left Column - Table of Contents */}
-        {isSidebarExpanded && (
-          <Grid size={{ xs: 12, md: 3 }}>
-            <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  mb: 2,
-                }}
-              >
-                <Typography variant="h6" gutterBottom>
-                  Table of Contents
-                </Typography>
-                <Tooltip
-                  title={
-                    Object.values(expandedItems).every(Boolean)
-                      ? "Collapse All"
-                      : "Expand All"
-                  }
-                >
-                  <IconButton
-                    size="small"
-                    onClick={() => {
-                      const allExpanded =
-                        Object.values(expandedItems).every(Boolean);
-                      const newExpandedItems = {};
-                      const traverseAndSetExpanded = (items, expand) => {
-                        items.forEach((item) => {
-                          if (item.children && item.children.length > 0) {
-                            newExpandedItems[item.id] = !expand;
-                          }
-                          traverseAndSetExpanded(item.children || [], expand);
-                        });
-                      };
-                      traverseAndSetExpanded(navigationTree, allExpanded);
-                      setExpandedItems(newExpandedItems);
-                    }}
-                  >
-                    {Object.values(expandedItems).every(Boolean) ? (
-                      <UnfoldLessIcon />
-                    ) : (
-                      <UnfoldMoreIcon />
-                    )}
-                  </IconButton>
-                </Tooltip>
-              </Box>
-              <Divider sx={{ mb: 2 }} />
-              {navigationTree.length > 0 ? (
-                <List sx={{ width: "100%" }}>
-                  {[...navigationTree]
-                    .sort((a, b) => (a.order || 0) - (b.order || 0))
-                    .map((item, index) =>
-                      renderNavigationItem(item, 0, [index + 1])
-                    )}
-                </List>
-              ) : (
-                <Typography>No navigation items found</Typography>
-              )}
-            </Paper>
-          </Grid>
-        )}
-
-        {/* Right Column - Content */}
-        <Grid size={{ xs: 12, md: isSidebarExpanded ? 9 : 12 }}>
-          <Paper elevation={3} sx={{ p: 3, minHeight: "70vh", height: "100%" }}>
-            {policyLoading ? (
-              <Box
-                sx={{
-                  p: 3,
-                  textAlign: "center",
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  gap: 2,
-                }}
-              >
-                <CircularProgress />
-                <Typography>Loading {loadingPolicyName}...</Typography>
-              </Box>
-            ) : selectedPolicy ? (
-              <>
-                {/* Breadcrumb and Edit Button */}
+    <>
+      <Container maxWidth="xl" sx={{ py: 3 }}>
+        <Grid container spacing={3}>
+          {/* Left Column - Table of Contents */}
+          {isSidebarExpanded && (
+            <Grid size={{ xs: 12, md: 3 }}>
+              <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
                 <Box
                   sx={{
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
-                    mb: 3,
+                    mb: 2,
                   }}
                 >
-                  {/* Breadcrumb */}
-                  <Box sx={{ width: "75%" }}>
-                    {breadcrumbPath.length > 0 && (
-                      <Box
-                        sx={{
-                          cursor: "pointer",
-                        }}
-                        onClick={() =>
-                          setIsBreadcrumbExpanded(!isBreadcrumbExpanded)
-                        }
-                      >
-                        {isBreadcrumbExpanded ? (
-                          // Show full path when expanded
-                          <Box
-                            sx={{
-                              whiteSpace: "normal",
-                              overflow: "visible",
-                              textOverflow: "clip",
-                            }}
-                          >
-                            {breadcrumbPath.map((item, index) => (
-                              <span key={item.id}>
-                                {item.type === "manual" ? (
-                                  <MuiLink
-                                    component="button"
-                                    variant="body1"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleManualTitleClick();
-                                    }}
-                                    sx={{ fontWeight: "bold" }}
-                                  >
-                                    {item.title}
-                                  </MuiLink>
-                                ) : (
-                                  <Typography
-                                    component="span"
-                                    variant="body1"
-                                    sx={{
-                                      fontWeight:
-                                        index === breadcrumbPath.length - 1
-                                          ? "bold"
-                                          : "normal",
-                                    }}
-                                  >
-                                    {item.title}
-                                  </Typography>
-                                )}
-                                {index < breadcrumbPath.length - 1 && (
-                                  <Typography
-                                    component="span"
-                                    variant="body1"
-                                    sx={{ mx: 1 }}
-                                  >
-                                    /
-                                  </Typography>
-                                )}
-                              </span>
-                            ))}
-                          </Box>
-                        ) : (
-                          // Show simplified path when collapsed: Manual/.../Policy
-                          <Box
-                            sx={{
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            <MuiLink
-                              component="button"
-                              variant="body1"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleManualTitleClick();
-                              }}
-                              sx={{ fontWeight: "bold" }}
-                            >
-                              {breadcrumbPath[0]?.title}
-                            </MuiLink>
-                            <Typography
-                              component="span"
-                              variant="body1"
-                              sx={{ mx: 1 }}
-                            >
-                              /
-                            </Typography>
-                            <Typography
-                              component="span"
-                              variant="body1"
-                              sx={{ color: "primary.main" }}
-                            >
-                              ...
-                            </Typography>
-                            <Typography
-                              component="span"
-                              variant="body1"
-                              sx={{ mx: 1 }}
-                            >
-                              /
-                            </Typography>
-                            <Typography
-                              component="span"
-                              variant="body1"
-                              sx={{ fontWeight: "bold" }}
-                            >
-                              {breadcrumbPath[breadcrumbPath.length - 1]?.title}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    )}
-                  </Box>
-
-                  {/* Action Buttons */}
-                  <Box sx={{ width: "25%", textAlign: "right" }}>
-                    {/* Play/Pause Button */}
-                    <Tooltip
-                      title={isPlaying ? "Pause" : isPaused ? "Resume" : "Play"}
+                  <Typography variant="h6" gutterBottom>
+                    Table of Contents
+                  </Typography>
+                  <Tooltip
+                    title={
+                      Object.values(expandedItems).every(Boolean)
+                        ? "Collapse All"
+                        : "Expand All"
+                    }
+                  >
+                    <IconButton
+                      size="small"
+                      onClick={() => {
+                        const allExpanded =
+                          Object.values(expandedItems).every(Boolean);
+                        const newExpandedItems = {};
+                        const traverseAndSetExpanded = (items, expand) => {
+                          items.forEach((item) => {
+                            if (item.children && item.children.length > 0) {
+                              newExpandedItems[item.id] = !expand;
+                            }
+                            traverseAndSetExpanded(item.children || [], expand);
+                          });
+                        };
+                        traverseAndSetExpanded(navigationTree, allExpanded);
+                        setExpandedItems(newExpandedItems);
+                      }}
                     >
-                      <IconButton
-                        onClick={() => {
-                          if (isPlaying) {
-                            pauseSpeech();
-                          } else if (isPaused) {
-                            resumeSpeech();
-                          } else {
-                            speakPolicyContent();
-                          }
-                        }}
-                        sx={{ border: "1px solid #ccc", mr: 1 }}
-                      >
-                        {isPlaying ? <PauseCircle /> : <PlayCircle />}
-                      </IconButton>
-                    </Tooltip>
-
-                    {/* Stop Button */}
-                    {isPlaying || isPaused ? (
-                      <Tooltip title="Stop">
-                        <IconButton
-                          onClick={stopSpeech}
-                          sx={{ border: "1px solid #ccc", mr: 1 }}
-                        >
-                          <Stop />
-                        </IconButton>
-                      </Tooltip>
-                    ) : null}
-
-                    {/* Expand Reading Area Button */}
-                    <Tooltip
-                      title={
-                        isSidebarExpanded
-                          ? "Hide Table of Contents"
-                          : "Show Table of Contents"
-                      }
-                    >
-                      <IconButton
-                        onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
-                        sx={{ border: "1px solid #ccc", mr: 1 }}
-                      >
-                        {isSidebarExpanded ? (
-                          <ExpandIcon sx={{ transform: "rotate(-90deg)" }} />
-                        ) : (
-                          <TocIcon />
-                        )}
-                      </IconButton>
-                    </Tooltip>
-
-                    {/* Edit Button */}
-                    {isAdmin && (
-                      <Tooltip title="Edit">
-                        <IconButton
-                          onClick={() => {
-                            // Find the navigation item for the selected policy
-                            let policyNavigationItem = null;
-                            const findPolicyNavigationItem = (items) => {
-                              for (const item of items) {
-                                if (
-                                  item.table === "policies" &&
-                                  item.primary_id === selectedPolicy.id
-                                ) {
-                                  policyNavigationItem = item;
-                                  return true;
-                                }
-                                if (
-                                  item.children &&
-                                  findPolicyNavigationItem(item.children)
-                                ) {
-                                  return true;
-                                }
-                              }
-                              return false;
-                            };
-                            findPolicyNavigationItem(navigationTree);
-
-                            // Navigate to edit page with navigationId
-                            const navigationId = policyNavigationItem
-                              ? policyNavigationItem.parent_id
-                              : "";
-                            window.location.href = `/manuals/edit/${id}/policies/edit/${
-                              selectedPolicy.id
-                            }/details${
-                              navigationId
-                                ? `?navigationId=${navigationId}`
-                                : ""
-                            }`;
-                          }}
-                          sx={{ border: "1px solid #ccc" }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </Box>
+                      {Object.values(expandedItems).every(Boolean) ? (
+                        <UnfoldLessIcon />
+                      ) : (
+                        <UnfoldMoreIcon />
+                      )}
+                    </IconButton>
+                  </Tooltip>
                 </Box>
-
-                {/* Separator */}
-                <Divider sx={{ mb: 3 }} />
-
-                {/* Policy Content */}
-                {/* <Typography variant="h4" gutterBottom>
-                  {selectedPolicy.title}
-                </Typography> */}
-
-                {selectedPolicy.content && (
-                  <Box
-                    sx={{ mt: 2, mb: 3 }}
-                    dangerouslySetInnerHTML={{ __html: selectedPolicy.content }}
-                  />
+                <Divider sx={{ mb: 2 }} />
+                {navigationTree.length > 0 ? (
+                  <List sx={{ width: "100%" }}>
+                    {[...navigationTree]
+                      .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      .map((item, index) =>
+                        renderNavigationItem(item, 0, [index + 1])
+                      )}
+                  </List>
+                ) : (
+                  <Typography>No navigation items found</Typography>
                 )}
+              </Paper>
+            </Grid>
+          )}
 
-                {/* Videos */}
-                {selectedPolicy.videos && selectedPolicy.videos.length > 0 && (
-                  <Box sx={{ mt: 3 }}>
-                    {selectedPolicy.videos.map((video) => renderVideo(video))}
-                  </Box>
-                )}
-
-                {/* Tags */}
-                {selectedPolicy.tags && selectedPolicy.tags.length > 0 && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Tags
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                      {selectedPolicy.tags.map((tag) => (
-                        <Chip
-                          key={tag.id}
-                          label={tag.title}
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  </Box>
-                )}
-
-                {/* Links */}
-                {selectedPolicy.links && selectedPolicy.links.length > 0 && (
-                  <Box sx={{ mt: 3 }}>
-                    <Typography variant="h6" gutterBottom>
-                      Links
-                    </Typography>
-                    {selectedPolicy.links.map((link) => renderLink(link))}
-                  </Box>
-                )}
-
-                {/* Previous/Next Buttons */}
+          {/* Right Column - Content */}
+          <Grid size={{ xs: 12, md: isSidebarExpanded ? 9 : 12 }}>
+            <Paper
+              elevation={3}
+              sx={{ p: 3, minHeight: "70vh", height: "100%" }}
+            >
+              {policyLoading ? (
                 <Box
                   sx={{
-                    mt: 4,
+                    p: 3,
+                    textAlign: "center",
                     display: "flex",
-                    justifyContent: "space-between",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: 2,
                   }}
                 >
-                  <Button
-                    variant="outlined"
-                    onClick={handlePreviousPolicy}
-                    disabled={!getPreviousPolicy()}
-                  >
-                    Previous
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    onClick={handleNextPolicy}
-                    disabled={!getNextPolicy()}
-                  >
-                    Next
-                  </Button>
+                  <CircularProgress />
+                  <Typography>Loading {loadingPolicyName}...</Typography>
                 </Box>
-              </>
-            ) : (
-              <>
-                {/* Manual Info */}
-                {manual && (
-                  <>
-                    <Typography variant="h4" gutterBottom>
-                      {manual.title}
-                    </Typography>
-                    {navigationTree.length > 0 && (
-                      <Typography variant="body1" sx={{ mb: 3 }}>
-                        Please select a policy from the table of contents.
-                      </Typography>
-                    )}
-                    {manual.thumbnail && (
-                      <Box sx={{ textAlign: "center", my: 3 }}>
-                        <img
-                          src={manual.thumbnail}
-                          alt={manual.title}
-                          style={{ maxWidth: "100%", height: "auto" }}
-                        />
+              ) : selectedPolicy ? (
+                <>
+                  {/* Breadcrumb and Edit Button */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
+                    {/* Breadcrumb */}
+                    <Box sx={{ width: "65%" }}>
+                      {breadcrumbPath.length > 0 && (
+                        <Box
+                          sx={{
+                            cursor: "pointer",
+                          }}
+                          onClick={() =>
+                            setIsBreadcrumbExpanded(!isBreadcrumbExpanded)
+                          }
+                        >
+                          {isBreadcrumbExpanded ? (
+                            // Show full path when expanded
+                            <Box
+                              sx={{
+                                whiteSpace: "normal",
+                                overflow: "visible",
+                                textOverflow: "clip",
+                              }}
+                            >
+                              {breadcrumbPath.map((item, index) => (
+                                <span key={item.id}>
+                                  {item.type === "manual" ? (
+                                    <MuiLink
+                                      component="button"
+                                      variant="body1"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleManualTitleClick();
+                                      }}
+                                      sx={{ fontWeight: "bold" }}
+                                    >
+                                      {item.title}
+                                    </MuiLink>
+                                  ) : (
+                                    <Typography
+                                      component="span"
+                                      variant="body1"
+                                      sx={{
+                                        fontWeight:
+                                          index === breadcrumbPath.length - 1
+                                            ? "bold"
+                                            : "normal",
+                                      }}
+                                    >
+                                      {item.title}
+                                    </Typography>
+                                  )}
+                                  {index < breadcrumbPath.length - 1 && (
+                                    <Typography
+                                      component="span"
+                                      variant="body1"
+                                      sx={{ mx: 1 }}
+                                    >
+                                      /
+                                    </Typography>
+                                  )}
+                                </span>
+                              ))}
+                            </Box>
+                          ) : (
+                            // Show simplified path when collapsed: Manual/.../Policy
+                            <Box
+                              sx={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                              }}
+                            >
+                              <MuiLink
+                                component="button"
+                                variant="body1"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleManualTitleClick();
+                                }}
+                                sx={{ fontWeight: "bold" }}
+                              >
+                                {breadcrumbPath[0]?.title}
+                              </MuiLink>
+                              <Typography
+                                component="span"
+                                variant="body1"
+                                sx={{ mx: 1 }}
+                              >
+                                /
+                              </Typography>
+                              <Typography
+                                component="span"
+                                variant="body1"
+                                sx={{ color: "primary.main" }}
+                              >
+                                ...
+                              </Typography>
+                              <Typography
+                                component="span"
+                                variant="body1"
+                                sx={{ mx: 1 }}
+                              >
+                                /
+                              </Typography>
+                              <Typography
+                                component="span"
+                                variant="body1"
+                                sx={{ fontWeight: "bold" }}
+                              >
+                                {
+                                  breadcrumbPath[breadcrumbPath.length - 1]
+                                    ?.title
+                                }
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      )}
+                    </Box>
+
+                    {/* Action Buttons */}
+                    <Box sx={{ width: "35%", textAlign: "right" }}>
+                      {/* Version Button */}
+                      {selectedPolicy &&
+                        selectedPolicy.versions &&
+                        selectedPolicy.versions.length > 0 && (
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            sx={{
+                              mr: 1,
+                              border: "1px solid #ccc",
+                              height: "40px",
+                            }}
+                            onClick={() => setIsVersionDialogOpen(true)}
+                          >
+                            <Typography
+                              variant="body1"
+                              sx={{ color: "#636363" }}
+                            >
+                              Version{" "}
+                              {calculateCurrentVersion(selectedPolicy.versions)}
+                            </Typography>
+                          </Button>
+                        )}
+
+                      {/* View Notes Button */}
+                      {selectedPolicy && (
+                        <Tooltip title="View Notes">
+                          <IconButton
+                            onClick={() => {
+                              setViewNotesData({
+                                created_by: selectedPolicy?.creator?.name,
+                                created_at: selectedPolicy.created_at,
+                                updated_by: selectedPolicy?.updator?.name,
+                                updated_at: selectedPolicy.updated_at,
+                                notes: selectedPolicy.notes,
+                              });
+                              setIsViewNotesDialogOpen(true);
+                            }}
+                            sx={{ border: "1px solid #ccc", mr: 1 }}
+                          >
+                            <Article sx={{ fontSize: 20 }} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      {/* Play/Pause Button */}
+                      <Tooltip
+                        title={
+                          isPlaying ? "Pause" : isPaused ? "Resume" : "Play"
+                        }
+                      >
+                        <IconButton
+                          onClick={() => {
+                            if (isPlaying) {
+                              pauseSpeech();
+                            } else if (isPaused) {
+                              resumeSpeech();
+                            } else {
+                              speakPolicyContent();
+                            }
+                          }}
+                          size="small"
+                          sx={{ border: "1px solid #ccc", mr: 1 }}
+                        >
+                          {isPlaying ? <PauseCircle /> : <PlayCircle />}
+                        </IconButton>
+                      </Tooltip>
+
+                      {/* Stop Button */}
+                      {isPlaying || isPaused ? (
+                        <Tooltip title="Stop">
+                          <IconButton
+                            onClick={stopSpeech}
+                            sx={{ border: "1px solid #ccc", mr: 1 }}
+                            size="small"
+                          >
+                            <Stop />
+                          </IconButton>
+                        </Tooltip>
+                      ) : null}
+
+                      {/* Expand Reading Area Button */}
+                      <Tooltip
+                        title={
+                          isSidebarExpanded
+                            ? "Hide Table of Contents"
+                            : "Show Table of Contents"
+                        }
+                      >
+                        <IconButton
+                          onClick={() =>
+                            setIsSidebarExpanded(!isSidebarExpanded)
+                          }
+                          size="small"
+                          sx={{ border: "1px solid #ccc", mr: 1 }}
+                        >
+                          {isSidebarExpanded ? (
+                            <ExpandIcon sx={{ transform: "rotate(-90deg)" }} />
+                          ) : (
+                            <TocIcon />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+
+                      {/* PDF Export Button */}
+                      <Tooltip title="Export to PDF">
+                        <IconButton
+                          onClick={() =>
+                            handleExportPDF(
+                              selectedPolicy,
+                              calculateCurrentVersion(selectedPolicy.versions)
+                            )
+                          }
+                          disabled={isExportingPDF}
+                          size="small"
+                          sx={{ border: "1px solid #ccc", mr: 1 }}
+                        >
+                          {isExportingPDF ? (
+                            <CircularProgress size={20} />
+                          ) : (
+                            <PictureAsPdf />
+                          )}
+                        </IconButton>
+                      </Tooltip>
+
+                      {/* Edit Button */}
+                      {isAdmin && (
+                        <Tooltip title="Edit">
+                          <IconButton
+                            onClick={() => {
+                              // Find the navigation item for the selected policy
+                              let policyNavigationItem = null;
+                              const findPolicyNavigationItem = (items) => {
+                                for (const item of items) {
+                                  if (
+                                    item.table === "policies" &&
+                                    item.primary_id === selectedPolicy.id
+                                  ) {
+                                    policyNavigationItem = item;
+                                    return true;
+                                  }
+                                  if (
+                                    item.children &&
+                                    findPolicyNavigationItem(item.children)
+                                  ) {
+                                    return true;
+                                  }
+                                }
+                                return false;
+                              };
+                              findPolicyNavigationItem(navigationTree);
+
+                              // Navigate to edit page with navigationId
+                              const navigationId = policyNavigationItem
+                                ? policyNavigationItem.parent_id
+                                : "";
+                              window.location.href = `/manuals/edit/${id}/policies/edit/${
+                                selectedPolicy.id
+                              }/details${
+                                navigationId
+                                  ? `?navigationId=${navigationId}`
+                                  : ""
+                              }`;
+                            }}
+                            size="small"
+                            sx={{ border: "1px solid #ccc" }}
+                          >
+                            <EditIcon />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  </Box>
+
+                  {/* Separator */}
+                  <Divider sx={{ mb: 3 }} />
+
+                  {/* Policy Content */}
+                  <Typography variant="h4" gutterBottom>
+                    {selectedPolicy.title}
+                  </Typography>
+
+                  {selectedPolicy.content && (
+                    <Box
+                      sx={{ mt: 2, mb: 3 }}
+                      dangerouslySetInnerHTML={{
+                        __html: selectedPolicy.content,
+                      }}
+                    />
+                  )}
+
+                  {/* Videos */}
+                  {selectedPolicy.videos &&
+                    selectedPolicy.videos.length > 0 && (
+                      <Box sx={{ mt: 3 }}>
+                        {selectedPolicy.videos.map((video) =>
+                          renderVideo(video)
+                        )}
                       </Box>
                     )}
-                  </>
-                )}
-              </>
-            )}
-          </Paper>
+
+                  {/* Tags */}
+                  {selectedPolicy.tags && selectedPolicy.tags.length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Tags
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                        {selectedPolicy.tags.map((tag) => (
+                          <Chip
+                            key={tag.id}
+                            label={tag.title}
+                            variant="outlined"
+                          />
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Links */}
+                  {selectedPolicy.links && selectedPolicy.links.length > 0 && (
+                    <Box sx={{ mt: 3 }}>
+                      <Typography variant="h6" gutterBottom>
+                        Links
+                      </Typography>
+                      {selectedPolicy.links.map((link) => renderLink(link))}
+                    </Box>
+                  )}
+
+                  {/* Previous/Next Buttons */}
+                  <Box
+                    sx={{
+                      mt: 4,
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <Button
+                      variant="outlined"
+                      onClick={handlePreviousPolicy}
+                      disabled={!getPreviousPolicy()}
+                    >
+                      Previous
+                    </Button>
+                    <Button
+                      variant="outlined"
+                      onClick={handleNextPolicy}
+                      disabled={!getNextPolicy()}
+                    >
+                      Next
+                    </Button>
+                  </Box>
+                </>
+              ) : (
+                <>
+                  {/* Manual Info */}
+                  {manual && (
+                    <>
+                      <Typography variant="h4" gutterBottom>
+                        {manual.title}
+                      </Typography>
+                      {navigationTree.length > 0 && (
+                        <Typography variant="body1" sx={{ mb: 3 }}>
+                          Please select a policy from the table of contents.
+                        </Typography>
+                      )}
+                      {manual.thumbnail && (
+                        <Box sx={{ textAlign: "center", my: 3 }}>
+                          <img
+                            src={manual.thumbnail}
+                            alt={manual.title}
+                            style={{ maxWidth: "100%", height: "auto" }}
+                          />
+                        </Box>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Paper>
+          </Grid>
         </Grid>
-      </Grid>
-    </Container>
+      </Container>
+      <VersionHistoryDialog
+        open={isVersionDialogOpen}
+        onClose={() => setIsVersionDialogOpen(false)}
+        versions={selectedPolicy?.versions}
+        onDownload={handleExportPDF}
+        selectedPolicy={selectedPolicy}
+        versionDownloadLoading={versionDownloadLoading}
+        onViewNotes={(version) => {
+          setViewNotesData({
+            created_by: version?.creator?.name,
+            created_at: version.created_at,
+            updated_by: version?.updator?.name,
+            updated_at: version.updated_at,
+            notes: version.notes,
+          });
+          setIsViewNotesDialogOpen(true);
+        }}
+      />
+      <ViewNotesDialog
+        open={isViewNotesDialogOpen}
+        onClose={() => setIsViewNotesDialogOpen(false)}
+        notesData={viewNotesData}
+      />
+    </>
+  );
+};
+
+// Version History Dialog
+const VersionHistoryDialog = ({
+  open,
+  onClose,
+  versions,
+  onDownload,
+  selectedPolicy,
+  versionDownloadLoading,
+  onViewNotes,
+}) => {
+  const [page, setPage] = useState(0);
+  const [rowsPerPage] = useState(10);
+
+  // Sort versions by created_at date (newest first)
+  const sortedVersions = versions
+    ? [...versions].sort(
+        (a, b) => new Date(b.created_at) - new Date(a.created_at)
+      )
+    : [];
+
+  const handleChangePage = (event, newPage) => {
+    setPage(newPage);
+  };
+
+  // Calculate version numbers (e.g., 1.0, 1.9, 2.0)
+  const getVersionNumber = (index) => {
+    const numVersionsUpToThisOne = sortedVersions.length - index;
+    if (numVersionsUpToThisOne <= 0) return "1.0"; // Should not happen
+
+    const major = 1 + Math.floor((numVersionsUpToThisOne - 1) / 10);
+    const minor = (numVersionsUpToThisOne - 1) % 10;
+    return `${major}.${minor}`;
+  };
+
+  // Handle download version
+  const handleDownloadVersion = (version, versionNumber) => {
+    // Create a temporary policy object with the version data
+    const versionPolicy = {
+      ...selectedPolicy,
+      title: version.title,
+      content: version.content,
+      created_at: version.policy_created_at,
+      updated_at: version.policy_updated_at,
+    };
+
+    // Call the export PDF function with the version policy and version info
+    onDownload(versionPolicy, version, true, versionNumber);
+  };
+
+  // Handle view notes
+  const handleViewNotes = (version) => {
+    onViewNotes(version);
+  };
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+      <DialogTitle>Version History</DialogTitle>
+      <DialogContent>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Version</TableCell>
+                <TableCell>Published By</TableCell>
+                <TableCell>Published Date</TableCell>
+                <TableCell>Last Updated</TableCell>
+                <TableCell>Updated By</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {(rowsPerPage > 0
+                ? sortedVersions.slice(
+                    page * rowsPerPage,
+                    page * rowsPerPage + rowsPerPage
+                  )
+                : sortedVersions
+              ).map((version, index) => {
+                const originalIndex = page * rowsPerPage + index;
+                return (
+                  <TableRow key={version.id}>
+                    <TableCell>{getVersionNumber(originalIndex)}</TableCell>
+                    <TableCell>{version?.creator?.name || "N/A"}</TableCell>
+                    <TableCell>
+                      {new Date(version.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>
+                      {new Date(version.updated_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell>{version?.updator?.name || "N/A"}</TableCell>
+                    <TableCell>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        sx={{ mr: 1 }}
+                        onClick={() =>
+                          handleDownloadVersion(
+                            version,
+                            getVersionNumber(originalIndex)
+                          )
+                        }
+                        disabled={versionDownloadLoading[version.id]}
+                      >
+                        <Typography variant="body2">Download</Typography>
+                        {versionDownloadLoading[version.id] && (
+                          <CircularProgress size={16} sx={{ ml: 1 }} />
+                        )}
+                      </Button>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => handleViewNotes(version)}
+                      >
+                        View Notes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[10]}
+          component="div"
+          count={sortedVersions.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+        />
+      </DialogContent>
+      <DialogActions>
+        <Button variant="contained" onClick={onClose}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+};
+
+// View Notes Dialog
+const ViewNotesDialog = ({ open, onClose, notesData }) => {
+  if (!notesData) return null;
+
+  return (
+    <Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Policy Notes</DialogTitle>
+      <DialogContent>
+        <Box sx={{ pt: 2 }}>
+          {/* Combined Information Group */}
+          <Paper elevation={1} sx={{ p: 2, mb: 2, backgroundColor: "#f8f9fa" }}>
+            {/* <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ color: "#1976d2", fontSize: "1rem", mb: 2 }}
+            >
+              Policy Information
+            </Typography> */}
+
+            {/* Published Information Section */}
+            <Box sx={{ mb: 2 }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Published By:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData?.created_by || "N/A"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Published Date:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.created_at
+                    ? new Date(notesData.created_at).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+              </Box>
+            </Box>
+
+            <Divider sx={{ my: 2, borderColor: "#e0e0e0" }} />
+
+            {/* Last Updated Information Section */}
+            <Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  mb: 1,
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated Date:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData.updated_at
+                    ? new Date(notesData.updated_at).toLocaleDateString()
+                    : "N/A"}
+                </Typography>
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                <Typography variant="body2" color="text.secondary">
+                  Last Updated By:
+                </Typography>
+                <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                  {notesData?.updated_by || "N/A"}
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+
+          {/* Notes Group */}
+          <Paper elevation={1} sx={{ p: 2, backgroundColor: "#f8f9fa" }}>
+            <Typography
+              variant="h6"
+              gutterBottom
+              sx={{ color: "#1976d2", fontSize: "1rem" }}
+            >
+              Notes
+            </Typography>
+            <Box
+              sx={{
+                backgroundColor: "white",
+                p: 2,
+                borderRadius: 1,
+                border: "1px solid #e0e0e0",
+                minHeight: "60px",
+              }}
+            >
+              <Typography
+                variant="body1"
+                sx={{ whiteSpace: "pre-wrap", color: "text.primary" }}
+              >
+                {notesData.notes || "No notes available"}
+              </Typography>
+            </Box>
+          </Paper>
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button variant="contained" onClick={onClose}>
+          Close
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 };
 
