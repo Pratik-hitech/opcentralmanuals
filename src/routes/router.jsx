@@ -66,6 +66,9 @@ import PolicyDetails from "../pages/Operationsmanuals/components/policies/Policy
 import CreatePolicies from "../pages/Operationsmanuals/components/policies/CreatePolicies";
 import PolicyPermissions from "../pages/Operationsmanuals/components/policies/PolicyPermissions";
 import PolicyVerification from "../pages/Operationsmanuals/components/policies/PolicyVerification";
+import Loggedinprofile from "../Loggedinprofile/Loggedinprofile";
+import ProfileLayout from "../Loggedinprofile/components/ProfileLayout";
+import Useractivity from "../Loggedinprofile/components/Useractivity";
 
 
 // import ManageUsers from "../pages/ManageUsers/ManageUsers";
@@ -221,15 +224,36 @@ children:[
         children: [
           {
             path: "details",
-            element: <ManualsDetails />,
+
+
+
+            element:( 
+            
+            <ProtectedRoute allowedRoles={["admin"]}>
+
+              <ManualsDetails />,
+            </ProtectedRoute>
+
+
+            )
           },
           {
             path: "content",
-            element: <ManualsContent />,
+
+               element:( 
+            <ProtectedRoute allowedRoles={["admin"]}>
+            <ManualsContent />,
+            </ProtectedRoute>
+               )
           },
           {
             path: "permission",
-            element: <ManualsPermissions />,
+             element:( 
+            <ProtectedRoute allowedRoles={["admin"]}>
+            
+            <ManualsPermissions />,
+            </ProtectedRoute>
+             )
           },
         ],
       },
@@ -245,7 +269,12 @@ children:[
     children: [
       {
         path: "",
-        element: <CreateManuals />,
+           element:( 
+            <ProtectedRoute allowedRoles={["admin"]}>
+        
+        <CreateManuals />,
+           </ProtectedRoute>
+           ),
         children: [
           {
             path: "details",
@@ -318,7 +347,10 @@ children:[
     path: "/reporting",
     element: (
       <PrivateRoute>
+      <ProtectedRoute allowedRoles= {["admin"]}>
+        
         <PrivateLayout />
+      </ProtectedRoute>
       </PrivateRoute>
     ),
     children: [
@@ -333,28 +365,7 @@ children:[
       },
     ],
   },
-  {
-    path: "/test",
-    element: (
-      <PrivateRoute>
-        <PrivateLayout />
-      </PrivateRoute>
-    ),
-    children: [
-      {
-        path: "",
-        element: <Test />,
-        children: [
-          {
-            index: true, // ✅ This means "/test" will load this route by default
-            element: <Route1 />,
-          },
-          { path: "routetest1", element: <Route1 /> },
-          { path: "routetest2", element: <Route2 /> },
-        ],
-      },
-    ],
-  },
+ 
   {
     path: "/manage/news",
     element: (
@@ -365,15 +376,23 @@ children:[
     errorElement: <PermissionDenied />,
 
     children: [
-      { index: true, element: <ManageNews />, loader: manageArticlesLoader },
+      { index: true, element:(
+        <ProtectedRoute allowedRoles={["admin"]}>
+        <ManageNews />, 
+        </ProtectedRoute>
+      ),
+        loader: manageArticlesLoader },
     ],
   },
 
   {
     path: "/manage/newsarticle",
     element: (
+      
       <PrivateRoute>
+       
         <PrivateLayout />
+        
       </PrivateRoute>
     ),
     errorElement: <PermissionDenied />,
@@ -384,15 +403,30 @@ children:[
       // },
       {
         path: "create",
-        element: <EditNews />,
+        element:( 
+        
+        <ProtectedRoute allowedRoles={["admin"]}>
+        <EditNews />,
+        </ProtectedRoute>
+
+      
+      ),
         children: [
           {
             index: true,
-            element: <EditForm />, // Edit mode (with ID)
+             element: (
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <EditForm />
+            </ProtectedRoute>
+          ), // Edit mode (with ID)
           },
           {
             path: "details",
-            element: <EditForm />, // Alternate edit view
+               element: (
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <EditForm />
+            </ProtectedRoute>
+          ),
           },
           {
             path: "permissions",
@@ -484,6 +518,54 @@ children:[
   //     }
   //   ]
   // },
+ {
+    path: "/test",
+    element: (
+      <PrivateRoute>
+        <PrivateLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      {
+        path: "",
+        element: <Test />,
+        children: [
+          {
+            index: true, // ✅ This means "/test" will load this route by default
+            element: <Route1 />,
+          },
+          { path: "routetest1", element: <Route1 /> },
+          { path: "routetest2", element: <Route2 /> },
+        ],
+      },
+    ],
+  },
+
+  {
+    path: "/profile",
+    element: (
+      <PrivateRoute>
+        <PrivateLayout />
+      </PrivateRoute>
+    ),
+    children: [
+      {
+        path: "",
+        element: <Loggedinprofile />,
+        children: [
+          {
+            index: true, 
+            element: <ProfileLayout />,
+          },
+          { path: "user", element: <ProfileLayout /> },
+          { path: "useractivity", element: <Useractivity />      },
+        ],
+      },
+    ],
+  },
+
+
+
   {
     path: "/users/profile",
     element: (
@@ -497,17 +579,38 @@ children:[
         index: true,
         element: <Navigate to="/manage/users" replace />,
       },
+
+
+
       {
         path: ":userid",
-        element: <UserProfile />,
+        element: 
+        (
+<ProtectedRoute allowRoles={["admin"]}>
+          
+        <UserProfile />,
+        </ProtectedRoute>
+        ),
         children: [
           {
             index: true,
-            element: <UserProfileLayout />,
+             element:     (
+<ProtectedRoute allowedRoles={["admin"]}>
+          
+        <UserProfileLayout />,
+        </ProtectedRoute>
+        ),
           },
           {
             path: "activitylog",
-            element: <ActivityLog />,
+
+                 element:   (
+<ProtectedRoute allowedRoles={["admin"]}>
+          
+        <ActivityLog />,
+        </ProtectedRoute>
+        ),
+            
           },
           {
             path: "filemanager",
@@ -562,19 +665,35 @@ children:[
     path: "/location",
     element: (
       <PrivateRoute>
-        <PrivateLayout />
+        <PrivateLayout />      
       </PrivateRoute>
     ),
     errorElement: <PermissionDenied />,
     children: [
-      { index: true, element: <ManageLocation /> },
+      { index: true, element:(
+      <ProtectedRoute  allowedRoles={["admin"]}>
+      <ManageLocation />
+      </ProtectedRoute>
+      ) },
       {
         path: "create",
-        element: <LocationForm />,
+        element:(
+
+          <ProtectedRoute allowedRoles={["admin"]} >
+          <LocationForm />,
+          </ProtectedRoute>
+
+          ) 
+
       },
       {
         path: ":id/edit",
-        element: <LocationForm />,
+        element: (
+      <ProtectedRoute allowedRoles={["admin"]} >
+
+        <LocationForm />,
+      </ProtectedRoute>  
+      )
       },
     ],
   },

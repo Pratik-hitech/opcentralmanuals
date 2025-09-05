@@ -1,3 +1,235 @@
+
+
+// // **********************
+
+// import { useState } from "react";
+// import {
+//   Card,
+//   Grid,
+//   TextField,
+//   Button,
+//   Typography,
+//   Box,
+//   Snackbar,
+//   Alert,
+//   Fade,
+//   InputAdornment,
+//   IconButton,
+//   Link,
+// } from "@mui/material";
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../../context/AuthContext";
+// import LoginImage from "../../assets/bluewheelerslogo-operationsmanuals.png";
+// import { Visibility, VisibilityOff } from "@mui/icons-material";
+// import { httpClient } from "../../utils/httpClientSetup";
+// import ForgotPassword from "./components/ForgotPassword"
+
+// export default function Login() {
+//   const navigate = useNavigate();
+//   const { login } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [emailError, setEmailError] = useState("");
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [snackbar, setSnackbar] = useState({
+//     open: false,
+//     message: "",
+//     severity: "success",
+//   });
+
+//   const [forgotOpen, setForgotOpen] = useState(false); // ✅ State for modal
+
+//   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+//   const handleEmailChange = (e) => {
+//     const value = e.target.value;
+//     setEmail(value);
+//     setEmailError(value && !validateEmail(value) ? "Invalid email format" : "");
+//   };
+
+//   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+
+//   const handleCloseSnackbar = () =>
+//     setSnackbar((prev) => ({ ...prev, open: false }));
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     if (!validateEmail(email)) {
+//       setEmailError("Invalid email format");
+//       return;
+//     }
+//     if (!password) {
+//       setSnackbar({
+//         open: true,
+//         message: "Please enter your password",
+//         severity: "error",
+//       });
+//       return;
+//     }
+
+//     setIsSubmitting(true);
+
+//     try {
+//       const formData = new URLSearchParams();
+//       formData.append("email", email);
+//       formData.append("password", password);
+
+//       const response = await httpClient.post("/login", formData);
+
+//       if (response.data?.success && response.data.token) {
+//         login(response.data.token, response.data.data);
+
+//         setSnackbar({
+//           open: true,
+//           message: response.data.message || "Logged in successfully!",
+//           severity: "success",
+//         });
+
+//         setTimeout(() => navigate("/dashboard"), 1000);
+//       } else {
+//         throw new Error(response.data?.message || "Invalid credentials");
+//       }
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message:
+//           error.response?.data?.message || error.message || "Login failed",
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   return (
+//     <Grid
+//       container
+//       justifyContent="center"
+//       alignItems="center"
+//       minHeight="100vh"
+//       bgcolor="#f5f5f5"
+//     >
+//       <Card sx={{ width: 800, height: 400, display: "flex", borderRadius: 4 }}>
+//         <Box
+//           flex={1}
+//           p={4}
+//           display="flex"
+//           flexDirection="column"
+//           justifyContent="center"
+//         >
+//           <Typography variant="h5" fontWeight="bold" mb={2}>
+//             Login
+//           </Typography>
+
+//           <Box component="form" onSubmit={handleSubmit}>
+//             <TextField
+//               label="Email"
+//               fullWidth
+//               type="email"
+//               variant="outlined"
+//               margin="normal"
+//               value={email}
+//               helperText={emailError}
+//               error={!!emailError}
+//               onChange={handleEmailChange}
+//               disabled={isSubmitting}
+//               required
+//               autoComplete="email"
+//             />
+
+//             <TextField
+//               label="Password"
+//               fullWidth
+//               type={showPassword ? "text" : "password"}
+//               variant="outlined"
+//               margin="normal"
+//               value={password}
+//               onChange={(e) => setPassword(e.target.value)}
+//               disabled={isSubmitting}
+//               required
+//               autoComplete="current-password"
+//               InputProps={{
+//                 endAdornment: (
+//                   <InputAdornment position="end">
+//                     <IconButton
+//                       onClick={togglePasswordVisibility}
+//                       edge="end"
+//                       disabled={isSubmitting}
+//                     >
+//                       {showPassword ? <VisibilityOff /> : <Visibility />}
+//                     </IconButton>
+//                   </InputAdornment>
+//                 ),
+//               }}
+//             />
+
+//             {/* Forgot Password Link */}
+//           <Box textAlign="right" mt={1}>
+//   <Button
+//     variant="text"
+//     size="small"
+//     sx={{ textTransform: "none" }}
+//     onClick={() => {
+//       // ✅ Remove focus from login email field before opening modal
+//       document.activeElement?.blur();
+//       setForgotOpen(true);
+//     }}
+//   >
+//     Forgot Password?
+//   </Button>
+// </Box>
+
+
+//             <Button
+//               type="submit"
+//               fullWidth
+//               variant="contained"
+//               sx={{ mt: 2 }}
+//               disabled={isSubmitting}
+//             >
+//               {isSubmitting ? "Logging in..." : "Log In"}
+//             </Button>
+//           </Box>
+//         </Box>
+
+//         <Box
+//           flex={1}
+//           sx={{
+//             backgroundImage: `url(${LoginImage})`,
+//             backgroundSize: "cover",
+//             backgroundPosition: "center",
+//             borderTopRightRadius: 16,
+//             borderBottomRightRadius: 16,
+//           }}
+//         />
+//       </Card>
+
+//       <Snackbar
+//         open={snackbar.open}
+//         autoHideDuration={3000}
+//         onClose={handleCloseSnackbar}
+//         TransitionComponent={Fade}
+//         anchorOrigin={{ vertical: "top", horizontal: "right" }}
+//       >
+//         <Alert
+//           onClose={handleCloseSnackbar}
+//           severity={snackbar.severity}
+//           variant="filled"
+//         >
+//           {snackbar.message}
+//         </Alert>
+//       </Snackbar>
+
+//       {/* Forgot Password Modal */}
+//       <ForgotPassword open={forgotOpen} onClose={() => setForgotOpen(false)} />
+//     </Grid>
+//   );
+// }
+
+
+
 // import { useState } from "react";
 // import {
 //   Card,
@@ -451,3 +683,318 @@ export default function Login() {
     </Grid>
   );
 }
+
+
+// *****up is the latest commented out code************
+
+
+// import { useState, useEffect } from "react";
+// import {
+//   Card,
+//   Grid,
+//   TextField,
+//   Button,
+//   Typography,
+//   Box,
+//   Snackbar,
+//   Alert,
+//   Fade,
+//   InputAdornment,
+//   IconButton,
+// } from "@mui/material";
+// import { useNavigate } from "react-router-dom";
+// import { useAuth } from "../../context/AuthContext";
+// import LoginImage from "../../assets/bluewheelerslogo-operationsmanuals.png";
+// import { Visibility, VisibilityOff } from "@mui/icons-material";
+// import { httpClient } from "../../utils/httpClientSetup";
+// import ForgotPassword from "./components/ForgotPassword";
+
+// export default function Login() {
+//   const navigate = useNavigate();
+//   const { login } = useAuth();
+
+//   const [email, setEmail] = useState("");
+//   const [password, setPassword] = useState("");
+//   const [showPassword, setShowPassword] = useState(false);
+//   const [emailError, setEmailError] = useState("");
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [snackbar, setSnackbar] = useState({
+//     open: false,
+//     message: "",
+//     severity: "success",
+//   });
+//   const [forgotOpen, setForgotOpen] = useState(false);
+//   const [hideForm, setHideForm] = useState(false);
+// console.log("push test 2")
+//   const validateEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+//   const handleCloseSnackbar = () =>
+//     setSnackbar((prev) => ({ ...prev, open: false }));
+
+//   const handleEmailChange = (e) => {
+//     const value = e.target.value;
+//     setEmail(value);
+//     setEmailError(value && !validateEmail(value) ? "Invalid email format" : "");
+//   };
+
+//   const togglePasswordVisibility = () => setShowPassword((prev) => !prev);
+
+//   /**
+//    * 🔹 Auto Login if inside Franchise System
+//    */
+//   useEffect(() => {
+//     const isIframe = window.self !== window.top;
+
+//     // ✅ Check if we are inside the franchise system iframe
+//     if (isIframe) {
+//       console.log("✅ Franchise iframe detected → Auto Login");
+
+//       setHideForm(true);
+
+//       const franchiseLogin = localStorage.getItem("login");
+
+//       if (franchiseLogin) {
+//         const { aid, uid, cid } = JSON.parse(franchiseLogin);
+//         if (aid && uid && cid) {
+//           handleMateLogin(aid, uid, cid);
+//         } else {
+//           console.warn("⚠️ Missing franchise login data, showing login form.");
+//           setHideForm(false);
+//         }
+//       } else {
+//         console.warn("⚠️ No franchise credentials found → showing login form");
+//         setHideForm(false);
+//       }
+//     }
+//   }, []);
+
+//   const handleMateLogin = async (aid, uid, cid) => {
+//     setIsSubmitting(true);
+//     try {
+//       const formData = new URLSearchParams();
+//       formData.append("aid", aid);
+//       formData.append("uid", uid);
+//       formData.append("cid", cid);
+
+//       const response = await httpClient.post("/mate-login", formData);
+
+//       if (response.data?.success && response.data.token) {
+//         login(response.data.token, response.data.data);
+//         localStorage.setItem("manual_token", response.data.token);
+
+//         navigate("/dashboard", { replace: true });
+//       } else {
+//         throw new Error(response.data?.message || "Mate login failed");
+//       }
+//     } catch (error) {
+//       console.error("Mate login failed:", error);
+//       setSnackbar({
+//         open: true,
+//         message:
+//           error.response?.data?.message || error.message || "Mate login failed",
+//         severity: "error",
+//       });
+//       setHideForm(false);
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   /**
+//    * 🔹 Normal External Login
+//    */
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+//     if (!validateEmail(email)) {
+//       setEmailError("Invalid email format");
+//       return;
+//     }
+//     if (!password) {
+//       setSnackbar({
+//         open: true,
+//         message: "Please enter your password",
+//         severity: "error",
+//       });
+//       return;
+//     }
+
+//     setIsSubmitting(true);
+//     try {
+//       const formData = new URLSearchParams();
+//       formData.append("email", email);
+//       formData.append("password", password);
+
+//       const response = await httpClient.post("/login", formData);
+
+//       if (response.data?.success && response.data.token) {
+//         login(response.data.token, response.data.data);
+//         localStorage.setItem("manual_token", response.data.token);
+
+//         setSnackbar({
+//           open: true,
+//           message: response.data.message || "Logged in successfully!",
+//           severity: "success",
+//         });
+
+//         setTimeout(() => navigate("/dashboard"), 500);
+//       } else {
+//         throw new Error(response.data?.message || "Invalid credentials");
+//       }
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message:
+//           error.response?.data?.message || error.message || "Login failed",
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   // ✅ If token exists, skip login immediately
+//   useEffect(() => {
+//     const token = localStorage.getItem("manual_token");
+//     if (token) {
+//       console.log("✅ Token found → skipping login");
+//       navigate("/dashboard", { replace: true });
+//     }
+//   }, [navigate]);
+
+//   // 🔹 If auto-login in progress, show loading text
+//   if (hideForm) {
+//     return (
+//       <Grid
+//         container
+//         justifyContent="center"
+//         alignItems="center"
+//         minHeight="100vh"
+//         bgcolor="#f5f5f5"
+//       >
+//         <Typography variant="h6" color="textSecondary">
+//           Authenticating, please wait...
+//         </Typography>
+//       </Grid>
+//     );
+//   }
+
+//   return (
+//     <Grid
+//       container
+//       justifyContent="center"
+//       alignItems="center"
+//       minHeight="100vh"
+//       bgcolor="#f5f5f5"
+//     >
+//       <Card sx={{ width: 800, height: 400, display: "flex", borderRadius: 4 }}>
+//         <Box
+//           flex={1}
+//           p={4}
+//           display="flex"
+//           flexDirection="column"
+//           justifyContent="center"
+//         >
+//           <Typography variant="h5" fontWeight="bold" mb={2}>
+//             Login
+//           </Typography>
+
+//           <Box component="form" onSubmit={handleSubmit}>
+//             <TextField
+//               label="Email"
+//               fullWidth
+//               type="email"
+//               variant="outlined"
+//               margin="normal"
+//               value={email}
+//               helperText={emailError}
+//               error={!!emailError}
+//               onChange={handleEmailChange}
+//               disabled={isSubmitting}
+//               required
+//               autoComplete="email"
+//             />
+
+//             <TextField
+//               label="Password"
+//               fullWidth
+//               type={showPassword ? "text" : "password"}
+//               variant="outlined"
+//               margin="normal"
+//               value={password}
+//               onChange={(e) => setPassword(e.target.value)}
+//               disabled={isSubmitting}
+//               required
+//               autoComplete="current-password"
+//               InputProps={{
+//                 endAdornment: (
+//                   <InputAdornment position="end">
+//                     <IconButton
+//                       onClick={togglePasswordVisibility}
+//                       edge="end"
+//                       disabled={isSubmitting}
+//                     >
+//                       {showPassword ? <VisibilityOff /> : <Visibility />}
+//                     </IconButton>
+//                   </InputAdornment>
+//                 ),
+//               }}
+//             />
+
+//             <Box textAlign="right" mt={1}>
+//               <Button
+//                 variant="text"
+//                 size="small"
+//                 sx={{ textTransform: "none" }}
+//                 onClick={() => {
+//                   document.activeElement?.blur();
+//                   setForgotOpen(true);
+//                 }}
+//               >
+//                 Forgot Password?
+//               </Button>
+//             </Box>
+
+//             <Button
+//               type="submit"
+//               fullWidth
+//               variant="contained"
+//               sx={{ mt: 2 }}
+//               disabled={isSubmitting}
+//             >
+//               {isSubmitting ? "Logging in..." : "Log In"}
+//             </Button>
+//           </Box>
+//         </Box>
+
+//         <Box
+//           flex={1}
+//           sx={{
+//             backgroundImage: `url(${LoginImage})`,
+//             backgroundSize: "cover",
+//             backgroundPosition: "center",
+//             borderTopRightRadius: 16,
+//             borderBottomRightRadius: 16,
+//           }}
+//         />
+//       </Card>
+
+//       <Snackbar
+//         open={snackbar.open}
+//         autoHideDuration={3000}
+//         onClose={handleCloseSnackbar}
+//         TransitionComponent={Fade}
+//         anchorOrigin={{ vertical: "top", horizontal: "right" }}
+//       >
+//         <Alert
+//           onClose={handleCloseSnackbar}
+//           severity={snackbar.severity}
+//           variant="filled"
+//         >
+//           {snackbar.message}
+//         </Alert>
+//       </Snackbar>
+
+//       <ForgotPassword open={forgotOpen} onClose={() => setForgotOpen(false)} />
+//     </Grid>
+//   );
+// }

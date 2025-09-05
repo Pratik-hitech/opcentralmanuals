@@ -775,9 +775,14 @@ const Navbar = () => {
         <ListItem button component={NavLink} to="/operations/manuals" style={navLinkStyle}>
           <ListItemText primary="Operations Manual" primaryTypographyProps={{ fontWeight: "bold" }} />
         </ListItem>
+{isAdmin &&
+
         <ListItem button component={NavLink} to="/reporting" style={navLinkStyle}>
           <ListItemText primary="Reporting" primaryTypographyProps={{ fontWeight: "bold" }} />
         </ListItem>
+
+}
+
 
        {isAdmin && (
   <>
@@ -1048,6 +1053,8 @@ const Navbar = () => {
                 >
                   Operations Manual
                 </Button>
+
+{isAdmin && 
                 <Button
                   color="inherit"
                   component={NavLink}
@@ -1056,6 +1063,7 @@ const Navbar = () => {
                 >
                   Reporting
                 </Button>
+}
                 {isAdmin && (
   <>
     <Button
