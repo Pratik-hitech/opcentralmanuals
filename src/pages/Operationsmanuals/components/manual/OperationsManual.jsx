@@ -1188,9 +1188,9 @@ const OperationsManual = () => {
                           <IconButton
                             onClick={() => {
                               setViewNotesData({
-                                created_by: selectedPolicy.created_by,
+                                created_by: selectedPolicy?.creator?.name,
                                 created_at: selectedPolicy.created_at,
-                                updated_by: selectedPolicy.updated_by,
+                                updated_by: selectedPolicy?.updator?.name,
                                 updated_at: selectedPolicy.updated_at,
                                 notes: selectedPolicy.notes,
                               });
@@ -1450,9 +1450,9 @@ const OperationsManual = () => {
         versionDownloadLoading={versionDownloadLoading}
         onViewNotes={(version) => {
           setViewNotesData({
-            created_by: version.created_by,
+            created_by: version?.creator?.name,
             created_at: version.created_at,
-            updated_by: version.updated_by,
+            updated_by: version?.updator?.name,
             updated_at: version.updated_at,
             notes: version.notes,
           });
@@ -1550,14 +1550,14 @@ const VersionHistoryDialog = ({
                 return (
                   <TableRow key={version.id}>
                     <TableCell>{getVersionNumber(originalIndex)}</TableCell>
-                    <TableCell>{version.created_by}</TableCell>
+                    <TableCell>{version?.creator?.name || "N/A"}</TableCell>
                     <TableCell>
                       {new Date(version.created_at).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       {new Date(version.updated_at).toLocaleDateString()}
                     </TableCell>
-                    <TableCell>{version.updated_by}</TableCell>
+                    <TableCell>{version?.updator?.name || "N/A"}</TableCell>
                     <TableCell>
                       <Button
                         size="small"
@@ -1641,7 +1641,7 @@ const ViewNotesDialog = ({ open, onClose, notesData }) => {
                   Published By:
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {notesData.created_by || "N/A"}
+                  {notesData?.created_by || "N/A"}
                 </Typography>
               </Box>
               <Box
@@ -1694,7 +1694,7 @@ const ViewNotesDialog = ({ open, onClose, notesData }) => {
                   Last Updated By:
                 </Typography>
                 <Typography variant="body1" sx={{ fontWeight: 500 }}>
-                  {notesData.updated_by || "N/A"}
+                  {notesData?.updated_by || "N/A"}
                 </Typography>
               </Box>
             </Box>
