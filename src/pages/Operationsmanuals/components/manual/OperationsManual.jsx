@@ -690,6 +690,12 @@ const OperationsManual = () => {
     }
   };
 
+  const handleExportAllPDF = async () => {
+    if (!manual) return;
+
+    setIsExportingPDF(true);
+  };
+
   // Render navigation item
   const renderNavigationItem = (item, depth = 0, numberingPath = []) => {
     const hasChildren = item.children && item.children.length > 0;
@@ -959,38 +965,59 @@ const OperationsManual = () => {
                   <Typography variant="h6" gutterBottom>
                     Table of Contents
                   </Typography>
-                  <Tooltip
-                    title={
-                      Object.values(expandedItems).every(Boolean)
-                        ? "Collapse All"
-                        : "Expand All"
-                    }
-                  >
-                    <IconButton
-                      size="small"
-                      onClick={() => {
-                        const allExpanded =
-                          Object.values(expandedItems).every(Boolean);
-                        const newExpandedItems = {};
-                        const traverseAndSetExpanded = (items, expand) => {
-                          items.forEach((item) => {
-                            if (item.children && item.children.length > 0) {
-                              newExpandedItems[item.id] = !expand;
-                            }
-                            traverseAndSetExpanded(item.children || [], expand);
-                          });
-                        };
-                        traverseAndSetExpanded(navigationTree, allExpanded);
-                        setExpandedItems(newExpandedItems);
-                      }}
+                  <Box>
+                    {/* <Tooltip title="Export All Policies">
+                      <IconButton
+                        onClick={handleExportAllPDF}
+                        disabled={
+                          isExportingPDF || policyNavigationOrder.length === 0
+                        }
+                        size="small"
+                        sx={{ border: "1px solid #ccc", mr: 1 }}
+                      >
+                        {isExportingPDF ? (
+                          <CircularProgress size={20} />
+                        ) : (
+                          <PictureAsPdf />
+                        )}
+                      </IconButton>
+                    </Tooltip> */}
+                    <Tooltip
+                      title={
+                        Object.values(expandedItems).every(Boolean)
+                          ? "Collapse All"
+                          : "Expand All"
+                      }
                     >
-                      {Object.values(expandedItems).every(Boolean) ? (
-                        <UnfoldLessIcon />
-                      ) : (
-                        <UnfoldMoreIcon />
-                      )}
-                    </IconButton>
-                  </Tooltip>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          const allExpanded =
+                            Object.values(expandedItems).every(Boolean);
+                          const newExpandedItems = {};
+                          const traverseAndSetExpanded = (items, expand) => {
+                            items.forEach((item) => {
+                              if (item.children && item.children.length > 0) {
+                                newExpandedItems[item.id] = !expand;
+                              }
+                              traverseAndSetExpanded(
+                                item.children || [],
+                                expand
+                              );
+                            });
+                          };
+                          traverseAndSetExpanded(navigationTree, allExpanded);
+                          setExpandedItems(newExpandedItems);
+                        }}
+                      >
+                        {Object.values(expandedItems).every(Boolean) ? (
+                          <UnfoldLessIcon />
+                        ) : (
+                          <UnfoldMoreIcon />
+                        )}
+                      </IconButton>
+                    </Tooltip>
+                  </Box>
                 </Box>
                 <Divider sx={{ mb: 2 }} />
                 {navigationTree.length > 0 ? (
