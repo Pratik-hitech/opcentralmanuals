@@ -168,6 +168,7 @@ const PolicyDetails = () => {
   const [updateToVersion, setUpdateToVersion] = useState(false);
   const [versionNotes, setVersionNotes] = useState("");
   const [nextVersion, setNextVersion] = useState("");
+  const [currentVersion, setCurrentVersion] = useState("1.0");
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
@@ -277,10 +278,18 @@ const PolicyDetails = () => {
             // Always set mappedMappings from policy data
             setMappedMappings(resolvedMappings.filter((m) => m !== null));
 
-            // Calculate next version
+            // Calculate current and next version
             if (data.versions && data.versions.length > 0) {
+              const currentVer = (
+                1.0 +
+                (data.versions.length - 1) * 0.1
+              ).toFixed(1);
               const nextVer = (1.0 + data.versions.length * 0.1).toFixed(1);
+              setCurrentVersion(currentVer);
               setNextVersion(nextVer);
+            } else {
+              setCurrentVersion("1.0");
+              setNextVersion("1.1");
             }
           }
           setLoading(false);
@@ -1447,6 +1456,9 @@ const PolicyDetails = () => {
         <DialogTitle>Update Policy</DialogTitle>
         <DialogContent>
           <Box sx={{ mt: 2 }}>
+            <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
+              Current Version: {currentVersion}
+            </Typography>
             <FormControlLabel
               control={
                 <Checkbox
@@ -1458,7 +1470,7 @@ const PolicyDetails = () => {
             />
             {updateToVersion && (
               <TextField
-                label="Notes"
+                label="Version Notes"
                 multiline
                 rows={3}
                 value={versionNotes}
