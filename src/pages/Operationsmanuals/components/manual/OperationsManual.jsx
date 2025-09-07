@@ -49,6 +49,7 @@ import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
 import { httpClient } from "../../../../utils/httpClientSetup";
 import { useAuth } from "../../../../context/AuthContext";
+import RichTextContent from "../RichTextContent";
 
 const OperationsManual = () => {
   const { id, policyId } = useParams();
@@ -1368,11 +1369,9 @@ const OperationsManual = () => {
                   </Typography>
 
                   {selectedPolicy.content && (
-                    <Box
+                    <RichTextContent
+                      content={selectedPolicy.content}
                       sx={{ mt: 2, mb: 3 }}
-                      dangerouslySetInnerHTML={{
-                        __html: selectedPolicy.content,
-                      }}
                     />
                   )}
 

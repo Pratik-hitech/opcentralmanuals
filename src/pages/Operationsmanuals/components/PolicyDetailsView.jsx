@@ -19,6 +19,7 @@ import {
   ArrowBack,
 } from "@mui/icons-material";
 import { httpClient } from "../../../utils/httpClientSetup";
+import RichTextContent from "./RichTextContent";
 
 const PolicyDetailsView = () => {
   const { policyId } = useParams();
@@ -215,12 +216,7 @@ const PolicyDetailsView = () => {
         {/* Policy Content */}
         {policy && (
           <>
-            {policy.content && (
-              <Box
-                sx={{ mt: 2, mb: 3 }}
-                dangerouslySetInnerHTML={{ __html: policy.content }}
-              />
-            )}
+            {policy.content && <RichTextContent content={policy.content} />}
 
             {/* Videos */}
             {policy.videos && policy.videos.length > 0 && (
