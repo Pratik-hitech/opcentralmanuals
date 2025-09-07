@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
@@ -75,6 +75,9 @@ const OperationsManual = () => {
   const [isViewNotesDialogOpen, setIsViewNotesDialogOpen] = useState(false);
   const [viewNotesData, setViewNotesData] = useState(null);
   const [versionDownloadLoading, setVersionDownloadLoading] = useState({});
+
+  // Ref for the right column content area to enable scrolling to top
+  const contentRef = useRef(null);
 
   const { user } = useAuth();
   const isAdmin = user?.role?.name === "admin";
@@ -231,6 +234,25 @@ const OperationsManual = () => {
     };
   }, []);
 
+  // Scroll to top when selectedPolicy changes
+  useEffect(() => {
+    if (selectedPolicy) {
+      // Try multiple approaches to ensure scrolling works
+      setTimeout(() => {
+        // First try window scroll
+        window.scrollTo({ top: 0, behavior: "smooth" });
+
+        // Also try scrolling the content ref if available
+        if (contentRef.current) {
+          contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+
+        // Try document body scroll as fallback
+        document.body.scrollTo({ top: 0, behavior: "smooth" });
+      }, 100); // Small delay to ensure content has loaded
+    }
+  }, [selectedPolicy]);
+
   // Toggle expand/collapse for navigation items
   const toggleExpand = (itemId) => {
     setExpandedItems((prev) => ({
@@ -247,6 +269,20 @@ const OperationsManual = () => {
       // Set policy loading state and policy name
       setPolicyLoading(true);
       setLoadingPolicyName(item.title);
+
+      // Scroll to top immediately when clicking
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      document.body.scrollTo({ top: 0, behavior: "smooth" });
+
+      // Also scroll after a delay to ensure content loads
+      setTimeout(() => {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        document.body.scrollTo({ top: 0, behavior: "smooth" });
+        if (contentRef.current) {
+          contentRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        }
+      }, 500);
+
       // Navigate to the policy route
       navigate(`/operations/manual/${id}/policy/${item.primary_id}`);
     }
@@ -1076,6 +1112,7 @@ const OperationsManual = () => {
           {/* Right Column - Content */}
           <Grid size={{ xs: 12, md: isSidebarExpanded ? 9 : 12 }}>
             <Paper
+              ref={contentRef}
               elevation={3}
               sx={{ p: 3, minHeight: "70vh", height: "100%" }}
             >
@@ -1401,7 +1438,7 @@ const OperationsManual = () => {
                   <Divider sx={{ mb: 3 }} />
 
                   {/* Policy Content */}
-                  <Typography variant="h4" gutterBottom>
+                  <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
                     {selectedPolicy.title}
                   </Typography>
 

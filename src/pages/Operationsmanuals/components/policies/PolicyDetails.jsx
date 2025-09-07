@@ -265,11 +265,14 @@ const PolicyDetails = () => {
                 const treeRes = await httpClient.get(
                   `/navigations/tree/${nav.collection_id}`
                 );
-                const tree = treeRes.data.data || [];
-                const pathTitles = getPathToItem(tree, nav.id);
-                if (pathTitles) {
-                  const fullPath = [col.title, ...pathTitles];
-                  return { navId: nav.id, fullPath };
+
+                if (treeRes.data.success) {
+                  const tree = treeRes.data.data || [];
+                  const pathTitles = getPathToItem(tree, nav.id);
+                  if (pathTitles) {
+                    const fullPath = [col.title, ...pathTitles];
+                    return { navId: nav.id, fullPath };
+                  }
                 }
               }
               return null;
@@ -1486,7 +1489,7 @@ const PolicyDetails = () => {
         <DialogActions>
           <Button onClick={handleUpdateCancel}>Cancel</Button>
           <Button onClick={handleUpdateConfirm} variant="contained">
-            Confirm
+            {updateToVersion ? "Confirm" : "Continue"}
           </Button>
         </DialogActions>
       </Dialog>
