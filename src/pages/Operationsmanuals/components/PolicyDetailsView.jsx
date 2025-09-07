@@ -20,6 +20,7 @@ import {
 } from "@mui/icons-material";
 import { httpClient } from "../../../utils/httpClientSetup";
 import RichTextContent from "./RichTextContent";
+import { useAuth } from "../../../context/AuthContext";
 
 const PolicyDetailsView = () => {
   const { policyId } = useParams();
@@ -27,6 +28,9 @@ const PolicyDetailsView = () => {
   const [policy, setPolicy] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const { user } = useAuth();
+  const isAdmin = user?.role?.name === "admin";
 
   // Fetch policy data
   const fetchPolicy = async () => {
@@ -190,18 +194,23 @@ const PolicyDetailsView = () => {
             {policy ? policy.title : "Policy Details"}
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <IconButton
-              onClick={() => {
-                // Navigate to edit page
-                navigate(
-                  `/manuals/edit/${policyId}/policies/edit/${policyId}/details`
-                );
-              }}
-              sx={{ border: "1px solid #ccc" }}
-            >
-              <EditIcon />
-            </IconButton>
-            <Divider orientation="vertical" flexItem />
+            {isAdmin && (
+              <>
+                <IconButton
+                  onClick={() => {
+                    // Navigate to edit page
+                    navigate(
+                      `/manuals/edit/${policyId}/policies/edit/${policyId}/details`
+                    );
+                  }}
+                  sx={{ border: "1px solid #ccc" }}
+                >
+                  <EditIcon />
+                </IconButton>
+                <Divider orientation="vertical" flexItem />
+              </>
+            )}
+
             <IconButton
               onClick={() => navigate(-1)}
               sx={{ border: "1px solid #ccc" }}
