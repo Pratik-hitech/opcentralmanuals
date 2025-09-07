@@ -223,6 +223,14 @@ const OperationsManual = () => {
     initialize();
   }, [id, policyId]);
 
+  // Cleanup speech synthesis on component unmount
+  useEffect(() => {
+    return () => {
+      // Stop any speech when the component unmounts
+      window.speechSynthesis.cancel();
+    };
+  }, []);
+
   // Toggle expand/collapse for navigation items
   const toggleExpand = (itemId) => {
     setExpandedItems((prev) => ({
@@ -234,6 +242,8 @@ const OperationsManual = () => {
   // Handle policy click
   const handlePolicyClick = (item) => {
     if (item.table === "policies") {
+      // Stop any currently playing speech before navigating
+      window.speechSynthesis.cancel();
       // Set policy loading state and policy name
       setPolicyLoading(true);
       setLoadingPolicyName(item.title);
@@ -309,9 +319,36 @@ const OperationsManual = () => {
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
 
     utterance.text = textContent;
-    utterance.rate = 1;
-    utterance.pitch = 1;
+    utterance.rate = 0.9; // A measured pace for clarity.
+    utterance.pitch = 1; // Standard pitch.
     utterance.volume = 1;
+
+    // Get available voices and select a high-quality female voice.
+    // Note: voices may load asynchronously.
+    const voices = window.speechSynthesis.getVoices();
+
+    // Prioritize known high-quality voices to match the desired style.
+    let selectedVoice =
+      voices.find((voice) => voice.name === "Google US English") ||
+      voices.find((voice) => voice.name === "Samantha") ||
+      voices.find((voice) => voice.name === "Google UK English Female") ||
+      voices.find(
+        (voice) =>
+          voice.name === "Microsoft Zira Desktop - English (United States)"
+      );
+
+    // Fallback to a generic English female voice if no prioritized voice is found.
+    if (!selectedVoice) {
+      selectedVoice = voices.find(
+        (voice) =>
+          voice.lang.startsWith("en-") &&
+          (voice.name.includes("Female") || voice.gender === "female")
+      );
+    }
+
+    if (selectedVoice) {
+      utterance.voice = selectedVoice;
+    }
 
     utterance.onstart = () => {
       setIsPlaying(true);
