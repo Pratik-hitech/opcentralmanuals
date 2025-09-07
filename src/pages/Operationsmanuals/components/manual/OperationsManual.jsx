@@ -351,7 +351,7 @@ const OperationsManual = () => {
 
     // Strip HTML tags from content for speech
     const tempDiv = document.createElement("div");
-    tempDiv.innerHTML = selectedPolicy.content;
+    tempDiv.innerHTML = `${selectedPolicy.title}. ${selectedPolicy.content}`;
     const textContent = tempDiv.textContent || tempDiv.innerText || "";
 
     utterance.text = textContent;
