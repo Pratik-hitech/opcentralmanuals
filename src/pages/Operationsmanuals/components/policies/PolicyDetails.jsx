@@ -194,10 +194,13 @@ const PolicyDetails = () => {
     if (navigationId) {
       autoMapNavigation(navigationId);
     } else if (id && !policyId) {
-      // Fallback: Use collection id when navigationId is null
+      // Fallback: Use collection id when navigationId is null (create mode)
+      autoMapNavigationFromCollection(id);
+    } else if (id && policyId && mappedMappings.length === 0) {
+      // Fallback: Use collection id when navigationId is null and no mappings exist (edit mode)
       autoMapNavigationFromCollection(id);
     }
-  }, [navigationId, id, policyId]);
+  }, [navigationId, id, policyId, mappedMappings.length]);
 
   useEffect(() => {
     if (policyId) {
@@ -271,7 +274,11 @@ const PolicyDetails = () => {
                   const pathTitles = getPathToItem(tree, nav.id);
                   if (pathTitles) {
                     const fullPath = [col.title, ...pathTitles];
-                    return { navId: nav.id, fullPath };
+                    return {
+                      navId: nav.id,
+                      fullPath,
+                      collectionId: nav.collection_id,
+                    };
                   }
                 }
               }
@@ -298,7 +305,7 @@ const PolicyDetails = () => {
           setLoading(false);
         })
         .catch((err) => {
-          showNotification("error", "Failed to fetch policy details");
+          // showNotification("error", "Failed to fetch policy details");
           setLoading(false);
         });
     }
@@ -805,12 +812,31 @@ const PolicyDetails = () => {
     };
 
     mappedMappings.forEach((mapping, index) => {
-      const item = findNavigationItem(navigationTree, mapping.navId);
-      if (item) {
-        const navId = item.table === "policies" ? item.parent_id : item.id;
-        submitData.append(`navigations[${index}][id]`, navId);
-        if (isEdit) {
-          submitData.append(`navigations[${index}][order]`, item.order);
+      if (mapping.navId !== null) {
+        const item = findNavigationItem(navigationTree, mapping.navId);
+
+        if (item) {
+          const navId = item.table === "policies" ? item.parent_id : item.id;
+          submitData.append(`navigations[${index}][id]`, navId);
+          if (isEdit) {
+            submitData.append(`navigations[${index}][order]`, item.order);
+          }
+        }
+      } else {
+        submitData.append(`navigations[${index}][id]`, null);
+
+        if (!isEdit) {
+          const topLevelNavs = navigationTree.filter(
+            (item) => item.parent_id === null
+          );
+          const maxOrder = topLevelNavs.reduce(
+            (max, curr) => Math.max(max, curr.order || 0),
+            0
+          );
+          const nextOrder = maxOrder + 1;
+          submitData.append(`navigations[${index}][order]`, nextOrder);
+        } else {
+          console.warn("Edit mode with null navId");
         }
       }
     });
@@ -824,6 +850,10 @@ const PolicyDetails = () => {
     // Add version update data if selected
     if (isEdit && updateToVersion) {
       submitData.append("notes", versionNotes);
+    }
+
+    for (let pair of submitData.entries()) {
+      console.log(pair[0] + ", " + pair[1]);
     }
 
     try {

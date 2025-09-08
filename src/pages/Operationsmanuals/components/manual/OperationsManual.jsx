@@ -264,11 +264,15 @@ const OperationsManual = () => {
   // Handle policy click
   const handlePolicyClick = (item) => {
     if (item.table === "policies") {
-      // Stop any currently playing speech before navigating
       window.speechSynthesis.cancel();
-      // Set policy loading state and policy name
-      setPolicyLoading(true);
-      setLoadingPolicyName(item.title);
+      const targetPolicyId = item.primary_id;
+      const isSamePolicy =
+        parseInt(policyId || "0") === targetPolicyId &&
+        selectedPolicy?.id === targetPolicyId;
+      if (!isSamePolicy) {
+        setPolicyLoading(true);
+        setLoadingPolicyName(item.title);
+      }
 
       // Scroll to top immediately when clicking
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -283,9 +287,31 @@ const OperationsManual = () => {
         }
       }, 500);
 
-      // Navigate to the policy route
-      navigate(`/operations/manual/${id}/policy/${item.primary_id}`);
+      if (isSamePolicy) {
+        if (manual) {
+          buildBreadcrumbPath(item, manual);
+        }
+      } else {
+        navigate(`/operations/manual/${id}/policy/${targetPolicyId}`);
+      }
     }
+  };
+
+  // Get path to navigation item
+  const getPathToItem = (targetId, items, currentPath = []) => {
+    for (const item of items) {
+      const newPath = [...currentPath, item];
+      if (item.id === targetId) {
+        return newPath;
+      }
+      if (item.children && item.children.length > 0) {
+        const foundPath = getPathToItem(targetId, item.children, newPath);
+        if (foundPath) {
+          return foundPath;
+        }
+      }
+    }
+    return null;
   };
 
   // Build breadcrumb path for a policy
@@ -297,39 +323,26 @@ const OperationsManual = () => {
       path.push({ title: manualData.title, type: "manual", id: manualData.id });
     }
 
-    // Find the policy in the navigation tree and build the path
-    const findPolicyPath = (items, policyId) => {
-      for (const item of items) {
-        if (item.table === "policies" && item.primary_id === policyId) {
-          // Found the policy
-          path.push({ title: item.title, type: "policy", id: item.primary_id });
-          return true;
+    const navPath = getPathToItem(policyItem.id, navigationTree);
+    if (navPath) {
+      navPath.forEach((navItem) => {
+        if (navItem.table === null) {
+          const type = navItem.parent_id === null ? "section" : "subsection";
+          path.push({
+            title: navItem.title,
+            type,
+            id: navItem.id,
+          });
+        } else if (navItem.table === "policies") {
+          path.push({
+            title: navItem.title,
+            type: "policy",
+            id: navItem.primary_id,
+          });
         }
+      });
+    }
 
-        if (item.children && item.children.length > 0) {
-          // Add section or subsection to path
-          if (item.table === null) {
-            path.push({
-              title: item.title,
-              type: item.parent_id === null ? "section" : "subsection",
-              id: item.id,
-            });
-          }
-
-          if (findPolicyPath(item.children, policyId)) {
-            return true;
-          }
-
-          // Remove section or subsection from path if policy not found in this branch
-          if (item.table === null) {
-            path.pop();
-          }
-        }
-      }
-      return false;
-    };
-
-    findPolicyPath(navigationTree, policyItem.primary_id);
     setBreadcrumbPath(path);
   };
 
