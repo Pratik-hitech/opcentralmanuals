@@ -124,6 +124,8 @@ const CreateSectionDialog = ({
     onClose();
   };
 
+  const isSubSection = mode === "create" ? !!item : !!item?.parent_id;
+
   return (
     <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
       <DialogTitle>
@@ -135,7 +137,9 @@ const CreateSectionDialog = ({
           }}
         >
           <Typography variant="h6">
-            {mode === "edit" ? "Edit Section" : "Create Section"}
+            {mode === "edit"
+              ? `Edit ${isSubSection ? "Sub " : ""}Section`
+              : `Create ${isSubSection ? "Sub " : ""}Section`}
           </Typography>
           <IconButton onClick={handleClose} size="small" disabled={loading}>
             <Close />

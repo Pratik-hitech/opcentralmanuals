@@ -597,12 +597,13 @@ const ManualsContent = () => {
     if (navigations.length > 0) {
       const initialExpandedItems = {};
       const traverseAndSetExpanded = (items) => {
-        items.forEach((item) => {
-          if (item.children && item.children.length > 0) {
-            initialExpandedItems[item.id] = true;
-          }
-          traverseAndSetExpanded(item.children);
-        });
+        items &&
+          items.forEach((item) => {
+            if (item?.children && item?.children?.length > 0) {
+              initialExpandedItems[item?.id] = true;
+            }
+            traverseAndSetExpanded(item?.children);
+          });
       };
       traverseAndSetExpanded(navigations);
       setExpandedItems(initialExpandedItems);
@@ -629,18 +630,22 @@ const ManualsContent = () => {
 
   const handleAddPolicyClick = () => {
     setAddMenuAnchorEl(null);
-    navigate(
-      `/manuals/edit/${id}/policies/create/details?navigationId=${currentItem.id}`
-    );
+    let url = `/manuals/edit/${id}/policies/create/details`;
+    if (currentItem.id) {
+      url += `?navigationId=${currentItem.id}`;
+    }
+    navigate(url);
   };
 
   const handleEditClick = (item = null) => {
     setMoreMenuAnchorEl(null);
     const itemToEdit = item || currentItem;
     if (itemToEdit && itemToEdit?.table !== null) {
-      navigate(
-        `/manuals/edit/${id}/policies/edit/${itemToEdit?.primary_id}/details?navigationId=${itemToEdit?.parent_id}`
-      );
+      let url = `/manuals/edit/${id}/policies/edit/${itemToEdit?.primary_id}/details`;
+      if (itemToEdit?.parent_id) {
+        url += `?navigationId=${itemToEdit?.parent_id}`;
+      }
+      navigate(url);
     } else {
       setDialogMode("edit");
       setIsModalOpen(true);
