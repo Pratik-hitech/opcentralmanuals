@@ -502,7 +502,7 @@ useEffect(() => {
         <MenuItem onClick={handleBulkDeleteClick}>
           Delete Selected Users
         </MenuItem>
-        <MenuItem>Change Roles</MenuItem>
+        {/* <MenuItem>Change Roles</MenuItem> */}
         {/* <MenuItem onClick={() => handleBulkStatusChange(true)}>
           Activate Selected
         </MenuItem>
@@ -518,7 +518,7 @@ useEffect(() => {
         onClose={handleMenuClose(setAnchorEl)}
       >
         <MenuItem onClick={()=>navigate("/general-settings/roles")}>Manage Roles</MenuItem>
-        <MenuItem>Manage Brands</MenuItem>
+        {/* <MenuItem>Manage Brands</MenuItem> */}
       </Menu>
 
       <Menu

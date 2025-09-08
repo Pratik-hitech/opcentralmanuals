@@ -69,12 +69,12 @@ const EditNews = () => {
               component={Link}
               to="./details"
             />
-            <EqualWidthTab
+            {/* <EqualWidthTab
               label="Permissions"
               value="permissions"
               component={Link}
               to="./permissions"
-            />
+            /> */}
           </Tabs>
         </Paper>
       </Box>

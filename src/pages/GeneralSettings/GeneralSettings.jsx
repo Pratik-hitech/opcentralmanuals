@@ -191,27 +191,27 @@ const GeneralSettings = () => {
                   to="./roles"
                   disabled={!isAdmin() && !hasPermission('manage_users')}
                 />
-                <EqualWidthTab
+                {/* <EqualWidthTab
                   label="System"
                   value="system"
                   component={Link}
                   to="./system"
                   disabled={!isAdmin() && !hasPermission('manage_system_setting')}
-                />
-                <EqualWidthTab
+                /> */}
+                {/* <EqualWidthTab
                   label="Security"
                   value="security"
                   component={Link}
                   to="./security"
                   disabled={!isAdmin() && !hasPermission('manage_system_setting')}
-                />
-                <EqualWidthTab
+                /> */}
+                {/* <EqualWidthTab
                   label="Branding"
                   value="branding"
                   component={Link}
                   to="./branding"
                   disabled={!isAdmin() && !hasPermission('manage_system_setting')}
-                />
+                /> */}
               </Tabs>
             </Paper>
           </Box>

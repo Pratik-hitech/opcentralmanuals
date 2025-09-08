@@ -45,7 +45,7 @@ const Loggedinprofile = () => {
   return (
     <Container maxWidth="lg" sx={{ py: 2 }}>
       <Typography variant="h6" mb={2}>
-        Logged In Profile
+        User Profile
       </Typography>
 
       <Box sx={{ display: "flex", justifyContent: "center", mb: 3 }}>

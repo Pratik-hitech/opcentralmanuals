@@ -18,15 +18,15 @@ import {
   TextField,
   Stack,
   CircularProgress,
+  TableContainer,
 } from "@mui/material";
 import { SaveAlt } from "@mui/icons-material";
 import { saveAs } from "file-saver";
 import { useParams } from "react-router-dom";
-
 import { useAuth } from "../../context/AuthContext";
 
-export default function loggedUseractivity() {
-  const {user}= useAuth()
+export default function LoggedUserActivity() {
+  const { user } = useAuth();
   const { userid } = useParams();
   const [activities, setActivities] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -35,17 +35,15 @@ export default function loggedUseractivity() {
   const [toDate, setToDate] = useState("");
   const [filteredActivities, setFilteredActivities] = useState([]);
 
-  // Fetch activities
   const fetchActivities = async () => {
     setLoading(true);
     try {
-      // Use userid from route params to filter activities
       const endpoint = `activities?user_id=${user.id}`;
       const res = await httpClient(endpoint);
-      
+
       if (res?.data?.success && res.data.data) {
         setActivities(res.data.data);
-        setFilteredActivities(res.data.data); // Initialize filtered activities with all activities
+        setFilteredActivities(res.data.data);
       }
     } catch (err) {
       console.error("Error fetching activities:", err);
@@ -56,42 +54,38 @@ export default function loggedUseractivity() {
 
   useEffect(() => {
     fetchActivities();
-  }, [userid]); // Refetch when userid changes
+  }, [userid]);
 
-  // Apply date filters when fromDate or toDate changes
   useEffect(() => {
     const filtered = activities.filter((act) => {
       const actDate = new Date(act.created_at);
       const from = fromDate ? new Date(fromDate) : null;
-      const to = toDate ? new Date(toDate + "T23:59:59") : null; // Include entire end date
-      
+      const to = toDate ? new Date(toDate + "T23:59:59") : null;
+
       if (from && actDate < from) return false;
       if (to && actDate > to) return false;
       return true;
     });
-    
+
     setFilteredActivities(filtered);
   }, [activities, fromDate, toDate]);
 
-  // Export CSV excluding user_agent and primary_id
   const exportCSV = () => {
     if (filteredActivities.length === 0) return;
 
-    // Get all keys except 'user_agent' and 'primary_id'
     const keys = Object.keys(filteredActivities[0]).filter(
       (key) => key !== "user_agent" && key !== "primary_id"
     );
 
-    const rows = filteredActivities.map((act) => 
+    const rows = filteredActivities.map((act) =>
       keys.map((key) => {
-        // Format date fields properly
         if (key === "created_at" || key === "updated_at") {
           return new Date(act[key]).toLocaleString();
         }
         return act[key];
       })
     );
-    
+
     const csvContent =
       [keys, ...rows].map((e) => e.map((v) => `"${v}"`).join(",")).join("\n");
 
@@ -100,15 +94,22 @@ export default function loggedUseractivity() {
     setFilterModalOpen(false);
   };
 
-  // Reset filters
   const resetFilters = () => {
     setFromDate("");
     setToDate("");
   };
 
   return (
-    <Paper elevation={3} sx={{ padding: 4, margin: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+    <Paper elevation={3} sx={{ padding: 3, margin: 2 }}>
+      {/* Header */}
+      <Box
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        flexWrap="wrap"
+        mb={3}
+        gap={2}
+      >
         <Typography variant="h5" fontWeight="bold">
           📋 Activity Log {userid && `for User ID: ${userid}`}
         </Typography>
@@ -121,6 +122,7 @@ export default function loggedUseractivity() {
         </IconButton>
       </Box>
 
+      {/* Table Section */}
       {loading ? (
         <Box display="flex" justifyContent="center" alignItems="center" height={200}>
           <CircularProgress />
@@ -128,28 +130,32 @@ export default function loggedUseractivity() {
       ) : filteredActivities.length === 0 ? (
         <Typography>No activities found.</Typography>
       ) : (
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell><b>Title</b></TableCell>
-              <TableCell><b>Description</b></TableCell>
-              <TableCell><b>Module</b></TableCell>
-              <TableCell><b>IP Address</b></TableCell>
-              <TableCell><b>Created At</b></TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {filteredActivities.map((act) => (
-              <TableRow key={act.id}>
-                <TableCell>{act.title}</TableCell>
-                <TableCell>{act.description}</TableCell>
-                <TableCell>{act.module}</TableCell>
-                <TableCell>{act.ip_address}</TableCell>
-                <TableCell>{new Date(act.created_at).toLocaleString()}</TableCell>
+        <TableContainer sx={{ maxHeight: 450, overflowX: "auto" }}>
+          <Table stickyHeader>
+            <TableHead>
+              <TableRow>
+                <TableCell><b>Title</b></TableCell>
+                <TableCell><b>Description</b></TableCell>
+                <TableCell><b>Module</b></TableCell>
+                <TableCell><b>IP Address</b></TableCell>
+                <TableCell><b>Created At</b></TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {filteredActivities.map((act) => (
+                <TableRow key={act.id}>
+                  <TableCell>{act.title}</TableCell>
+                  <TableCell>{act.description}</TableCell>
+                  <TableCell>{act.module}</TableCell>
+                  <TableCell>{act.ip_address}</TableCell>
+                  <TableCell>
+                    {new Date(act.created_at).toLocaleString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       )}
 
       {/* Export Modal */}
@@ -185,9 +191,9 @@ export default function loggedUseractivity() {
         </DialogContent>
         <DialogActions sx={{ px: 3, pb: 2 }}>
           <Button onClick={() => setFilterModalOpen(false)}>Cancel</Button>
-          <Button 
-            variant="contained" 
-            color="primary" 
+          <Button
+            variant="contained"
+            color="primary"
             onClick={exportCSV}
             disabled={filteredActivities.length === 0}
           >
@@ -201,3 +207,13 @@ export default function loggedUseractivity() {
 
 
 
+
+// import React from 'react'
+
+// const Useractivity = () => {
+//   return (
+//     <div>Useractivity</div>
+//   )
+// }
+
+// export default Useractivity

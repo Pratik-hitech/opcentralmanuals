@@ -819,33 +819,57 @@ const LocationForm = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!validate()) return;
+  e.preventDefault();
+  if (!validate()) return;
 
-    setIsSubmitting(true);
-    try {
-      const payload = { ...formData, updated_by: 1 };
-      if (isEditMode) {
-        const response = await httpClient.put(`locations/${id}`, payload);
-        if (response.data && response.data.success) {
-          setSnackbar({ open: true, message: 'Location updated successfully', severity: 'success' });
-          setTimeout(() => navigate('/location'), 1500);
-        }
-      } else {
-        payload.created_by = 1;
-        const response = await httpClient.post('locations', payload);
-        if (response.data && response.data.success) {
-          setSnackbar({ open: true, message: 'Location created successfully', severity: 'success' });
-          setTimeout(() => navigate('/location'), 1500);
-        }
+  setIsSubmitting(true);
+  try {
+    const payload = { ...formData, updated_by: 1 };
+    if (isEditMode) {
+      const response = await httpClient.put(`locations/${id}`, payload);
+      if (response.data && response.data.success) {
+        setSnackbar({ open: true, message: 'Location updated successfully', severity: 'success' });
+        setTimeout(() => navigate('/location'), 1500);
       }
-    } catch (error) {
-      setSnackbar({ open: true, message: error.message || `Failed to ${isEditMode ? 'update' : 'create'} location`, severity: 'error' });
-    } finally {
-      setIsSubmitting(false);
+    } else {
+      payload.created_by = 1;
+      const response = await httpClient.post('locations', payload);
+      if (response.data && response.data.success) {
+        setSnackbar({ open: true, message: 'Location created successfully', severity: 'success' });
+        setTimeout(() => navigate('/location'), 1500);
+      }
     }
-  };
-
+  } catch (error) {
+    let errorMessage = error.message || `Failed to ${isEditMode ? 'update' : 'create'} location`;
+    
+    // Check if we have a detailed error response from the server
+    if (error.response && error.response.data) {
+      const responseData = error.response.data;
+      
+      // Use the server's error message if available
+      if (responseData.message) {
+        errorMessage = responseData.message;
+      }
+      
+      // If there are specific field errors, append them to the message
+      if (responseData.errors && Object.keys(responseData.errors).length > 0) {
+        const fieldErrors = Object.entries(responseData.errors)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+          .join('; ');
+        
+        errorMessage += ` (${fieldErrors})`;
+      }
+    }
+    
+    setSnackbar({ 
+      open: true, 
+      message: errorMessage, 
+      severity: 'error' 
+    });
+  } finally {
+    setIsSubmitting(false);
+  }
+};
   if (isLoading) return <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh"><CircularProgress /></Box>;
 
   return (

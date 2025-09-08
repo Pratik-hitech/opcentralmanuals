@@ -1370,7 +1370,7 @@ import { MoreVert, Search, Download, ExpandMore, Edit, Delete } from "@mui/icons
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { httpClient } from "../../utils/httpClientSetup";
-
+import ManageTypesModal from "./components/TypesManager";
 const ManageLocations = () => {
   const navigate = useNavigate();
   const theme = useTheme();
@@ -1395,14 +1395,30 @@ const ManageLocations = () => {
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [openBulkDeleteModal, setOpenBulkDeleteModal] = useState(false);
   const [locationToDelete, setLocationToDelete] = useState(null);
-
+const [openTypesModal, setOpenTypesModal] = useState(false);
   // Snackbar
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
     severity: "success",
   });
+// Handle opening the types modal
+const handleOpenTypesModal = () => {
+  setOpenTypesModal(true);
+  handleMenuClose(setAnchorEl); // Close the menu when opening the modal
+};
 
+// Handle closing the types modal
+const handleCloseTypesModal = () => {
+  setOpenTypesModal(false);
+};
+
+// Handle when types are updated (refresh your data if needed)
+const handleTypesUpdated = () => {
+  // Refresh your data here if needed
+  // For example: fetchLocations(); or whatever function you use to get data
+  console.log("Types were updated, refresh data if needed");
+};
   // Menu handlers
   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
   const handleMenuClose = (setter) => () => setter(null);
@@ -1728,12 +1744,16 @@ const ManageLocations = () => {
         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
       </Menu>
 
-      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose(setAnchorEl)}>
-        <MenuItem>Manage Location Types</MenuItem>
-        <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
-      </Menu>
-
+     <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose(setAnchorEl)}>
+  <MenuItem onClick={handleOpenTypesModal}>Manage Location Types</MenuItem>
+  <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
+  <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+</Menu>
+  <ManageTypesModal
+        open={openTypesModal}
+        onClose={handleCloseTypesModal}
+        onTypesUpdated={handleTypesUpdated}
+      />
       <Menu anchorEl={downloadAnchorEl} open={Boolean(downloadAnchorEl)} onClose={handleMenuClose(setDownloadAnchorEl)}>
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
