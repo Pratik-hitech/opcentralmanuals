@@ -34,6 +34,7 @@ import {
   Collapse,
   FormControlLabel,
   Checkbox,
+  ListItemIcon,
 } from "@mui/material";
 import {
   InfoOutlined as InfoIcon,
@@ -42,6 +43,7 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
   Edit as EditIcon,
+  Article,
 } from "@mui/icons-material";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import Grid from "@mui/material/Grid";
@@ -190,7 +192,7 @@ const PolicyDetails = () => {
       // Fallback: Use collection id when navigationId is null and no mappings exist (edit mode)
       autoMapNavigationFromCollection(id);
     }
-  }, [navigationId, id, policyId, mappedMappings.length]);
+  }, [navigationId, id, policyId]);
 
   useEffect(() => {
     if (policyId) {
@@ -709,6 +711,11 @@ const PolicyDetails = () => {
               backgroundColor: depth === 0 ? "#eeeeee" : "#fafafa",
             }}
           >
+            {isPolicy && (
+              <ListItemIcon sx={{ minWidth: 25 }}>
+                <Article sx={{ fontSize: 16 }} />
+              </ListItemIcon>
+            )}
             <ListItemText
               primary={item.title}
               primaryTypographyProps={{
