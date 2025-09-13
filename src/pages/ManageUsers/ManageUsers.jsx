@@ -1,620 +1,629 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useLoaderData } from "react-router-dom";
-import {
-  Box,
-  Table,
-  TableHead,
-  TableBody,
-  TableRow,
-  TableCell,
-  Checkbox,
-  IconButton,
-  Button,
-  Menu,
-  MenuItem,
-  TextField,
-  InputAdornment,
-  TablePagination,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-  Skeleton,
-  Snackbar,
-  Alert,
-  CircularProgress,
-  Switch,
-  Tabs,
-  Tab,
-  Avatar,
-} from "@mui/material";
-import {
-  MoreVert,
-  Search,
-  BarChart,
-  FilterList,
-  Download,
-  ExpandMore,
-  Person,
-} from "@mui/icons-material";
-import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
-import { httpClient } from "../../utils/httpClientSetup";
+// import React, { useState, useEffect } from "react";
+// import { useNavigate, useLoaderData } from "react-router-dom";
+// import {
+//   Box,
+//   Table,
+//   TableHead,
+//   TableBody,
+//   TableRow,
+//   TableCell,
+//   Checkbox,
+//   IconButton,
+//   Button,
+//   Menu,
+//   MenuItem,
+//   TextField,
+//   InputAdornment,
+//   TablePagination,
+//   Dialog,
+//   DialogTitle,
+//   DialogContent,
+//   DialogContentText,
+//   DialogActions,
+//   Skeleton,
+//   Snackbar,
+//   Alert,
+//   CircularProgress,
+//   Switch,
+//   Tabs,
+//   Tab,
+//   Avatar,
+// } from "@mui/material";
+// import {
+//   MoreVert,
+//   Search,
+//   BarChart,
+//   FilterList,
+//   Download,
+//   ExpandMore,
+//   Person,
+// } from "@mui/icons-material";
+// import * as XLSX from "xlsx";
+// import { saveAs } from "file-saver";
+// import { httpClient } from "../../utils/httpClientSetup";
 
-export async function loader({ request }) {
-  try {
-    const response = await httpClient.get("users");
-    return { users: response.data.data };
-  } catch (error) {
-    console.error("Loader Error:", error);
-    throw new Error(error.message || "Failed to load users");
-  }
-}
+// export async function loader({ request }) {
+//   try {
+//     const response = await httpClient.get("users");
+//     return { users: response.data.data };
+//   } catch (error) {
+//     console.error("Loader Error:", error);
+//     throw new Error(error.message || "Failed to load users");
+//   }
+// }
 
-const ManageUsers = () => {
-  const navigate = useNavigate();
-  const { users: initialUsers } = useLoaderData();
+// const ManageUsers = () => {
+//   const navigate = useNavigate();
+//   const { users: initialUsers } = useLoaderData();
 
-  const [allUsers, setAllUsers] = useState(initialUsers);
-  const [filteredUsers, setFilteredUsers] = useState([]);
-  const [isActionLoading, setIsActionLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [tab, setTab] = useState("active");
+//   const [allUsers, setAllUsers] = useState(initialUsers);
+//   const [filteredUsers, setFilteredUsers] = useState([]);
+//   const [isActionLoading, setIsActionLoading] = useState(false);
+//   const [error, setError] = useState(null);
+//   const [tab, setTab] = useState("active");
 
-  const [selected, setSelected] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+//   const [selected, setSelected] = useState([]);
+//   const [searchTerm, setSearchTerm] = useState("");
+//   const [page, setPage] = useState(0);
+//   const [rowsPerPage, setRowsPerPage] = useState(5);
 
-  const [anchorEl, setAnchorEl] = useState(null);
-  const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
-  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
-  const [rowMenuAnchorEl, setRowMenuAnchorEl] = useState(null);
-  const [activeRowId, setActiveRowId] = useState(null);
-  const [openDeleteModal, setOpenDeleteModal] = useState(false);
-  const [userToDelete, setUserToDelete] = useState(null);
-  const [isBulkDelete, setIsBulkDelete] = useState(false);
+//   const [anchorEl, setAnchorEl] = useState(null);
+//   const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
+//   const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
+//   const [rowMenuAnchorEl, setRowMenuAnchorEl] = useState(null);
+//   const [activeRowId, setActiveRowId] = useState(null);
+//   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+//   const [userToDelete, setUserToDelete] = useState(null);
+//   const [isBulkDelete, setIsBulkDelete] = useState(false);
 
-  const [snackbar, setSnackbar] = useState({
-    open: false,
-    message: "",
-    severity: "success",
-  });
+//   const [snackbar, setSnackbar] = useState({
+//     open: false,
+//     message: "",
+//     severity: "success",
+//   });
 
-  // Helper function to display data or N/A if null/undefined
-  const displayValue = (value) => value || "N/A";
+//   // Helper function to display data or N/A if null/undefined
+//   const displayValue = (value) => value || "N/A";
 
-  // Filter users based on tab and search term
- // Filter users based on tab and search term
-useEffect(() => {
-  let filtered = allUsers;
-  
-  // Filter by status first
-  filtered = filtered.filter(user => 
-    tab === "active" ? user.status === 1 : user.status === 0
-  );
-  
-  // Then filter by search term if exists
-  if (searchTerm.trim() !== "") {
-    filtered = filtered.filter(
-      (user) =>
-        user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.location?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }
-  
-  setFilteredUsers(filtered);
-  setPage(0); // Reset to first page when filters change
-}, [allUsers, tab, searchTerm]);
+//   // Filter users based on tab and search term
+//   // Filter users based on tab and search term
+//   useEffect(() => {
+//     let filtered = allUsers;
 
-  const handleTabChange = (event, newValue) => {
-    setTab(newValue);
-  };
+//     // Filter by status first
+//     filtered = filtered.filter((user) =>
+//       tab === "active" ? user.status === 1 : user.status === 0
+//     );
 
-  const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
-  const handleMenuClose = (setter) => () => setter(null);
+//     // Then filter by search term if exists
+//     if (searchTerm.trim() !== "") {
+//       filtered = filtered.filter(
+//         (user) =>
+//           user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//           user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//           user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//           user.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//           user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+//           user.location?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+//       );
+//     }
 
-  const handleSelectAll = (e) => {
-    setSelected(e.target.checked ? filteredUsers.map((u) => u.id) : []);
-  };
+//     setFilteredUsers(filtered);
+//     setPage(0); // Reset to first page when filters change
+//   }, [allUsers, tab, searchTerm]);
 
-  const handleSelect = (id) => {
-    setSelected((prev) =>
-      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
-    );
-  };
+//   const handleTabChange = (event, newValue) => {
+//     setTab(newValue);
+//   };
 
-  const handleChangePage = (_, newPage) => setPage(newPage);
+//   const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
+//   const handleMenuClose = (setter) => () => setter(null);
 
-  const handleChangeRowsPerPage = (e) => {
-    setRowsPerPage(parseInt(e.target.value, 10));
-    setPage(0);
-  };
+//   const handleSelectAll = (e) => {
+//     setSelected(e.target.checked ? filteredUsers.map((u) => u.id) : []);
+//   };
 
-  const handleToggleActivation = async (userId, currentStatus) => {
-    setIsActionLoading(true);
-    try {
-      const newStatus = currentStatus === 1 ? 0 : 1;
-      await httpClient.put(`/users/${userId}`, { status: newStatus });
-      
-      // Update the allUsers state
-      setAllUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId ? { ...user, status: newStatus } : user
-        )
-      );
-      
-      setSnackbar({
-        open: true,
-        message: `User ${newStatus === 1 ? "activated" : "deactivated"} successfully`,
-        severity: "success",
-      });
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: error.message || "Failed to update user status",
-        severity: "error",
-      });
-    } finally {
-      setIsActionLoading(false);
-    }
-  };
+//   const handleSelect = (id) => {
+//     setSelected((prev) =>
+//       prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+//     );
+//   };
 
-  const handleBulkStatusChange = async (activate) => {
-    setIsActionLoading(true);
-    try {
-      await Promise.all(
-        selected.map(id => 
-          httpClient.put(`/users/${id}`, { status: activate ? 1 : 0 })
-        )
-      );
-      
-      // Update all users
-      setAllUsers(prevUsers => 
-        prevUsers.map(user => 
-          selected.includes(user.id) ? { ...user, status: activate ? 1 : 0 } : user
-        )
-      );
-      
-      setSnackbar({
-        open: true,
-        message: `${selected.length} user(s) ${activate ? 'activated' : 'deactivated'} successfully`,
-        severity: "success",
-      });
-      setSelected([]);
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: error.message || `Failed to ${activate ? 'activate' : 'deactivate'} users`,
-        severity: "error",
-      });
-    } finally {
-      setIsActionLoading(false);
-      handleMenuClose(setBulkAnchorEl)();
-    }
-  };
+//   const handleChangePage = (_, newPage) => setPage(newPage);
 
-  const exportData = (type) => {
-    const data = filteredUsers.map((user) => ({
-      "First Name": displayValue(user.first_name),
-      "Middle Name": displayValue(user.middle_name),
-      "Last Name": displayValue(user.last_name),
-      "Full Name": displayValue(user.name),
-      Username: displayValue(user.user_name),
-      Email: displayValue(user.email),
-      "Company ID": user.company_id,
-      "Role ID": user.role_id,
-      "Location ID": user.location_id,
-      "Location Name": user.location ? displayValue(user.location.name) : "N/A",
-      "Verified At": user.email_verified_at || "Not Verified",
-      Status: user.status === 1 ? "Active" : "Inactive",
-      "Created At": new Date(user.created_at).toLocaleString(),
-      "Updated At": new Date(user.updated_at).toLocaleString(),
-    }));
+//   const handleChangeRowsPerPage = (e) => {
+//     setRowsPerPage(parseInt(e.target.value, 10));
+//     setPage(0);
+//   };
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Users");
+//   const handleToggleActivation = async (userId, currentStatus) => {
+//     setIsActionLoading(true);
+//     try {
+//       const newStatus = currentStatus === 1 ? 0 : 1;
+//       await httpClient.put(`/users/${userId}`, { status: newStatus });
 
-    const fileType = type === "csv" ? "csv" : "xlsx";
-    const wbout =
-      type === "csv"
-        ? XLSX.utils.sheet_to_csv(ws)
-        : XLSX.write(wb, { bookType: fileType, type: "array" });
-    const blob = new Blob([wbout], {
-      type:
-        type === "csv" ? "text/csv;charset=utf-8;" : "application/octet-stream",
-    });
-    saveAs(blob, `users_export.${fileType}`);
-    setDownloadAnchorEl(null);
-  };
+//       // Update the allUsers state
+//       setAllUsers((prevUsers) =>
+//         prevUsers.map((user) =>
+//           user.id === userId ? { ...user, status: newStatus } : user
+//         )
+//       );
 
-  const handleDeleteClick = (id) => {
-    setUserToDelete(id);
-    setIsBulkDelete(false);
-    setOpenDeleteModal(true);
-    handleMenuClose(setRowMenuAnchorEl)();
-  };
+//       setSnackbar({
+//         open: true,
+//         message: `User ${
+//           newStatus === 1 ? "activated" : "deactivated"
+//         } successfully`,
+//         severity: "success",
+//       });
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message: error.message || "Failed to update user status",
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsActionLoading(false);
+//     }
+//   };
 
-  const handleBulkDeleteClick = () => {
-    setIsBulkDelete(true);
-    setOpenDeleteModal(true);
-    handleMenuClose(setBulkAnchorEl)();
-  };
+//   const handleBulkStatusChange = async (activate) => {
+//     setIsActionLoading(true);
+//     try {
+//       await Promise.all(
+//         selected.map((id) =>
+//           httpClient.put(`/users/${id}`, { status: activate ? 1 : 0 })
+//         )
+//       );
 
-  const confirmDelete = async () => {
-    setIsActionLoading(true);
-    try {
-      if (isBulkDelete) {
-        await Promise.all(
-          selected.map((id) => httpClient.delete(`/users/${id}`))
-        );
+//       // Update all users
+//       setAllUsers((prevUsers) =>
+//         prevUsers.map((user) =>
+//           selected.includes(user.id)
+//             ? { ...user, status: activate ? 1 : 0 }
+//             : user
+//         )
+//       );
 
-        setAllUsers((prev) => prev.filter((u) => !selected.includes(u.id)));
-        setSelected([]);
+//       setSnackbar({
+//         open: true,
+//         message: `${selected.length} user(s) ${
+//           activate ? "activated" : "deactivated"
+//         } successfully`,
+//         severity: "success",
+//       });
+//       setSelected([]);
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message:
+//           error.message ||
+//           `Failed to ${activate ? "activate" : "deactivate"} users`,
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsActionLoading(false);
+//       handleMenuClose(setBulkAnchorEl)();
+//     }
+//   };
 
-        setSnackbar({
-          open: true,
-          message: `${selected.length} users deleted successfully`,
-          severity: "success",
-        });
-      } else {
-        await httpClient.delete(`/users/${userToDelete}`);
+//   const exportData = (type) => {
+//     const data = filteredUsers.map((user) => ({
+//       "First Name": displayValue(user.first_name),
+//       "Middle Name": displayValue(user.middle_name),
+//       "Last Name": displayValue(user.last_name),
+//       "Full Name": displayValue(user.name),
+//       Username: displayValue(user.user_name),
+//       Email: displayValue(user.email),
+//       "Company ID": user.company_id,
+//       "Role ID": user.role_id,
+//       "Location ID": user.location_id,
+//       "Location Name": user.location ? displayValue(user.location.name) : "N/A",
+//       "Verified At": user.email_verified_at || "Not Verified",
+//       Status: user.status === 1 ? "Active" : "Inactive",
+//       "Created At": new Date(user.created_at).toLocaleString(),
+//       "Updated At": new Date(user.updated_at).toLocaleString(),
+//     }));
 
-        setSnackbar({
-          open: true,
-          message: "User deleted successfully",
-          severity: "success",
-        });
-        setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete));
-        setSelected((prev) => prev.filter((id) => id !== userToDelete));
-      }
-    } catch (error) {
-      setSnackbar({
-        open: true,
-        message: error.message || "Failed to delete user(s)",
-        severity: "error",
-      });
-    } finally {
-      setIsActionLoading(false);
-      setOpenDeleteModal(false);
-      setUserToDelete(null);
-      setIsBulkDelete(false);
-    }
-  };
+//     const ws = XLSX.utils.json_to_sheet(data);
+//     const wb = XLSX.utils.book_new();
+//     XLSX.utils.book_append_sheet(wb, ws, "Users");
 
-  const renderSkeletonRows = () => {
-    return Array(rowsPerPage)
-      .fill(0)
-      .map((_, index) => (
-        <TableRow key={`skeleton-${index}`}>
-          <TableCell>
-            <Skeleton variant="rectangular" width={20} height={20} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={100} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={100} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={100} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={80} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={150} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={120} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={80} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="text" width={80} />
-          </TableCell>
-          <TableCell>
-            <Skeleton variant="circular" width={32} height={32} />
-          </TableCell>
-        </TableRow>
-      ));
-  };
+//     const fileType = type === "csv" ? "csv" : "xlsx";
+//     const wbout =
+//       type === "csv"
+//         ? XLSX.utils.sheet_to_csv(ws)
+//         : XLSX.write(wb, { bookType: fileType, type: "array" });
+//     const blob = new Blob([wbout], {
+//       type:
+//         type === "csv" ? "text/csv;charset=utf-8;" : "application/octet-stream",
+//     });
+//     saveAs(blob, `users_export.${fileType}`);
+//     setDownloadAnchorEl(null);
+//   };
 
-  return (
-    <Box p={2}>
-      {/* Header with controls */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={2}
-      >
-        <Box display="flex" gap={1}>
-          {selected.length > 0 && (
-            <Button
-              variant="contained"
-              color="primary"
-              endIcon={<ExpandMore />}
-              onClick={handleMenuOpen(setBulkAnchorEl)}
-            >
-              Bulk Actions
-            </Button>
-          )}
-          {/* <IconButton>
-            <BarChart />
-          </IconButton> */}
-          <Button
-            variant="contained"
-            color="warning"
-            onClick={() => navigate("/users/create")}
-          >
-            Create User
-          </Button>
+//   const handleDeleteClick = (id) => {
+//     setUserToDelete(id);
+//     setIsBulkDelete(false);
+//     setOpenDeleteModal(true);
+//     handleMenuClose(setRowMenuAnchorEl)();
+//   };
 
-          <Tabs value={tab} onChange={handleTabChange} sx={{ ml: 2 }}>
-            <Tab label="Active" value="active" />
-            <Tab label="Inactive" value="archived" />
-          </Tabs>
-        </Box>
+//   const handleBulkDeleteClick = () => {
+//     setIsBulkDelete(true);
+//     setOpenDeleteModal(true);
+//     handleMenuClose(setBulkAnchorEl)();
+//   };
 
-        <Box display="flex" alignItems="center" gap={1}>
-          <TextField
-            size="small"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              endAdornment: (
-                <InputAdornment position="end">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
-          <IconButton onClick={handleMenuOpen(setDownloadAnchorEl)}>
-            <Download />
-          </IconButton>
-          {/* <IconButton>
-            <FilterList />
-          </IconButton> */}
-          <IconButton onClick={handleMenuOpen(setAnchorEl)}>
-            <MoreVert />
-          </IconButton>
-        </Box>
-      </Box>
+//   const confirmDelete = async () => {
+//     setIsActionLoading(true);
+//     try {
+//       if (isBulkDelete) {
+//         await Promise.all(
+//           selected.map((id) => httpClient.delete(`/users/${id}`))
+//         );
 
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+//         setAllUsers((prev) => prev.filter((u) => !selected.includes(u.id)));
+//         setSelected([]);
 
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>
-              <Checkbox
-                onChange={handleSelectAll}
-                checked={
-                  selected.length === filteredUsers.length &&
-                  filteredUsers.length > 0
-                }
-              />
-            </TableCell>
-            <TableCell>First Name</TableCell>
-            <TableCell>Last Name</TableCell>
-            <TableCell>Full Name</TableCell>
-            <TableCell>Username</TableCell>
-            <TableCell>Email</TableCell>
-            <TableCell>Location</TableCell>
-            <TableCell>Status</TableCell>
-            <TableCell>Verified</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {filteredUsers.length > 0 ? (
-            filteredUsers
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <Checkbox
-                      checked={selected.includes(user.id)}
-                      onChange={() => handleSelect(user.id)}
-                    />
-                  </TableCell>
-                  <TableCell>{displayValue(user.first_name)}</TableCell>
-                  <TableCell>{displayValue(user.last_name)}</TableCell>
-                  <TableCell>{displayValue(user.name)}</TableCell>
-                  <TableCell>{displayValue(user.user_name)}</TableCell>
-                  <TableCell>{displayValue(user.email)}</TableCell>
-                  <TableCell>
-                    {user.location ? displayValue(user.location.name) : "N/A"}
-                  </TableCell>
-                  <TableCell>
-                    <Switch
-                      checked={user.status === 1}
-                      onChange={() => handleToggleActivation(user.id, user.status)}
-                      color="primary"
-                      disabled={isActionLoading}
-                    />
-                    {user.status === 1 ? "Active" : "Inactive"}
-                  </TableCell>
-                  <TableCell>
-                    {user.email_verified_at ? "Yes" : "No"}
-                  </TableCell>
-                  <TableCell>
-                    <Box display="flex" alignItems="center" gap={1}>
-                      <IconButton
-                        onClick={() => navigate(`/users/profile/${user.id}`)}
-                        size="small"
-                      >
-                        <Avatar sx={{ width: 32, height: 32 }}>
-                          {user.name ? user.name.charAt(0) : <Person />}
-                        </Avatar>
-                      </IconButton>
-                      <IconButton
-                        onClick={(e) => {
-                          setActiveRowId(user.id);
-                          handleMenuOpen(setRowMenuAnchorEl)(e);
-                        }}
-                        size="small"
-                      >
-                        <MoreVert />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                </TableRow>
-              ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={10} align="center">
-                No users found
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+//         setSnackbar({
+//           open: true,
+//           message: `${selected.length} users deleted successfully`,
+//           severity: "success",
+//         });
+//       } else {
+//         await httpClient.delete(`/users/${userToDelete}`);
 
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={filteredUsers.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+//         setSnackbar({
+//           open: true,
+//           message: "User deleted successfully",
+//           severity: "success",
+//         });
+//         setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete));
+//         setSelected((prev) => prev.filter((id) => id !== userToDelete));
+//       }
+//     } catch (error) {
+//       setSnackbar({
+//         open: true,
+//         message: error.message || "Failed to delete user(s)",
+//         severity: "error",
+//       });
+//     } finally {
+//       setIsActionLoading(false);
+//       setOpenDeleteModal(false);
+//       setUserToDelete(null);
+//       setIsBulkDelete(false);
+//     }
+//   };
 
-      <Menu
-        anchorEl={bulkAnchorEl}
-        open={Boolean(bulkAnchorEl)}
-        onClose={handleMenuClose(setBulkAnchorEl)}
-      >
-        <MenuItem onClick={handleBulkDeleteClick}>
-          Delete Selected Users
-        </MenuItem>
-        {/* <MenuItem>Change Roles</MenuItem> */}
-        {/* <MenuItem onClick={() => handleBulkStatusChange(true)}>
-          Activate Selected
-        </MenuItem>
-        <MenuItem onClick={() => handleBulkStatusChange(false)}>
-          Deactivate Selected
-        </MenuItem> */}
-        {/* <MenuItem onClick={() => exportData("csv")}>Export</MenuItem> */}
-      </Menu>
+//   const renderSkeletonRows = () => {
+//     return Array(rowsPerPage)
+//       .fill(0)
+//       .map((_, index) => (
+//         <TableRow key={`skeleton-${index}`}>
+//           <TableCell>
+//             <Skeleton variant="rectangular" width={20} height={20} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={100} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={100} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={100} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={80} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={150} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={120} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={80} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="text" width={80} />
+//           </TableCell>
+//           <TableCell>
+//             <Skeleton variant="circular" width={32} height={32} />
+//           </TableCell>
+//         </TableRow>
+//       ));
+//   };
 
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose(setAnchorEl)}
-      >
-        <MenuItem onClick={()=>navigate("/general-settings/roles")}>Manage Roles</MenuItem>
-        {/* <MenuItem>Manage Brands</MenuItem> */}
-      </Menu>
+//   return (
+//     <Box p={2}>
+//       {/* Header with controls */}
+//       <Box
+//         display="flex"
+//         justifyContent="space-between"
+//         alignItems="center"
+//         mb={2}
+//       >
+//         <Box display="flex" gap={1}>
+//           {selected.length > 0 && (
+//             <Button
+//               variant="contained"
+//               color="primary"
+//               endIcon={<ExpandMore />}
+//               onClick={handleMenuOpen(setBulkAnchorEl)}
+//             >
+//               Bulk Actions
+//             </Button>
+//           )}
+//           {/* <IconButton>
+//             <BarChart />
+//           </IconButton> */}
+//           <Button
+//             variant="contained"
+//             color="warning"
+//             onClick={() => navigate("/users/create")}
+//           >
+//             Create User
+//           </Button>
 
-      <Menu
-        anchorEl={downloadAnchorEl}
-        open={Boolean(downloadAnchorEl)}
-        onClose={handleMenuClose(setDownloadAnchorEl)}
-      >
-        <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
-      </Menu>
+//           <Tabs value={tab} onChange={handleTabChange} sx={{ ml: 2 }}>
+//             <Tab label="Active" value="active" />
+//             <Tab label="Inactive" value="archived" />
+//           </Tabs>
+//         </Box>
 
-      <Menu
-        anchorEl={rowMenuAnchorEl}
-        open={Boolean(rowMenuAnchorEl)}
-        onClose={handleMenuClose(setRowMenuAnchorEl)}
-      >
-        <MenuItem onClick={() => navigate(`/users/${activeRowId}/edit`)}>
-          Edit
-        </MenuItem>
-        <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
-          Delete
-        </MenuItem>
-        {/* <MenuItem>Reset Password</MenuItem> */}
-        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
-      </Menu>
+//         <Box display="flex" alignItems="center" gap={1}>
+//           <TextField
+//             size="small"
+//             placeholder="Search users..."
+//             value={searchTerm}
+//             onChange={(e) => setSearchTerm(e.target.value)}
+//             InputProps={{
+//               endAdornment: (
+//                 <InputAdornment position="end">
+//                   <Search />
+//                 </InputAdornment>
+//               ),
+//             }}
+//           />
+//           <IconButton onClick={handleMenuOpen(setDownloadAnchorEl)}>
+//             <Download />
+//           </IconButton>
+//           {/* <IconButton>
+//             <FilterList />
+//           </IconButton> */}
+//           <IconButton onClick={handleMenuOpen(setAnchorEl)}>
+//             <MoreVert />
+//           </IconButton>
+//         </Box>
+//       </Box>
 
-      <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
-        <DialogTitle>
-          {isBulkDelete ? `Delete ${selected.length} Users?` : "Confirm Delete"}
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            {isBulkDelete
-              ? `Are you sure you want to delete ${selected.length} selected users? This action cannot be undone.`
-              : "Are you sure you want to delete this user? This action cannot be undone."}
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button
-            onClick={() => setOpenDeleteModal(false)}
-            color="primary"
-            disabled={isActionLoading}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={confirmDelete}
-            color="error"
-            autoFocus
-            disabled={isActionLoading}
-          >
-            {isActionLoading ? "Deleting..." : "Confirm Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+//       {error && (
+//         <Alert severity="error" sx={{ mb: 2 }}>
+//           {error}
+//         </Alert>
+//       )}
 
-      {isActionLoading && (
-        <Box
-          position="fixed"
-          top={0}
-          left={0}
-          right={0}
-          bottom={0}
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          bgcolor="rgba(0,0,0,0.1)"
-          zIndex={9999}
-        >
-          <CircularProgress />
-        </Box>
-      )}
+//       <Table size="small">
+//         <TableHead>
+//           <TableRow>
+//             <TableCell>
+//               <Checkbox
+//                 onChange={handleSelectAll}
+//                 checked={
+//                   selected.length === filteredUsers.length &&
+//                   filteredUsers.length > 0
+//                 }
+//               />
+//             </TableCell>
+//             <TableCell>First Name</TableCell>
+//             <TableCell>Last Name</TableCell>
+//             <TableCell>Full Name</TableCell>
+//             <TableCell>Username</TableCell>
+//             <TableCell>Email</TableCell>
+//             <TableCell>Location</TableCell>
+//             <TableCell>Status</TableCell>
+//             <TableCell>Verified</TableCell>
+//             <TableCell>Actions</TableCell>
+//           </TableRow>
+//         </TableHead>
+//         <TableBody>
+//           {filteredUsers.length > 0 ? (
+//             filteredUsers
+//               .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+//               .map((user) => (
+//                 <TableRow key={user.id}>
+//                   <TableCell>
+//                     <Checkbox
+//                       checked={selected.includes(user.id)}
+//                       onChange={() => handleSelect(user.id)}
+//                     />
+//                   </TableCell>
+//                   <TableCell>{displayValue(user.first_name)}</TableCell>
+//                   <TableCell>{displayValue(user.last_name)}</TableCell>
+//                   <TableCell>{displayValue(user.name)}</TableCell>
+//                   <TableCell>{displayValue(user.user_name)}</TableCell>
+//                   <TableCell>{displayValue(user.email)}</TableCell>
+//                   <TableCell>
+//                     {user.location ? displayValue(user.location.name) : "N/A"}
+//                   </TableCell>
+//                   <TableCell>
+//                     <Switch
+//                       checked={user.status === 1}
+//                       onChange={() =>
+//                         handleToggleActivation(user.id, user.status)
+//                       }
+//                       color="primary"
+//                       disabled={isActionLoading}
+//                     />
+//                     {user.status === 1 ? "Active" : "Inactive"}
+//                   </TableCell>
+//                   <TableCell>{user.email_verified_at ? "Yes" : "No"}</TableCell>
+//                   <TableCell>
+//                     <Box display="flex" alignItems="center" gap={1}>
+//                       <IconButton
+//                         onClick={() => navigate(`/users/profile/${user.id}`)}
+//                         size="small"
+//                       >
+//                         <Avatar sx={{ width: 32, height: 32 }}>
+//                           {user.name ? user.name.charAt(0) : <Person />}
+//                         </Avatar>
+//                       </IconButton>
+//                       <IconButton
+//                         onClick={(e) => {
+//                           setActiveRowId(user.id);
+//                           handleMenuOpen(setRowMenuAnchorEl)(e);
+//                         }}
+//                         size="small"
+//                       >
+//                         <MoreVert />
+//                       </IconButton>
+//                     </Box>
+//                   </TableCell>
+//                 </TableRow>
+//               ))
+//           ) : (
+//             <TableRow>
+//               <TableCell colSpan={10} align="center">
+//                 No users found
+//               </TableCell>
+//             </TableRow>
+//           )}
+//         </TableBody>
+//       </Table>
 
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={3000}
-        onClose={() => setSnackbar({ ...snackbar, open: false })}
-        anchorOrigin={{ vertical: "top", horizontal: "right" }}
-      >
-        <Alert
-          onClose={() => setSnackbar({ ...snackbar, open: false })}
-          severity={snackbar.severity}
-          variant= "filled"
-          sx={{ width: "100%" }}
-        >
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
-    </Box>
-  );
-};
+//       <TablePagination
+//         rowsPerPageOptions={[5, 10, 25]}
+//         component="div"
+//         count={filteredUsers.length}
+//         rowsPerPage={rowsPerPage}
+//         page={page}
+//         onPageChange={handleChangePage}
+//         onRowsPerPageChange={handleChangeRowsPerPage}
+//       />
 
-export default ManageUsers;
+//       <Menu
+//         anchorEl={bulkAnchorEl}
+//         open={Boolean(bulkAnchorEl)}
+//         onClose={handleMenuClose(setBulkAnchorEl)}
+//       >
+//         <MenuItem onClick={handleBulkDeleteClick}>
+//           Delete Selected Users
+//         </MenuItem>
+//         {/* <MenuItem>Change Roles</MenuItem> */}
+//         {/* <MenuItem onClick={() => handleBulkStatusChange(true)}>
+//           Activate Selected
+//         </MenuItem>
+//         <MenuItem onClick={() => handleBulkStatusChange(false)}>
+//           Deactivate Selected
+//         </MenuItem> */}
+//         {/* <MenuItem onClick={() => exportData("csv")}>Export</MenuItem> */}
+//       </Menu>
 
+//       <Menu
+//         anchorEl={anchorEl}
+//         open={Boolean(anchorEl)}
+//         onClose={handleMenuClose(setAnchorEl)}
+//       >
+//         <MenuItem onClick={() => navigate("/general-settings/roles")}>
+//           Manage Roles
+//         </MenuItem>
+//         {/* <MenuItem>Manage Brands</MenuItem> */}
+//       </Menu>
 
+//       <Menu
+//         anchorEl={downloadAnchorEl}
+//         open={Boolean(downloadAnchorEl)}
+//         onClose={handleMenuClose(setDownloadAnchorEl)}
+//       >
+//         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
+//         <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+//       </Menu>
 
+//       <Menu
+//         anchorEl={rowMenuAnchorEl}
+//         open={Boolean(rowMenuAnchorEl)}
+//         onClose={handleMenuClose(setRowMenuAnchorEl)}
+//       >
+//         <MenuItem onClick={() => navigate(`/users/${activeRowId}/edit`)}>
+//           Edit
+//         </MenuItem>
+//         <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
+//           Delete
+//         </MenuItem>
+//         {/* <MenuItem>Reset Password</MenuItem> */}
+//         <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
+//       </Menu>
+
+//       <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
+//         <DialogTitle>
+//           {isBulkDelete ? `Delete ${selected.length} Users?` : "Confirm Delete"}
+//         </DialogTitle>
+//         <DialogContent>
+//           <DialogContentText>
+//             {isBulkDelete
+//               ? `Are you sure you want to delete ${selected.length} selected users? This action cannot be undone.`
+//               : "Are you sure you want to delete this user? This action cannot be undone."}
+//           </DialogContentText>
+//         </DialogContent>
+//         <DialogActions>
+//           <Button
+//             onClick={() => setOpenDeleteModal(false)}
+//             color="primary"
+//             disabled={isActionLoading}
+//           >
+//             Cancel
+//           </Button>
+//           <Button
+//             onClick={confirmDelete}
+//             color="error"
+//             autoFocus
+//             disabled={isActionLoading}
+//           >
+//             {isActionLoading ? "Deleting..." : "Confirm Delete"}
+//           </Button>
+//         </DialogActions>
+//       </Dialog>
+
+//       {isActionLoading && (
+//         <Box
+//           position="fixed"
+//           top={0}
+//           left={0}
+//           right={0}
+//           bottom={0}
+//           display="flex"
+//           justifyContent="center"
+//           alignItems="center"
+//           bgcolor="rgba(0,0,0,0.1)"
+//           zIndex={9999}
+//         >
+//           <CircularProgress />
+//         </Box>
+//       )}
+
+//       <Snackbar
+//         open={snackbar.open}
+//         autoHideDuration={3000}
+//         onClose={() => setSnackbar({ ...snackbar, open: false })}
+//         anchorOrigin={{ vertical: "top", horizontal: "right" }}
+//       >
+//         <Alert
+//           onClose={() => setSnackbar({ ...snackbar, open: false })}
+//           severity={snackbar.severity}
+//           variant="filled"
+//           sx={{ width: "100%" }}
+//         >
+//           {snackbar.message}
+//         </Alert>
+//       </Snackbar>
+//     </Box>
+//   );
+// };
+
+// export default ManageUsers;
+
+// ************************************************************
 
 // import React, { useState, useEffect } from "react";
 // import { useNavigate, useLoaderData } from "react-router-dom";
@@ -1180,3 +1189,669 @@ export default ManageUsers;
 
 // export default ManageUsers;
 
+import React, { useState, useEffect } from "react";
+import { useNavigate, useLoaderData } from "react-router-dom";
+import {
+  Box,
+  Table,
+  TableHead,
+  TableBody,
+  TableRow,
+  TableCell,
+  Checkbox,
+  IconButton,
+  Button,
+  Menu,
+  MenuItem,
+  TextField,
+  InputAdornment,
+  TablePagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  Skeleton,
+  Snackbar,
+  Alert,
+  CircularProgress,
+  Switch,
+  Tabs,
+  Tab,
+  Avatar,
+  useMediaQuery,
+  useTheme,
+} from "@mui/material";
+import {
+  MoreVert,
+  Search,
+  BarChart,
+  Download,
+  ExpandMore,
+  Person,
+} from "@mui/icons-material";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+import { httpClient } from "../../utils/httpClientSetup";
+
+export async function loader() {
+  try {
+    const response = await httpClient.get("users");
+    return { users: response.data.data };
+  } catch (error) {
+    console.error("Loader Error:", error);
+    throw new Error(error.message || "Failed to load users");
+  }
+}
+
+const ManageUsers = () => {
+  const navigate = useNavigate();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+  const { users: initialUsers } = useLoaderData();
+
+  const [allUsers, setAllUsers] = useState(initialUsers);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [tab, setTab] = useState("active");
+  const [selected, setSelected] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(isMobile ? 5 : 10);
+
+  const [anchorEl, setAnchorEl] = useState(null);
+  const [bulkAnchorEl, setBulkAnchorEl] = useState(null);
+  const [downloadAnchorEl, setDownloadAnchorEl] = useState(null);
+  const [rowMenuAnchorEl, setRowMenuAnchorEl] = useState(null);
+  const [activeRowId, setActiveRowId] = useState(null);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isBulkDelete, setIsBulkDelete] = useState(false);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  // Update rowsPerPage on screen size change
+  useEffect(() => {
+    setRowsPerPage(isMobile ? 5 : 10);
+  }, [isMobile]);
+
+  const displayValue = (value) => value || "N/A";
+
+  // Filtering users by tab and searchTerm
+  useEffect(() => {
+    let filtered = allUsers;
+    filtered = filtered.filter((user) =>
+      tab === "active" ? user.status === 1 : user.status === 0
+    );
+    if (searchTerm.trim() !== "") {
+      filtered = filtered.filter(
+        (user) =>
+          user.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.location?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    setFilteredUsers(filtered);
+    setPage(0);
+  }, [allUsers, tab, searchTerm]);
+
+  const handleTabChange = (event, newValue) => {
+    setTab(newValue);
+  };
+
+  const handleMenuOpen = (setter) => (event) => setter(event.currentTarget);
+  const handleMenuClose = (setter) => () => setter(null);
+
+  const handleSelectAll = (e) => {
+    setSelected(e.target.checked ? filteredUsers.map((u) => u.id) : []);
+  };
+
+  const handleSelect = (id) => {
+    setSelected((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleChangePage = (_, newPage) => setPage(newPage);
+
+  const handleChangeRowsPerPage = (e) => {
+    setRowsPerPage(parseInt(e.target.value, 10));
+    setPage(0);
+  };
+
+  const handleToggleActivation = async (userId, currentStatus) => {
+    setIsActionLoading(true);
+    try {
+      const newStatus = currentStatus === 1 ? 0 : 1;
+      await httpClient.put(`/users/${userId}`, { status: newStatus });
+
+      setAllUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          user.id === userId ? { ...user, status: newStatus } : user
+        )
+      );
+      setSnackbar({
+        open: true,
+        message: `User ${
+          newStatus === 1 ? "activated" : "deactivated"
+        } successfully`,
+        severity: "success",
+      });
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to update user status",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleBulkStatusChange = async (activate) => {
+    setIsActionLoading(true);
+    try {
+      await Promise.all(
+        selected.map((id) =>
+          httpClient.put(`/users/${id}`, { status: activate ? 1 : 0 })
+        )
+      );
+
+      setAllUsers((prevUsers) =>
+        prevUsers.map((user) =>
+          selected.includes(user.id)
+            ? { ...user, status: activate ? 1 : 0 }
+            : user
+        )
+      );
+      setSnackbar({
+        open: true,
+        message: `${selected.length} user(s) ${
+          activate ? "activated" : "deactivated"
+        } successfully`,
+        severity: "success",
+      });
+      setSelected([]);
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message:
+          error.message ||
+          `Failed to ${activate ? "activate" : "deactivate"} users`,
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+      handleMenuClose(setBulkAnchorEl)();
+    }
+  };
+
+  const exportData = (type) => {
+    const data = filteredUsers.map((user) => ({
+      "First Name": displayValue(user.first_name),
+      "Middle Name": displayValue(user.middle_name),
+      "Last Name": displayValue(user.last_name),
+      "Full Name": displayValue(user.name),
+      Username: displayValue(user.user_name),
+      Email: displayValue(user.email),
+      "Company ID": user.company_id,
+      "Role ID": user.role_id,
+      "Location ID": user.location_id,
+      "Location Name": user.location ? displayValue(user.location.name) : "N/A",
+      "Verified At": user.email_verified_at || "Not Verified",
+      Status: user.status === 1 ? "Active" : "Inactive",
+      "Created At": new Date(user.created_at).toLocaleString(),
+      "Updated At": new Date(user.updated_at).toLocaleString(),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Users");
+
+    const fileType = type === "csv" ? "csv" : "xlsx";
+
+    let wbout, blob, fileExtension, mimeType;
+    if (fileType === "csv") {
+      wbout = XLSX.utils.sheet_to_csv(ws);
+      fileExtension = "csv";
+      mimeType = "text/csv;charset=utf-8;";
+      blob = new Blob([wbout], { type: mimeType });
+    } else {
+      wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+      fileExtension = "xlsx";
+      mimeType =
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      blob = new Blob([wbout], { type: mimeType });
+    }
+
+    saveAs(blob, `users_export.${fileExtension}`);
+    setDownloadAnchorEl(null);
+  };
+
+  const handleDeleteClick = (id) => {
+    setUserToDelete(id);
+    setIsBulkDelete(false);
+    setOpenDeleteModal(true);
+    handleMenuClose(setRowMenuAnchorEl)();
+  };
+
+  const handleBulkDeleteClick = () => {
+    setIsBulkDelete(true);
+    setOpenDeleteModal(true);
+    handleMenuClose(setBulkAnchorEl)();
+  };
+
+  const confirmDelete = async () => {
+    setIsActionLoading(true);
+    try {
+      if (isBulkDelete) {
+        await Promise.all(
+          selected.map((id) => httpClient.delete(`/users/${id}`))
+        );
+
+        setAllUsers((prev) => prev.filter((u) => !selected.includes(u.id)));
+        setSelected([]);
+        setSnackbar({
+          open: true,
+          message: `${selected.length} users deleted successfully`,
+          severity: "success",
+        });
+      } else {
+        await httpClient.delete(`/users/${userToDelete}`);
+
+        setSnackbar({
+          open: true,
+          message: "User deleted successfully",
+          severity: "success",
+        });
+        setAllUsers((prev) => prev.filter((u) => u.id !== userToDelete));
+        setSelected((prev) => prev.filter((id) => id !== userToDelete));
+      }
+    } catch (error) {
+      setSnackbar({
+        open: true,
+        message: error.message || "Failed to delete user(s)",
+        severity: "error",
+      });
+    } finally {
+      setIsActionLoading(false);
+      setOpenDeleteModal(false);
+      setUserToDelete(null);
+      setIsBulkDelete(false);
+    }
+  };
+
+  const renderSkeletonRows = () => {
+    return Array(rowsPerPage)
+      .fill(0)
+      .map((_, index) => (
+        <TableRow key={`skeleton-${index}`}>
+          <TableCell>
+            <Skeleton variant="rectangular" width={20} height={20} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={100} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={100} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={100} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={80} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={150} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={120} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={80} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="text" width={80} />
+          </TableCell>
+          <TableCell>
+            <Skeleton variant="circular" width={32} height={32} />
+          </TableCell>
+        </TableRow>
+      ));
+  };
+
+  return (
+    <Box p={isMobile ? 1 : 2}>
+      {/* Header with controls */}
+      <Box
+        display="flex"
+        flexDirection={isMobile ? "column" : "row"}
+        justifyContent="space-between"
+        alignItems={isMobile ? "flex-start" : "center"}
+        mb={2}
+        gap={1}
+      >
+        <Box
+          display="flex"
+          flexWrap="wrap"
+          gap={1}
+          alignItems="center"
+          width={isMobile ? "100%" : "auto"}
+        >
+          {selected.length > 0 && (
+            <Button
+              variant="contained"
+              color="primary"
+              size={isMobile ? "small" : "medium"}
+              endIcon={<ExpandMore />}
+              onClick={handleMenuOpen(setBulkAnchorEl)}
+              disabled={isActionLoading}
+            >
+              {isMobile ? "Actions" : "Bulk Actions"}
+            </Button>
+          )}
+          {/* Uncomment the BarChart icon if needed */}
+          {/* <IconButton>
+            <BarChart />
+          </IconButton> */}
+          <Button
+            variant="contained"
+            color="warning"
+            size={isMobile ? "small" : "medium"}
+            onClick={() => navigate("/users/create")}
+            disabled={isActionLoading}
+          >
+            {isMobile ? "Create" : "Create User"}
+          </Button>
+          <Tabs
+            value={tab}
+            onChange={handleTabChange}
+            sx={{ ml: isMobile ? 0 : 2, width: isMobile ? "100%" : "auto" }}
+            variant={isMobile ? "fullWidth" : "standard"}
+          >
+            <Tab label="Active" value="active" />
+            <Tab label="Inactive" value="archived" />
+          </Tabs>
+        </Box>
+
+        <Box
+          display="flex"
+          alignItems="center"
+          gap={1}
+          width={isMobile ? "100%" : "auto"}
+          mt={isMobile ? 1 : 0}
+        >
+          <TextField
+            fullWidth={isMobile}
+            size="small"
+            placeholder="Search users..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <Search />
+                </InputAdornment>
+              ),
+              sx: {
+                fontSize: isMobile ? "14px" : "inherit",
+                height: isMobile ? "40px" : "auto",
+              },
+            }}
+            disabled={isActionLoading}
+          />
+          <IconButton
+            onClick={handleMenuOpen(setDownloadAnchorEl)}
+            disabled={isActionLoading}
+          >
+            <Download />
+          </IconButton>
+          <IconButton
+            onClick={handleMenuOpen(setAnchorEl)}
+            disabled={isActionLoading}
+          >
+            <MoreVert />
+          </IconButton>
+        </Box>
+      </Box>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ overflowX: "auto" }}>
+        <Table size="small" sx={{ minWidth: isMobile ? "900px" : "100%" }}>
+          <TableHead>
+            <TableRow>
+              <TableCell>
+                <Checkbox
+                  onChange={handleSelectAll}
+                  checked={
+                    selected.length === filteredUsers.length &&
+                    filteredUsers.length > 0
+                  }
+                  indeterminate={
+                    selected.length > 0 &&
+                    selected.length < filteredUsers.length
+                  }
+                />
+              </TableCell>
+              <TableCell>First Name</TableCell>
+              <TableCell>Last Name</TableCell>
+              <TableCell>Full Name</TableCell>
+              <TableCell>Username</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Location</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Verified</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {filteredUsers.length > 0 ? (
+              filteredUsers
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selected.includes(user.id)}
+                        onChange={() => handleSelect(user.id)}
+                      />
+                    </TableCell>
+                    <TableCell>{displayValue(user.first_name)}</TableCell>
+                    <TableCell>{displayValue(user.last_name)}</TableCell>
+                    <TableCell>{displayValue(user.name)}</TableCell>
+                    <TableCell>{displayValue(user.user_name)}</TableCell>
+                    <TableCell>{displayValue(user.email)}</TableCell>
+                    <TableCell>
+                      {user.location ? displayValue(user.location.name) : "N/A"}
+                    </TableCell>
+                    <TableCell>
+                      <Switch
+                        checked={user.status === 1}
+                        onChange={() =>
+                          handleToggleActivation(user.id, user.status)
+                        }
+                        color="primary"
+                        disabled={isActionLoading}
+                      />
+                      {user.status === 1 ? "Active" : "Inactive"}
+                    </TableCell>
+                    <TableCell>
+                      {user.email_verified_at ? "Yes" : "No"}
+                    </TableCell>
+                    <TableCell>
+                      <Box display="flex" alignItems="center" gap={1}>
+                        <IconButton
+                          onClick={() => navigate(`/users/profile/${user.id}`)}
+                          size="small"
+                        >
+                          <Avatar sx={{ width: 32, height: 32 }}>
+                            {user.name ? user.name.charAt(0) : <Person />}
+                          </Avatar>
+                        </IconButton>
+                        <IconButton
+                          onClick={(e) => {
+                            setActiveRowId(user.id);
+                            handleMenuOpen(setRowMenuAnchorEl)(e);
+                          }}
+                          size="small"
+                        >
+                          <MoreVert />
+                        </IconButton>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={10} align="center">
+                  No users found
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Box>
+
+      <TablePagination
+        rowsPerPageOptions={[5, 10, 25]}
+        component="div"
+        count={filteredUsers.length}
+        rowsPerPage={rowsPerPage}
+        page={page}
+        onPageChange={handleChangePage}
+        onRowsPerPageChange={handleChangeRowsPerPage}
+        sx={{ mt: 1 }}
+      />
+
+      {/* Bulk Actions Menu */}
+      <Menu
+        anchorEl={bulkAnchorEl}
+        open={Boolean(bulkAnchorEl)}
+        onClose={handleMenuClose(setBulkAnchorEl)}
+      >
+        <MenuItem onClick={handleBulkDeleteClick}>
+          Delete Selected Users
+        </MenuItem>
+
+        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
+        {/* Additional bulk actions can be added here */}
+      </Menu>
+
+      {/* Settings Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose(setAnchorEl)}
+      >
+        <MenuItem onClick={() => navigate("/general-settings/roles")}>
+          Manage Roles
+        </MenuItem>
+        {/* Additional items can be added */}
+      </Menu>
+
+      {/* Download Menu */}
+      <Menu
+        anchorEl={downloadAnchorEl}
+        open={Boolean(downloadAnchorEl)}
+        onClose={handleMenuClose(setDownloadAnchorEl)}
+      >
+        <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
+        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+      </Menu>
+
+      {/* Row Actions Menu */}
+      <Menu
+        anchorEl={rowMenuAnchorEl}
+        open={Boolean(rowMenuAnchorEl)}
+        onClose={handleMenuClose(setRowMenuAnchorEl)}
+      >
+        <MenuItem onClick={() => navigate(`/users/${activeRowId}/edit`)}>
+          Edit
+        </MenuItem>
+        <MenuItem onClick={() => handleDeleteClick(activeRowId)}>
+          Delete
+        </MenuItem>
+        {/* <MenuItem>Reset Password</MenuItem> Additional actions */}
+        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
+      </Menu>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)}>
+        <DialogTitle>
+          {isBulkDelete ? `Delete ${selected.length} Users?` : "Confirm Delete"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {isBulkDelete
+              ? `Are you sure you want to delete ${selected.length} selected users? This action cannot be undone.`
+              : "Are you sure you want to delete this user? This action cannot be undone."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setOpenDeleteModal(false)}
+            color="primary"
+            disabled={isActionLoading}
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmDelete}
+            color="error"
+            autoFocus
+            disabled={isActionLoading}
+          >
+            {isActionLoading ? "Deleting..." : "Confirm Delete"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {isActionLoading && (
+        <Box
+          position="fixed"
+          top={0}
+          left={0}
+          right={0}
+          bottom={0}
+          display="flex"
+          justifyContent="center"
+          alignItems="center"
+          bgcolor="rgba(0,0,0,0.1)"
+          zIndex={9999}
+        >
+          <CircularProgress />
+        </Box>
+      )}
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={() => setSnackbar({ ...snackbar, open: false })}
+          severity={snackbar.severity}
+          variant="filled"
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
+    </Box>
+  );
+};
+
+export default ManageUsers;
