@@ -6,6 +6,7 @@ import {
   Chip,
   Link as MuiLink,
   Container,
+  Divider,
 } from "@mui/material";
 import { PlayCircle, Link as LinkIcon } from "@mui/icons-material";
 import RichTextContent from "../RichTextContent";
@@ -148,6 +149,7 @@ const PolicyPreview = ({
         <Typography variant="h4" gutterBottom>
           {title || "Policy Preview"}
         </Typography>
+        <Divider sx={{ mb: 3 }} />
         {content && <RichTextContent content={content} />}
         {videos.length > 0 && (
           <Box sx={{ mt: 3 }}>

@@ -1600,9 +1600,10 @@ const PolicyDetails = () => {
                       const videoId = getYoutubeVideoId(
                         previewVideo.reference_url
                       );
+
                       return videoId ? (
                         <iframe
-                          src={`https://www.youtube.com/embed/ ${videoId}`}
+                          src={`https://www.youtube.com/embed/${videoId}`}
                           title={previewVideo.title}
                           allowFullScreen
                           style={{
@@ -1626,7 +1627,7 @@ const PolicyDetails = () => {
                       );
                       return videoId ? (
                         <iframe
-                          src={`https://player.vimeo.com/video/ ${videoId}`}
+                          src={`https://player.vimeo.com/video/${videoId}`}
                           title={previewVideo.title}
                           allowFullScreen
                           style={{
