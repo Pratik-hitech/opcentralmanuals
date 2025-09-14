@@ -451,11 +451,11 @@ const OperationsManuals = () => {
               </>
             )}
 
-            <IconButton onClick={handleMenuClick}>
+            {/* <IconButton onClick={handleMenuClick}>
               <MoreVertIcon />
-            </IconButton>
+            </IconButton> */}
 
-            <Menu
+            {/* <Menu
               anchorEl={anchorEl}
               open={open}
               onClose={handleClose}
@@ -496,7 +496,7 @@ const OperationsManuals = () => {
                   </MenuItem>
                 </>
               )}
-            </Menu>
+            </Menu> */}
           </Stack>
         </Box>
 
