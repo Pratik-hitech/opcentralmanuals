@@ -4,7 +4,6 @@ import {
   Typography,
   Button,
   styled,
-  Chip,
   Switch,
   Dialog,
   DialogTitle,
@@ -31,12 +30,11 @@ import {
   VideoLibrary,
   YouTube,
   Movie,
-  PlayCircleOutline,
   Edit as EditIcon,
   Delete as DeleteIcon,
   Visibility as VisibilityIcon,
 } from "@mui/icons-material";
-import { getVimeoVideoId, getYoutubeVideoId } from "../../utils";
+import { getVimeoVideoId, getYouTubeVideoId } from "../../utils/videoUtils";
 
 const VideoCard = styled(Card)(({ theme }) => ({
   borderRadius: 16,
@@ -471,7 +469,7 @@ const AddVideo = ({
                     </Typography>
                     {selectedVideoType === "youtube"
                       ? (() => {
-                          const videoId = getYoutubeVideoId(videoData.url);
+                          const videoId = getYouTubeVideoId(videoData.url);
                           return videoId ? (
                             <iframe
                               src={`https://www.youtube.com/embed/${videoId}`}

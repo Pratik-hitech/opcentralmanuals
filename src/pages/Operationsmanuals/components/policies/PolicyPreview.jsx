@@ -4,13 +4,12 @@ import {
   Typography,
   Paper,
   Chip,
-  Link as MuiLink,
   Container,
   Divider,
 } from "@mui/material";
-import { PlayCircle, Link as LinkIcon } from "@mui/icons-material";
+import { Link as LinkIcon } from "@mui/icons-material";
 import RichTextContent from "../RichTextContent";
-import { getVimeoVideoId, getYoutubeVideoId } from "../../utils";
+import VideoRenderer from "../common/VideoRenderer";
 
 const PolicyPreview = ({
   title,
@@ -20,109 +19,7 @@ const PolicyPreview = ({
   links = [],
 }) => {
   const renderVideo = (video, index) => {
-    const renderVideoPreview = () => {
-      const videoSrc =
-        video.type === "upload" && video.file
-          ? URL.createObjectURL(video.file)
-          : video.reference_url;
-
-      if (video.type === "youtube" && video.reference_url) {
-        const videoId = getYoutubeVideoId(video.reference_url);
-        if (videoId) {
-          return (
-            <Box
-              sx={{
-                position: "relative",
-                paddingTop: "56.25%" /* 16:9 ratio */,
-              }}
-            >
-              <iframe
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title={video.title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  height: "100%",
-                  borderRadius: "8px",
-                }}
-              />
-            </Box>
-          );
-        }
-      } else if (video.type === "vimeo" && video.reference_url) {
-        const videoId = getVimeoVideoId(video.reference_url);
-        if (videoId) {
-          return (
-            <Box sx={{ mb: 2 }}>
-              <iframe
-                src={`https://player.vimeo.com/video/${videoId}`}
-                width="100%"
-                height="400"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                title={video.title}
-              />
-            </Box>
-          );
-        }
-      } else if (video.type === "upload" && videoSrc) {
-        return (
-          <Box sx={{ position: "relative", paddingTop: "56.25%", mb: 2 }}>
-            <video
-              controls
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "100%",
-                height: "100%",
-                borderRadius: "8px", // optional, for rounded edges
-                backgroundColor: "#000", // avoids white flash before video loads
-              }}
-            >
-              <source src={videoSrc} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </Box>
-        );
-      }
-      return null;
-    };
-
-    return (
-      <Paper key={index} elevation={2} sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {video.title}
-        </Typography>
-        {video.description && (
-          <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-            {video.description}
-          </Typography>
-        )}
-        {renderVideoPreview()}
-        {video.reference_url && (
-          <Box sx={{ mt: 2, mb: 2 }}>
-            <MuiLink href={video.reference_url} target="_blank" rel="noopener">
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                <PlayCircle color="primary" />
-                <Typography>
-                  {video.type === "youtube" && "Watch on YouTube"}
-                  {video.type === "vimeo" && "Watch on Vimeo"}
-                  {video.type === "upload" && "Play Video"}
-                </Typography>
-              </Box>
-            </MuiLink>
-          </Box>
-        )}
-        <Chip label={video.type} size="small" variant="outlined" />
-      </Paper>
-    );
+    return <VideoRenderer video={video} key={index} />;
   };
 
   const renderLink = (link, index) => {

@@ -50,6 +50,7 @@ import TocIcon from "@mui/icons-material/Toc";
 import { httpClient } from "../../../../utils/httpClientSetup";
 import { useAuth } from "../../../../context/AuthContext";
 import RichTextContent from "../RichTextContent";
+import VideoRenderer from "../common/VideoRenderer";
 
 const OperationsManual = () => {
   const { id, policyId } = useParams();
@@ -906,97 +907,8 @@ const OperationsManual = () => {
   };
 
   // Render video item
-  const renderVideo = (video) => {
-    // Function to extract YouTube video ID from URL
-    const getYouTubeVideoId = (url) => {
-      const regExp =
-        /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-      const match = url.match(regExp);
-      return match && match[2].length === 11 ? match[2] : null;
-    };
-
-    // Function to extract Vimeo video ID from URL
-    const getVimeoVideoId = (url) => {
-      const regExp = /(?:vimeo)\.com.*(?:videos|video|channels|)\/([\d]+)/i;
-      const match = url.match(regExp);
-      return match && match[1] ? match[1] : null;
-    };
-
-    // Render video preview based on type
-    const renderVideoPreview = () => {
-      if (video.type === "youtube") {
-        const videoId = getYouTubeVideoId(video.reference_url);
-        if (videoId) {
-          return (
-            <Box sx={{ mb: 2 }}>
-              <iframe
-                width="100%"
-                height="400"
-                src={`https://www.youtube.com/embed/${videoId}`}
-                title={video.title}
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              ></iframe>
-            </Box>
-          );
-        }
-      } else if (video.type === "vimeo") {
-        const videoId = getVimeoVideoId(video.reference_url);
-        if (videoId) {
-          return (
-            <Box sx={{ mb: 2 }}>
-              <iframe
-                src={`https://player.vimeo.com/video/${videoId}`}
-                width="100%"
-                height="400"
-                frameBorder="0"
-                allow="autoplay; fullscreen; picture-in-picture"
-                allowFullScreen
-                title={video.title}
-              ></iframe>
-            </Box>
-          );
-        }
-      } else if (video.type === "upload") {
-        return (
-          <Box sx={{ mb: 2 }}>
-            <video controls width="100%">
-              <source src={video.reference_url} type="video/mp4" />
-              Your browser does not support the video tag.
-            </video>
-          </Box>
-        );
-      }
-      return null;
-    };
-
-    return (
-      <Paper key={video.id} elevation={2} sx={{ p: 2, mb: 2 }}>
-        <Typography variant="h6" gutterBottom>
-          {video.title}
-        </Typography>
-        {video.description && (
-          <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-            {video.description}
-          </Typography>
-        )}
-        {renderVideoPreview()}
-        <Box sx={{ mb: 1 }}>
-          <MuiLink href={video.reference_url} target="_blank" rel="noopener">
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-              <PlayCircle color="primary" />
-              <Typography>
-                {video.type === "youtube" && "Watch on YouTube"}
-                {video.type === "vimeo" && "Watch on Vimeo"}
-                {video.type === "upload" && "Play Video"}
-              </Typography>
-            </Box>
-          </MuiLink>
-        </Box>
-        <Chip label={video.type} size="small" variant="outlined" />
-      </Paper>
-    );
+  const renderVideo = (video, index) => {
+    return <VideoRenderer video={video} key={index} />;
   };
 
   // Render link item

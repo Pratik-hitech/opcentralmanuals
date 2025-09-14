@@ -51,7 +51,8 @@ import RichTextEditor from "../../../../components/RichTextEditor";
 import { httpClient } from "../../../../utils/httpClientSetup";
 import { useNotification } from "../../../../hooks/useNotification";
 import MediaFolderViewer from "../../../FileManager/FileManager";
-import { getVimeoVideoId, getYoutubeVideoId } from "../../utils";
+import { getVimeoVideoId, getYouTubeVideoId } from "../../utils/videoUtils";
+
 import AddVideo from "./AddVideo";
 import PolicyPreview from "./PolicyPreview";
 
@@ -1597,7 +1598,7 @@ const PolicyDetails = () => {
                 ) : previewVideo.type === "youtube" ? (
                   previewVideo.reference_url ? (
                     (() => {
-                      const videoId = getYoutubeVideoId(
+                      const videoId = getYouTubeVideoId(
                         previewVideo.reference_url
                       );
 
