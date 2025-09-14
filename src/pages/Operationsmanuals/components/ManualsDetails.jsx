@@ -97,6 +97,8 @@ const ManualsDetails = () => {
     submitData.append("description", formData.description);
     if (formData.thumbnail) {
       submitData.append("image", formData.thumbnail);
+    } else {
+      submitData.append("thumbnail", "");
     }
 
     try {

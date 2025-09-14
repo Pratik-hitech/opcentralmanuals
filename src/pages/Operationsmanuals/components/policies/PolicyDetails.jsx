@@ -34,6 +34,7 @@ import {
   Collapse,
   FormControlLabel,
   Checkbox,
+  ListItemIcon,
 } from "@mui/material";
 import {
   InfoOutlined as InfoIcon,
@@ -42,6 +43,7 @@ import {
   Add as AddIcon,
   Close as CloseIcon,
   Edit as EditIcon,
+  Article,
 } from "@mui/icons-material";
 import ArrowBack from "@mui/icons-material/ArrowBack";
 import Grid from "@mui/material/Grid";
@@ -49,7 +51,9 @@ import RichTextEditor from "../../../../components/RichTextEditor";
 import { httpClient } from "../../../../utils/httpClientSetup";
 import { useNotification } from "../../../../hooks/useNotification";
 import MediaFolderViewer from "../../../FileManager/FileManager";
+import { getVimeoVideoId, getYoutubeVideoId } from "../../utils";
 import AddVideo from "./AddVideo";
+import PolicyPreview from "./PolicyPreview";
 
 const FormGrid = styled(Grid)(() => ({
   display: "flex",
@@ -120,19 +124,6 @@ const SelectedPdfBox = styled(Box)(({ theme }) => ({
   marginTop: theme.spacing(1),
 }));
 
-const getYoutubeVideoId = (url) => {
-  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
-  const match = url.match(regExp);
-  return match && match[2].length === 11 ? match[2] : null;
-};
-
-const getVimeoVideoId = (url) => {
-  const regExp =
-    /(?:www\.|player\.)?vimeo.com\/(?:channels\/(?:\w+\/)?|groups\/(?:[^/]*)\/videos\/|album\/(?:\d+)\/video\/|video\/|)(\d+)(?:[a-zA-Z0-9_-]+)?/i;
-  const match = url.match(regExp);
-  return match ? match[1] : null;
-};
-
 const PolicyDetails = () => {
   const [formData, setFormData] = useState({
     title: "",
@@ -169,6 +160,7 @@ const PolicyDetails = () => {
   const [versionNotes, setVersionNotes] = useState("");
   const [nextVersion, setNextVersion] = useState("");
   const [currentVersion, setCurrentVersion] = useState("1.0");
+  const [showPreview, setShowPreview] = useState(false);
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
@@ -200,7 +192,7 @@ const PolicyDetails = () => {
       // Fallback: Use collection id when navigationId is null and no mappings exist (edit mode)
       autoMapNavigationFromCollection(id);
     }
-  }, [navigationId, id, policyId, mappedMappings.length]);
+  }, [navigationId, id, policyId]);
 
   useEffect(() => {
     if (policyId) {
@@ -630,20 +622,20 @@ const PolicyDetails = () => {
   const handleImageMediaViewerClose = (selectedImageFiles = []) => {
     setShowImageMediaViewer(false);
     if (selectedImageFiles.length > 0) {
-      const selectedImage = selectedImageFiles[0];
-
-      const urlPart = selectedImage.url.startsWith("/")
-        ? selectedImage.url
-        : "/" + selectedImage.url;
-
-      const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}${urlPart}`;
-
-      // Get the TinyMCE editor instance and insert the image
       const tinyMCEEditor = window.tinymce.activeEditor;
       if (tinyMCEEditor) {
-        tinyMCEEditor.insertContent(
-          `<img src="${imageUrl}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
-        );
+        selectedImageFiles.forEach((selectedImage) => {
+          const urlPart = selectedImage.url.startsWith("/")
+            ? selectedImage.url
+            : "/" + selectedImage.url;
+
+          const imageUrl = `https://opmanual.franchise.care/uploaded/${selectedImage.company_id}${urlPart}`;
+
+          // Get the TinyMCE editor instance and insert the image
+          tinyMCEEditor.insertContent(
+            `<img src="${imageUrl}" alt="${selectedImage.name}" style="max-width: 100%; height: auto;" />`
+          );
+        });
       }
     }
   };
@@ -719,6 +711,11 @@ const PolicyDetails = () => {
               backgroundColor: depth === 0 ? "#eeeeee" : "#fafafa",
             }}
           >
+            {isPolicy && (
+              <ListItemIcon sx={{ minWidth: 25 }}>
+                <Article sx={{ fontSize: 16 }} />
+              </ListItemIcon>
+            )}
             <ListItemText
               primary={item.title}
               primaryTypographyProps={{
@@ -907,267 +904,275 @@ const PolicyDetails = () => {
   }
 
   return (
-    <Container
-      maxWidth={false}
-      sx={{
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        minHeight: "100vh",
-        py: 4,
-        backgroundColor: "#f8fafc",
-      }}
-    >
-      <Box
-        sx={{ width: "65%", display: "flex", flexDirection: "column", gap: 3 }}
+    <>
+      <Container
+        maxWidth={false}
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          py: 4,
+          backgroundColor: "#f8fafc",
+        }}
       >
         <Box
           sx={{
+            width: "65%",
             display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-          }}
-        >
-          <Typography
-            variant="h4"
-            component="h1"
-            sx={{
-              mb: 2,
-              textAlign: "center",
-              color: "#2d3748",
-              fontWeight: 700,
-            }}
-          >
-            Policy Details
-          </Typography>
-          <Button
-            variant="outlined"
-            color="primary"
-            startIcon={<ArrowBack />}
-            onClick={() => navigate(-1)}
-          >
-            Back
-          </Button>
-        </Box>
-        <Paper
-          elevation={3}
-          sx={{
-            p: 4,
-            borderRadius: 3,
-            backgroundColor: "#ffffff",
-            boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+            flexDirection: "column",
+            gap: 3,
           }}
         >
           <Box
-            component="form"
-            onSubmit={handleSubmit}
-            sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
           >
-            <FormGrid size={{ xs: 12, md: 6 }}>
-              <FormLabel
-                htmlFor="title"
-                required
-                sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}
-              >
-                Title
-              </FormLabel>
-              <OutlinedInput
-                id="title"
-                name="title"
-                type="text"
-                value={formData.title}
-                onChange={handleChange}
-                placeholder="Enter policy title"
-                autoComplete="title"
-                required
-                sx={{
-                  borderRadius: 2,
-                  "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#d1d5db",
-                  },
-                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#9ca3af",
-                  },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#667eea",
-                  },
-                }}
-              />
-            </FormGrid>
-            <FormGrid size={{ xs: 12, md: 6 }}>
-              <FormLabel
-                htmlFor="content"
-                required
-                sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}
-              >
-                Body Content
-              </FormLabel>
-              <RichTextEditor
-                value={formData.content}
-                onChange={handleContentChange}
-                onImageUpload={handleImageUpload}
-              />
-            </FormGrid>
-            <Box>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
-                  Tags
-                </FormLabel>
-                <Tooltip
-                  title="Use keywords to ensure this policy is easily searchable when people need it."
-                  placement="top-start"
-                  arrow
+            <Typography
+              variant="h4"
+              component="h1"
+              sx={{
+                mb: 2,
+                textAlign: "center",
+                color: "#2d3748",
+                fontWeight: 700,
+              }}
+            >
+              Policy Details
+            </Typography>
+            <Button
+              variant="outlined"
+              color="primary"
+              startIcon={<ArrowBack />}
+              onClick={() => navigate(-1)}
+            >
+              Back
+            </Button>
+          </Box>
+          <Paper
+            elevation={3}
+            sx={{
+              p: 4,
+              borderRadius: 3,
+              backgroundColor: "#ffffff",
+              boxShadow: "0 10px 40px rgba(0,0,0,0.06)",
+            }}
+          >
+            <Box
+              component="form"
+              onSubmit={handleSubmit}
+              sx={{ display: "flex", flexDirection: "column", gap: 3 }}
+            >
+              <FormGrid size={{ xs: 12, md: 6 }}>
+                <FormLabel
+                  htmlFor="title"
+                  required
+                  sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}
                 >
-                  <InfoIcon
-                    sx={{
-                      color: "action.active",
-                      fontSize: 18,
-                      cursor: "pointer",
-                    }}
-                  />
-                </Tooltip>
-              </Box>
-              <TagsContainer>
-                {tags.map((tag, index) => (
-                  <Chip
-                    key={index}
-                    label={tag}
-                    onDelete={() => handleDeleteTag(tag)}
-                    color="primary"
-                    variant="outlined"
-                    sx={{
-                      backgroundColor: "#eff6ff",
-                      borderColor: "#667eea",
-                      color: "#667eea",
-                      "& .MuiChip-deleteIcon": {
-                        color: "#667eea",
-                        "&:hover": { color: "#5a6fd8" },
-                      },
-                    }}
-                  />
-                ))}
-                <TagInput
+                  Title
+                </FormLabel>
+                <OutlinedInput
+                  id="title"
+                  name="title"
                   type="text"
-                  value={tagInput}
-                  onChange={handleTagInputChange}
-                  onKeyDown={handleTagInputKeyDown}
-                  placeholder={
-                    tags.length === 0
-                      ? "Type and press Enter to add tags"
-                      : "Add another tag..."
-                  }
+                  value={formData.title}
+                  onChange={handleChange}
+                  placeholder="Enter policy title"
+                  autoComplete="title"
+                  required
+                  sx={{
+                    borderRadius: 2,
+                    "& .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#d1d5db",
+                    },
+                    "&:hover .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#9ca3af",
+                    },
+                    "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                      borderColor: "#667eea",
+                    },
+                  }}
                 />
-              </TagsContainer>
-              <Typography
-                variant="caption"
-                sx={{ color: "#718096", mt: 1, display: "block" }}
-              >
-                Type a tag and press Enter to add it. Press Backspace to remove
-                the last tag.
-              </Typography>
-            </Box>
-            <AddVideo
-              isEnabled={isVideoEnabled}
-              onToggle={setIsVideoEnabled}
-              onVideoAdd={handleVideoAdd}
-              onVideoEdit={handleVideoEdit}
-              onVideoRemove={handleVideoRemove}
-              onVideoPreview={handleVideoPreview}
-              videos={videos}
-            />
-            <FormFieldContainer>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
-                  Links
+              </FormGrid>
+              <FormGrid size={{ xs: 12, md: 6 }}>
+                <FormLabel
+                  htmlFor="content"
+                  required
+                  sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}
+                >
+                  Body Content
                 </FormLabel>
-                <Tooltip
-                  title="Link additional resources to this policy"
-                  placement="top-start"
-                  arrow
-                >
-                  <InfoIcon
-                    sx={{
-                      color: "action.active",
-                      fontSize: 18,
-                      cursor: "pointer",
-                    }}
+                <RichTextEditor
+                  value={formData.content}
+                  onChange={handleContentChange}
+                  onImageUpload={handleImageUpload}
+                />
+              </FormGrid>
+              <Box>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                  <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
+                    Tags
+                  </FormLabel>
+                  <Tooltip
+                    title="Use keywords to ensure this policy is easily searchable when people need it."
+                    placement="top-start"
+                    arrow
+                  >
+                    <InfoIcon
+                      sx={{
+                        color: "action.active",
+                        fontSize: 18,
+                        cursor: "pointer",
+                      }}
+                    />
+                  </Tooltip>
+                </Box>
+                <TagsContainer>
+                  {tags.map((tag, index) => (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      onDelete={() => handleDeleteTag(tag)}
+                      color="primary"
+                      variant="outlined"
+                      sx={{
+                        backgroundColor: "#eff6ff",
+                        borderColor: "#667eea",
+                        color: "#667eea",
+                        "& .MuiChip-deleteIcon": {
+                          color: "#667eea",
+                          "&:hover": { color: "#5a6fd8" },
+                        },
+                      }}
+                    />
+                  ))}
+                  <TagInput
+                    type="text"
+                    value={tagInput}
+                    onChange={handleTagInputChange}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder={
+                      tags.length === 0
+                        ? "Type and press Enter to add tags"
+                        : "Add another tag..."
+                    }
                   />
-                </Tooltip>
-              </Box>
-              <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
-                <Button
-                  aria-controls={openDropdown ? "create-links-menu" : undefined}
-                  aria-haspopup="true"
-                  aria-expanded={openDropdown ? "true" : undefined}
-                  variant="outlined"
-                  color="primary"
-                  startIcon={<AddIcon />}
-                  onClick={handleClickCreateLinks}
-                  sx={{ borderRadius: 2, mr: 1 }}
+                </TagsContainer>
+                <Typography
+                  variant="caption"
+                  sx={{ color: "#718096", mt: 1, display: "block" }}
                 >
-                  Create Links
-                </Button>
-                <Menu
-                  id="create-links-menu"
-                  anchorEl={anchorEl}
-                  open={openDropdown}
-                  onClose={handleCloseDropdown}
-                  MenuListProps={{ "aria-labelledby": "create-links-button" }}
-                >
-                  <MenuItem onClick={handleSelectFileLink}>File</MenuItem>
-                  <MenuItem onClick={handleSelectPolicyLink}>Policy</MenuItem>
-                </Menu>
+                  Type a tag and press Enter to add it. Press Backspace to
+                  remove the last tag.
+                </Typography>
               </Box>
-            </FormFieldContainer>
-            {selectedLinks.length > 0 && (
-              <LinkTableContainer>
-                <TableContainer>
-                  <Table size="small" aria-label="selected links table">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell>Link Type</TableCell>
-                        <TableCell>Name</TableCell>
-                        <TableCell align="right">Actions</TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedLinks.map((link, index) => (
-                        <LinkTableRow
-                          key={`${link.type}-${link.data?.id || index}`}
-                        >
-                          <LinkTypeCell component="th" scope="row">
-                            {link.type === "file" ? "File" : "Policy"}
-                          </LinkTypeCell>
-                          <LinkNameCell>
-                            {link.data?.name || link.data?.title || "Unnamed"}
-                          </LinkNameCell>
-                          <LinkActionsCell>
-                            {link.type === "policy" && (
+              <AddVideo
+                isEnabled={isVideoEnabled}
+                onToggle={setIsVideoEnabled}
+                onVideoAdd={handleVideoAdd}
+                onVideoEdit={handleVideoEdit}
+                onVideoRemove={handleVideoRemove}
+                onVideoPreview={handleVideoPreview}
+                videos={videos}
+              />
+              <FormFieldContainer>
+                <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
+                  <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
+                    Links
+                  </FormLabel>
+                  <Tooltip
+                    title="Link additional resources to this policy"
+                    placement="top-start"
+                    arrow
+                  >
+                    <InfoIcon
+                      sx={{
+                        color: "action.active",
+                        fontSize: 18,
+                        cursor: "pointer",
+                      }}
+                    />
+                  </Tooltip>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "flex-start" }}>
+                  <Button
+                    aria-controls={
+                      openDropdown ? "create-links-menu" : undefined
+                    }
+                    aria-haspopup="true"
+                    aria-expanded={openDropdown ? "true" : undefined}
+                    variant="outlined"
+                    color="primary"
+                    startIcon={<AddIcon />}
+                    onClick={handleClickCreateLinks}
+                    sx={{ borderRadius: 2, mr: 1 }}
+                  >
+                    Create Links
+                  </Button>
+                  <Menu
+                    id="create-links-menu"
+                    anchorEl={anchorEl}
+                    open={openDropdown}
+                    onClose={handleCloseDropdown}
+                    MenuListProps={{ "aria-labelledby": "create-links-button" }}
+                  >
+                    <MenuItem onClick={handleSelectFileLink}>File</MenuItem>
+                    <MenuItem onClick={handleSelectPolicyLink}>Policy</MenuItem>
+                  </Menu>
+                </Box>
+              </FormFieldContainer>
+              {selectedLinks.length > 0 && (
+                <LinkTableContainer>
+                  <TableContainer>
+                    <Table size="small" aria-label="selected links table">
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>Link Type</TableCell>
+                          <TableCell>Name</TableCell>
+                          <TableCell align="right">Actions</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {selectedLinks.map((link, index) => (
+                          <LinkTableRow
+                            key={`${link.type}-${link.data?.id || index}`}
+                          >
+                            <LinkTypeCell component="th" scope="row">
+                              {link.type === "file" ? "File" : "Policy"}
+                            </LinkTypeCell>
+                            <LinkNameCell>
+                              {link.data?.name || link.data?.title || "Unnamed"}
+                            </LinkNameCell>
+                            <LinkActionsCell>
+                              {link.type === "policy" && (
+                                <IconButton
+                                  aria-label="edit"
+                                  size="small"
+                                  onClick={() => handleEditPolicyLink(index)}
+                                  sx={{ mr: 1 }}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              )}
                               <IconButton
-                                aria-label="edit"
+                                aria-label="remove"
                                 size="small"
-                                onClick={() => handleEditPolicyLink(index)}
-                                sx={{ mr: 1 }}
+                                onClick={() => handleRemoveLink(index)}
                               >
-                                <EditIcon fontSize="small" />
+                                <CloseIcon fontSize="small" />
                               </IconButton>
-                            )}
-                            <IconButton
-                              aria-label="remove"
-                              size="small"
-                              onClick={() => handleRemoveLink(index)}
-                            >
-                              <CloseIcon fontSize="small" />
-                            </IconButton>
-                          </LinkActionsCell>
-                        </LinkTableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              </LinkTableContainer>
-            )}
-            {/* <FormFieldContainer>
+                            </LinkActionsCell>
+                          </LinkTableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+                </LinkTableContainer>
+              )}
+              {/* <FormFieldContainer>
               <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
                 <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
                   Embed PDF
@@ -1219,417 +1224,462 @@ const PolicyDetails = () => {
                 </Box>
               )}
             </FormFieldContainer> */}
-            <FormGrid size={{ xs: 12 }}>
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
-                  Mappings
-                </FormLabel>
-                <Tooltip
-                  title="Select all of the manuals and sections where you want this policy to be displayed."
-                  placement="top-start"
-                >
-                  <IconButton size="small" sx={{ ml: 1, mb: 1 }}>
-                    <InfoIcon fontSize="inherit" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                    Add to Manual/Section
-                  </Typography>
-                  <Autocomplete
-                    options={collections}
-                    getOptionLabel={(option) => option.title}
-                    value={selectedCollection}
-                    onChange={(event, newValue) => {
-                      setSelectedCollection(newValue);
-                      if (newValue) {
-                        fetchNavigations(newValue.id);
-                      } else {
-                        setNavigationTree([]);
-                      }
-                    }}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Select Manual"
-                        variant="outlined"
-                      />
-                    )}
-                    sx={{ width: "100%", mb: 2 }}
-                  />
-                  {navigationTree.length > 0 && (
-                    <Box>
-                      <Typography variant="body2" sx={{ mb: 1 }}>
-                        Select sections in {selectedCollection?.title}
-                      </Typography>
-                      <List sx={{ width: "100%" }}>
-                        {navigationTree.map((item) => renderMappingItem(item))}
-                      </List>
-                    </Box>
-                  )}
-                </Grid>
-                <Grid size={{ xs: 12, md: 6 }}>
-                  <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                    Mapped Manual/Sections
-                  </Typography>
-                  {mappedMappings.length > 0 ? (
-                    mappedMappings.map((mapping) => (
-                      <Box
-                        key={mapping.navId}
-                        sx={{
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          my: 0.5,
-                        }}
-                      >
-                        <Breadcrumbs separator=" > " aria-label="breadcrumb">
-                          {mapping.fullPath.map((title, index) => (
-                            <Typography key={index} color="text.primary">
-                              {title}
-                            </Typography>
-                          ))}
-                        </Breadcrumbs>
-                        <IconButton
-                          size="small"
-                          onClick={() => removeMapping(mapping.navId)}
-                          sx={{ ml: 1 }}
-                        >
-                          <CloseIcon fontSize="small" />
-                        </IconButton>
-                      </Box>
-                    ))
-                  ) : (
-                    <Typography sx={{ color: "gray" }}>
-                      None mapped yet
+              <FormGrid size={{ xs: 12 }}>
+                <Box sx={{ display: "flex", alignItems: "center" }}>
+                  <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
+                    Mappings
+                  </FormLabel>
+                  <Tooltip
+                    title="Select all of the manuals and sections where you want this policy to be displayed."
+                    placement="top-start"
+                  >
+                    <IconButton size="small" sx={{ ml: 1, mb: 1 }}>
+                      <InfoIcon fontSize="inherit" />
+                    </IconButton>
+                  </Tooltip>
+                </Box>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Add to Manual/Section
                     </Typography>
-                  )}
+                    <Autocomplete
+                      options={collections}
+                      getOptionLabel={(option) => option.title}
+                      value={selectedCollection}
+                      onChange={(event, newValue) => {
+                        setSelectedCollection(newValue);
+                        if (newValue) {
+                          fetchNavigations(newValue.id);
+                        } else {
+                          setNavigationTree([]);
+                        }
+                      }}
+                      renderInput={(params) => (
+                        <TextField
+                          {...params}
+                          label="Select Manual"
+                          variant="outlined"
+                        />
+                      )}
+                      sx={{ width: "100%", mb: 2 }}
+                    />
+                    {navigationTree.length > 0 && (
+                      <Box>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          Select sections in {selectedCollection?.title}
+                        </Typography>
+                        <List sx={{ width: "100%" }}>
+                          {navigationTree.map((item) =>
+                            renderMappingItem(item)
+                          )}
+                        </List>
+                      </Box>
+                    )}
+                  </Grid>
+                  <Grid size={{ xs: 12, md: 6 }}>
+                    <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                      Mapped Manual/Sections
+                    </Typography>
+                    {mappedMappings.length > 0 ? (
+                      mappedMappings.map((mapping) => (
+                        <Box
+                          key={mapping.navId}
+                          sx={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            my: 0.5,
+                          }}
+                        >
+                          <Breadcrumbs separator=" > " aria-label="breadcrumb">
+                            {mapping.fullPath.map((title, index) => (
+                              <Typography key={index} color="text.primary">
+                                {title}
+                              </Typography>
+                            ))}
+                          </Breadcrumbs>
+                          <IconButton
+                            size="small"
+                            onClick={() => removeMapping(mapping.navId)}
+                            sx={{ ml: 1 }}
+                          >
+                            <CloseIcon fontSize="small" />
+                          </IconButton>
+                        </Box>
+                      ))
+                    ) : (
+                      <Typography sx={{ color: "gray" }}>
+                        None mapped yet
+                      </Typography>
+                    )}
+                  </Grid>
                 </Grid>
-              </Grid>
-            </FormGrid>
-            <Dialog
-              fullScreen
-              open={showMediaViewer}
-              onClose={() => handleMediaViewerClose([])}
-              maxWidth={false}
-            >
-              <DialogTitle sx={{ m: 0, p: 2 }}>
-                Select Files
-                <IconButton
-                  aria-label="close"
-                  onClick={() => handleMediaViewerClose([])}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[500],
-                  }}
+              </FormGrid>
+              <Dialog
+                fullScreen
+                open={showMediaViewer}
+                onClose={() => handleMediaViewerClose([])}
+                maxWidth={false}
+              >
+                <DialogTitle sx={{ m: 0, p: 2 }}>
+                  Select Files
+                  <IconButton
+                    aria-label="close"
+                    onClick={() => handleMediaViewerClose([])}
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      color: (theme) => theme.palette.grey[500],
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 0, height: "100%" }}>
+                  <MediaFolderViewer
+                    selectionMode={true}
+                    onSelectionConfirm={(selectedFiles) =>
+                      handleMediaViewerClose(selectedFiles)
+                    }
+                    onCloseRequest={() => handleMediaViewerClose([])}
+                    fileTypeFilter={null}
+                  />
+                </DialogContent>
+              </Dialog>
+              <Dialog
+                fullScreen
+                open={showPdfMediaViewer}
+                onClose={() => handlePdfMediaViewerClose([])}
+                maxWidth={false}
+              >
+                <DialogTitle sx={{ m: 0, p: 2 }}>
+                  Select PDF File
+                  <IconButton
+                    aria-label="close"
+                    onClick={() => handlePdfMediaViewerClose([])}
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      color: (theme) => theme.palette.grey[500],
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 0, height: "100%" }}>
+                  <MediaFolderViewer
+                    selectionMode={true}
+                    onSelectionConfirm={(selectedFiles) =>
+                      handlePdfMediaViewerClose(selectedFiles)
+                    }
+                    onCloseRequest={() => handlePdfMediaViewerClose([])}
+                    fileTypeFilter="pdf"
+                  />
+                </DialogContent>
+              </Dialog>
+              <Dialog
+                fullScreen
+                open={showImageMediaViewer}
+                onClose={() => handleImageMediaViewerClose([])}
+                maxWidth={false}
+              >
+                <DialogTitle sx={{ m: 0, p: 2 }}>
+                  Select Image
+                  <IconButton
+                    aria-label="close"
+                    onClick={() => handleImageMediaViewerClose([])}
+                    sx={{
+                      position: "absolute",
+                      right: 8,
+                      top: 8,
+                      color: (theme) => theme.palette.grey[500],
+                    }}
+                  >
+                    <CloseIcon />
+                  </IconButton>
+                </DialogTitle>
+                <DialogContent dividers sx={{ p: 0, height: "100%" }}>
+                  <MediaFolderViewer
+                    selectionMode={true}
+                    onSelectionConfirm={(selectedFiles) =>
+                      handleImageMediaViewerClose(selectedFiles)
+                    }
+                    onCloseRequest={() => handleImageMediaViewerClose([])}
+                    fileTypeFilter="image"
+                  />
+                </DialogContent>
+              </Dialog>
+              <Dialog
+                open={showPolicyDialog}
+                onClose={handlePolicyDialogClose}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                  sx: {
+                    minHeight: "350px",
+                  },
+                }}
+              >
+                <DialogTitle>
+                  {policyLinkToEditIndex !== null
+                    ? "Edit Linked Policy"
+                    : "Select Policy"}
+                </DialogTitle>
+                <DialogContent>
+                  {loadingPolicies ? (
+                    <Box
+                      sx={{ display: "flex", justifyContent: "center", my: 2 }}
+                    >
+                      <CircularProgress />
+                    </Box>
+                  ) : (
+                    <Autocomplete
+                      disablePortal
+                      id="policy-autocomplete"
+                      options={policies}
+                      getOptionLabel={(option) => option.title || ""}
+                      value={
+                        policies.find((p) => p.id === selectedPolicyId) || null
+                      }
+                      onChange={handlePolicySelectChange}
+                      renderInput={(params) => (
+                        <TextField {...params} label="Policy" />
+                      )}
+                      fullWidth
+                      sx={{ mt: 1 }}
+                    />
+                  )}
+                </DialogContent>
+                <DialogActions>
+                  <Button onClick={handlePolicyDialogClose}>Cancel</Button>
+                  <Button
+                    onClick={handleAddPolicyLink}
+                    disabled={!selectedPolicyId || loadingPolicies}
+                    variant="contained"
+                  >
+                    {policyLinkToEditIndex !== null
+                      ? "Update Link"
+                      : "Add Link"}
+                  </Button>
+                </DialogActions>
+              </Dialog>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 2,
+                  pt: 2,
+                }}
+              >
+                <Button
+                  variant="outlined"
+                  onClick={() => setShowPreview(true)}
+                  disabled={isSubmitting}
                 >
-                  <CloseIcon />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent dividers sx={{ p: 0, height: "100%" }}>
-                <MediaFolderViewer
-                  selectionMode={true}
-                  onSelectionConfirm={(selectedFiles) =>
-                    handleMediaViewerClose(selectedFiles)
-                  }
-                  onCloseRequest={() => handleMediaViewerClose([])}
-                  fileTypeFilter={null}
-                />
-              </DialogContent>
-            </Dialog>
-            <Dialog
-              fullScreen
-              open={showPdfMediaViewer}
-              onClose={() => handlePdfMediaViewerClose([])}
-              maxWidth={false}
-            >
-              <DialogTitle sx={{ m: 0, p: 2 }}>
-                Select PDF File
-                <IconButton
-                  aria-label="close"
-                  onClick={() => handlePdfMediaViewerClose([])}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[500],
-                  }}
+                  Preview
+                </Button>
+                <Button
+                  variant="contained"
+                  disabled={isSubmitting}
+                  onClick={isEdit ? handleUpdateClick : handleSubmit}
                 >
-                  <CloseIcon />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent dividers sx={{ p: 0, height: "100%" }}>
-                <MediaFolderViewer
-                  selectionMode={true}
-                  onSelectionConfirm={(selectedFiles) =>
-                    handlePdfMediaViewerClose(selectedFiles)
-                  }
-                  onCloseRequest={() => handlePdfMediaViewerClose([])}
-                  fileTypeFilter="pdf"
+                  {isSubmitting ? (
+                    <Box sx={{ display: "flex", alignItems: "center" }}>
+                      <CircularProgress size={18} color="inherit" />
+                      <Typography variant="body2" sx={{ ml: 1 }}>
+                        {isEdit ? "Updating" : "Saving"}
+                      </Typography>
+                    </Box>
+                  ) : isEdit ? (
+                    "Update"
+                  ) : (
+                    "Save"
+                  )}
+                </Button>
+              </Box>
+            </Box>
+          </Paper>
+        </Box>
+        <Dialog
+          open={updateDialogOpen}
+          onClose={handleUpdateCancel}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>Update Policy</DialogTitle>
+          <DialogContent>
+            <Box sx={{ mt: 2 }}>
+              <Typography
+                variant="body2"
+                sx={{ mb: 2, color: "text.secondary" }}
+              >
+                Current Version: {currentVersion}
+              </Typography>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={updateToVersion}
+                    onChange={(e) => setUpdateToVersion(e.target.checked)}
+                  />
+                }
+                label={`Update policy to version ${nextVersion}`}
+              />
+              {updateToVersion && (
+                <TextField
+                  label="Version Notes"
+                  multiline
+                  rows={3}
+                  value={versionNotes}
+                  onChange={(e) => setVersionNotes(e.target.value)}
+                  fullWidth
+                  sx={{ mt: 2 }}
+                  inputProps={{ maxLength: 200 }}
+                  helperText={`${versionNotes.length}/200 characters`}
                 />
-              </DialogContent>
-            </Dialog>
-            <Dialog
-              fullScreen
-              open={showImageMediaViewer}
-              onClose={() => handleImageMediaViewerClose([])}
-              maxWidth={false}
-            >
-              <DialogTitle sx={{ m: 0, p: 2 }}>
-                Select Image
-                <IconButton
-                  aria-label="close"
-                  onClick={() => handleImageMediaViewerClose([])}
-                  sx={{
-                    position: "absolute",
-                    right: 8,
-                    top: 8,
-                    color: (theme) => theme.palette.grey[500],
-                  }}
-                >
-                  <CloseIcon />
-                </IconButton>
-              </DialogTitle>
-              <DialogContent dividers sx={{ p: 0, height: "100%" }}>
-                <MediaFolderViewer
-                  selectionMode={true}
-                  onSelectionConfirm={(selectedFiles) =>
-                    handleImageMediaViewerClose(selectedFiles)
-                  }
-                  onCloseRequest={() => handleImageMediaViewerClose([])}
-                  fileTypeFilter="image"
-                />
-              </DialogContent>
-            </Dialog>
-            <Dialog
-              open={showPolicyDialog}
-              onClose={handlePolicyDialogClose}
-              maxWidth="sm"
-              fullWidth
-              PaperProps={{
-                sx: {
-                  minHeight: "350px",
-                },
+              )}
+            </Box>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={handleUpdateCancel}>Cancel</Button>
+            <Button onClick={handleUpdateConfirm} variant="contained">
+              {updateToVersion ? "Confirm" : "Continue"}
+            </Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          open={showVideoPreview}
+          onClose={() => setShowVideoPreview(false)}
+          maxWidth="md"
+          fullWidth
+        >
+          <DialogTitle>
+            <IconButton
+              aria-label="close"
+              onClick={() => setShowVideoPreview(false)}
+              sx={{
+                position: "absolute",
+                right: 8,
+                top: 8,
+                color: (theme) => theme.palette.grey[500],
               }}
             >
-              <DialogTitle>
-                {policyLinkToEditIndex !== null
-                  ? "Edit Linked Policy"
-                  : "Select Policy"}
-              </DialogTitle>
-              <DialogContent>
-                {loadingPolicies ? (
-                  <Box
-                    sx={{ display: "flex", justifyContent: "center", my: 2 }}
-                  >
-                    <CircularProgress />
-                  </Box>
-                ) : (
-                  <Autocomplete
-                    disablePortal
-                    id="policy-autocomplete"
-                    options={policies}
-                    getOptionLabel={(option) => option.title || ""}
-                    value={
-                      policies.find((p) => p.id === selectedPolicyId) || null
-                    }
-                    onChange={handlePolicySelectChange}
-                    renderInput={(params) => (
-                      <TextField {...params} label="Policy" />
-                    )}
-                    fullWidth
-                    sx={{ mt: 1 }}
-                  />
-                )}
-              </DialogContent>
-              <DialogActions>
-                <Button onClick={handlePolicyDialogClose}>Cancel</Button>
-                <Button
-                  onClick={handleAddPolicyLink}
-                  disabled={!selectedPolicyId || loadingPolicies}
-                  variant="contained"
-                >
-                  {policyLinkToEditIndex !== null ? "Update Link" : "Add Link"}
-                </Button>
-              </DialogActions>
-            </Dialog>
-            <Box sx={{ display: "flex", justifyContent: "center", pt: 2 }}>
-              <Button
-                variant="contained"
-                disabled={isSubmitting}
-                onClick={isEdit ? handleUpdateClick : handleSubmit}
-              >
-                {isSubmitting ? (
-                  <Box sx={{ display: "flex", alignItems: "center" }}>
-                    <CircularProgress size={18} color="inherit" />
-                    <Typography variant="body2" sx={{ ml: 1 }}>
-                      {isEdit ? "Updating" : "Saving"}
-                    </Typography>
-                  </Box>
-                ) : isEdit ? (
-                  "Update"
-                ) : (
-                  "Save"
-                )}
-              </Button>
-            </Box>
-          </Box>
-        </Paper>
-      </Box>
-      <Dialog
-        open={updateDialogOpen}
-        onClose={handleUpdateCancel}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Update Policy</DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2 }}>
-            <Typography variant="body2" sx={{ mb: 2, color: "text.secondary" }}>
-              Current Version: {currentVersion}
-            </Typography>
-            <FormControlLabel
-              control={
-                <Checkbox
-                  checked={updateToVersion}
-                  onChange={(e) => setUpdateToVersion(e.target.checked)}
-                />
-              }
-              label={`Update policy to version ${nextVersion}`}
-            />
-            {updateToVersion && (
-              <TextField
-                label="Version Notes"
-                multiline
-                rows={3}
-                value={versionNotes}
-                onChange={(e) => setVersionNotes(e.target.value)}
-                fullWidth
-                sx={{ mt: 2 }}
-                inputProps={{ maxLength: 200 }}
-                helperText={`${versionNotes.length}/200 characters`}
-              />
-            )}
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleUpdateCancel}>Cancel</Button>
-          <Button onClick={handleUpdateConfirm} variant="contained">
-            {updateToVersion ? "Confirm" : "Continue"}
-          </Button>
-        </DialogActions>
-      </Dialog>
-      <Dialog
-        open={showVideoPreview}
-        onClose={() => setShowVideoPreview(false)}
-        maxWidth="md"
-        fullWidth
-      >
-        <DialogTitle>
-          <IconButton
-            aria-label="close"
-            onClick={() => setShowVideoPreview(false)}
-            sx={{
-              position: "absolute",
-              right: 8,
-              top: 8,
-              color: (theme) => theme.palette.grey[500],
-            }}
-          >
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent>
-          {previewVideo && (
-            <Box sx={{ textAlign: "center" }}>
-              <Typography variant="h6" sx={{ mb: 2 }}>
-                {previewVideo.title}
-              </Typography>
-              {previewVideo.type === "upload" ? (
-                previewVideo.file ? (
-                  <video
-                    src={URL.createObjectURL(previewVideo.file)}
-                    controls
-                    style={{
-                      width: "100%",
-                      height: "460px",
-                    }}
-                  />
-                ) : previewVideo.reference_url ? (
-                  <video
-                    src={previewVideo.reference_url}
-                    controls
-                    style={{ width: "100%", maxHeight: "480px" }}
-                  />
-                ) : (
-                  <Typography>No video file available</Typography>
-                )
-              ) : previewVideo.type === "youtube" ? (
-                previewVideo.reference_url ? (
-                  (() => {
-                    const videoId = getYoutubeVideoId(
-                      previewVideo.reference_url
-                    );
-                    return videoId ? (
-                      <iframe
-                        src={`https://www.youtube.com/embed/ ${videoId}`}
-                        title={previewVideo.title}
-                        allowFullScreen
-                        style={{
-                          width: "100%",
-                          height: "400px",
-                          border: "none",
-                        }}
-                      />
-                    ) : (
-                      <Typography>Invalid YouTube URL</Typography>
-                    );
-                  })()
-                ) : (
-                  <Typography>No YouTube URL provided</Typography>
-                )
-              ) : previewVideo.type === "vimeo" ? (
-                previewVideo.reference_url ? (
-                  (() => {
-                    const videoId = getVimeoVideoId(previewVideo.reference_url);
-                    return videoId ? (
-                      <iframe
-                        src={`https://player.vimeo.com/video/ ${videoId}`}
-                        title={previewVideo.title}
-                        allowFullScreen
-                        style={{
-                          width: "100%",
-                          height: "400px",
-                          border: "none",
-                        }}
-                      />
-                    ) : (
-                      <Typography>Invalid Vimeo URL</Typography>
-                    );
-                  })()
-                ) : (
-                  <Typography>No Vimeo URL provided</Typography>
-                )
-              ) : (
-                <Typography>Unsupported video type</Typography>
-              )}
-              {previewVideo.description && (
-                <Typography variant="body2" sx={{ mt: 2, textAlign: "left" }}>
-                  {previewVideo.description}
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+          <DialogContent>
+            {previewVideo && (
+              <Box sx={{ textAlign: "center" }}>
+                <Typography variant="h6" sx={{ mb: 2 }}>
+                  {previewVideo.title}
                 </Typography>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowVideoPreview(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-    </Container>
+                {previewVideo.type === "upload" ? (
+                  previewVideo.file ? (
+                    <video
+                      src={URL.createObjectURL(previewVideo.file)}
+                      controls
+                      style={{
+                        width: "100%",
+                        height: "460px",
+                      }}
+                    />
+                  ) : previewVideo.reference_url ? (
+                    <video
+                      src={previewVideo.reference_url}
+                      controls
+                      style={{ width: "100%", maxHeight: "480px" }}
+                    />
+                  ) : (
+                    <Typography>No video file available</Typography>
+                  )
+                ) : previewVideo.type === "youtube" ? (
+                  previewVideo.reference_url ? (
+                    (() => {
+                      const videoId = getYoutubeVideoId(
+                        previewVideo.reference_url
+                      );
+
+                      return videoId ? (
+                        <iframe
+                          src={`https://www.youtube.com/embed/${videoId}`}
+                          title={previewVideo.title}
+                          allowFullScreen
+                          style={{
+                            width: "100%",
+                            height: "400px",
+                            border: "none",
+                          }}
+                        />
+                      ) : (
+                        <Typography>Invalid YouTube URL</Typography>
+                      );
+                    })()
+                  ) : (
+                    <Typography>No YouTube URL provided</Typography>
+                  )
+                ) : previewVideo.type === "vimeo" ? (
+                  previewVideo.reference_url ? (
+                    (() => {
+                      const videoId = getVimeoVideoId(
+                        previewVideo.reference_url
+                      );
+                      return videoId ? (
+                        <iframe
+                          src={`https://player.vimeo.com/video/${videoId}`}
+                          title={previewVideo.title}
+                          allowFullScreen
+                          style={{
+                            width: "100%",
+                            height: "400px",
+                            border: "none",
+                          }}
+                        />
+                      ) : (
+                        <Typography>Invalid Vimeo URL</Typography>
+                      );
+                    })()
+                  ) : (
+                    <Typography>No Vimeo URL provided</Typography>
+                  )
+                ) : (
+                  <Typography>Unsupported video type</Typography>
+                )}
+                {previewVideo.description && (
+                  <Typography variant="body2" sx={{ mt: 2, textAlign: "left" }}>
+                    {previewVideo.description}
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowVideoPreview(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+        <Dialog
+          open={showPreview}
+          onClose={() => setShowPreview(false)}
+          maxWidth="lg"
+          fullWidth
+        >
+          <DialogTitle>Preview</DialogTitle>
+          <DialogContent>
+            <PolicyPreview
+              title={formData.title}
+              content={formData.content}
+              tags={tags}
+              videos={videos}
+              links={selectedLinks}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowPreview(false)}>Close</Button>
+          </DialogActions>
+        </Dialog>
+      </Container>
+    </>
   );
 };
 
