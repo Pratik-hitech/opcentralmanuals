@@ -47,6 +47,7 @@ import {
   Delete as DeleteIcon,
   Edit as EditIcon,
   Info as InfoIcon,
+  Audiotrack as AudioIcon,
 } from "@mui/icons-material";
 import DescriptionIcon from "@mui/icons-material/Description";
 import { styled } from "@mui/material/styles";
@@ -678,7 +679,7 @@ const MediaFolderViewer = ({
   const renderMediaCard = (media) => {
     const isSelected = selectedFiles.some((f) => f.id === media.id);
 
-    // Check if the file is a PDF or DOCX
+    // Check for various file types
     const isPdf =
       media.type === "application/pdf" ||
       media.name.toLowerCase().endsWith(".pdf");
@@ -686,6 +687,41 @@ const MediaFolderViewer = ({
       media.type ===
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       media.name.toLowerCase().endsWith(".docx");
+    const isTxt =
+      media.type === "text/plain" || media.name.toLowerCase().endsWith(".txt");
+    const isXlsx =
+      media.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      media.name.toLowerCase().endsWith(".xlsx");
+    const isAudio = media.type.startsWith("audio/");
+
+    const isDocument = isPdf || isDocx || isTxt || isXlsx;
+
+    const getIcon = () => {
+      if (isAudio) {
+        return <AudioIcon sx={{ fontSize: 64, color: "#8e24aa" }} />;
+      }
+      if (isPdf) {
+        return <DescriptionIcon sx={{ fontSize: 64, color: "#d22d2d" }} />;
+      }
+      if (isDocx) {
+        return <DescriptionIcon sx={{ fontSize: 64, color: "#1976d2" }} />;
+      }
+      if (isXlsx) {
+        return <DescriptionIcon sx={{ fontSize: 64, color: "#107c41" }} />;
+      }
+      // for .txt and others
+      return <DescriptionIcon sx={{ fontSize: 64, color: "#5f6368" }} />;
+    };
+
+    const getBackgroundColor = () => {
+      if (isAudio) return "#f3e5f5";
+      if (isPdf) return "#f5f5f5";
+      if (isDocx) return "#e3f2fd";
+      if (isXlsx) return "#e6f4ea";
+      if (isTxt) return "#f1f3f4";
+      return "#f5f5f5"; // Default
+    };
 
     return (
       <Card
@@ -728,8 +764,8 @@ const MediaFolderViewer = ({
             }}
           />
         )}
-        {isPdf || isDocx ? (
-          // Render thumbnail for PDF or DOCX files
+        {isDocument || isAudio ? (
+          // Render thumbnail for documents and audio
           <>
             <Box
               sx={{
@@ -738,16 +774,11 @@ const MediaFolderViewer = ({
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                backgroundColor: isPdf ? "#f5f5f5" : "#e3f2fd",
+                backgroundColor: getBackgroundColor(),
                 borderRadius: 2,
               }}
             >
-              <DescriptionIcon
-                sx={{
-                  fontSize: 64,
-                  color: isPdf ? "#d22d2d" : "#1976d2",
-                }}
-              />
+              {getIcon()}
             </Box>
             {!selectionMode && (
               <MediaCardOverlay>
@@ -1199,7 +1230,7 @@ const MediaFolderViewer = ({
   };
 
   const renderMediaView = () => {
-    // Check if the file is a PDF or DOCX
+    // Check for various file types
     const isPdf =
       selectedMedia.type === "application/pdf" ||
       selectedMedia.name.toLowerCase().endsWith(".pdf");
@@ -1207,6 +1238,17 @@ const MediaFolderViewer = ({
       selectedMedia.type ===
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
       selectedMedia.name.toLowerCase().endsWith(".docx");
+    const isTxt =
+      selectedMedia.type === "text/plain" ||
+      selectedMedia.name.toLowerCase().endsWith(".txt");
+    const isXlsx =
+      selectedMedia.type ===
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      selectedMedia.name.toLowerCase().endsWith(".xlsx");
+    const isAudio = selectedMedia.type.startsWith("audio/");
+
+    const canPreview = isPdf || isTxt;
+    const noPreview = isDocx || isXlsx;
 
     return (
       <>
@@ -1266,8 +1308,8 @@ const MediaFolderViewer = ({
               backgroundColor: colors.secondary,
             }}
           >
-            {isPdf ? (
-              // PDF Preview using iframe
+            {canPreview ? (
+              // PDF and TXT Preview using iframe
               <iframe
                 src={`https://opmanual.franchise.care/uploaded/${
                   selectedMedia.company_id
@@ -1284,8 +1326,8 @@ const MediaFolderViewer = ({
                   borderRadius: 8,
                 }}
               />
-            ) : isDocx ? (
-              // DOCX files cannot be previewed in browser, show message with download option
+            ) : noPreview ? (
+              // Files that cannot be previewed in browser, show message with download option
               <Box
                 sx={{
                   display: "flex",
@@ -1303,27 +1345,16 @@ const MediaFolderViewer = ({
                   sx={{ fontSize: 64, color: "#1976d2", mb: 2 }}
                 />
                 <Typography variant="h6" sx={{ mb: 2, color: colors.text }}>
-                  Document Preview
+                  Preview not available
                 </Typography>
                 <Typography variant="body1" sx={{ mb: 3, color: colors.text }}>
-                  This document cannot be previewed directly in the browser.
+                  This file type cannot be previewed directly in the browser.
                   Please download the file to view it.
                 </Typography>
                 <Button
                   variant="contained"
                   startIcon={<DownloadIcon />}
-                  onClick={() => {
-                    const link = document.createElement("a");
-                    link.href = `https://opmanual.franchise.care/uploaded/${
-                      selectedMedia.company_id
-                    }${
-                      selectedMedia.url.startsWith("/")
-                        ? selectedMedia.url
-                        : "/" + selectedMedia.url
-                    }`;
-                    link.download = selectedMedia.name;
-                    link.click();
-                  }}
+                  onClick={() => handleDownload(selectedMedia)}
                   sx={{
                     backgroundColor: colors.primary,
                     "&:hover": { backgroundColor: colors.secondary },
@@ -1334,6 +1365,17 @@ const MediaFolderViewer = ({
                   </Typography>
                 </Button>
               </Box>
+            ) : isAudio ? (
+              <audio
+                src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}${selectedMedia.url}`}
+                controls
+                style={{
+                  width: "80%",
+                  borderRadius: 8,
+                }}
+              >
+                Your browser does not support the audio element.
+              </audio>
             ) : selectedMedia.type === "video" ? (
               <video
                 src={`https://opmanual.franchise.care/uploaded/${selectedMedia.company_id}${selectedMedia.url}`}
