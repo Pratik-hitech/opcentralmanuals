@@ -583,13 +583,6 @@ const OperationsManuals = () => {
             />
           </Box>
         )}
-
-        {/* Footer */}
-        <Box sx={{ mt: 6 }}>
-          <Typography variant="subtitle1" fontWeight="medium">
-            OPERATIONS AND PROCEDURES MANUAL
-          </Typography>
-        </Box>
       </Paper>
 
       {/* Snackbar for notifications */}
