@@ -1363,7 +1363,7 @@ useEffect(() => {
                 <RightCard />
               </Paper>
 
-              <Paper
+              {/* <Paper
                 elevation={0}
                 sx={{
                   p: 4,
@@ -1416,7 +1416,83 @@ useEffect(() => {
                     title="Facebook Stream"
                   />
                 </Box>
-              </Paper>
+              </Paper> */}
+
+              <Paper
+  elevation={0}
+  sx={{
+    p: 4,
+    borderRadius: 4,
+    background: "rgba(255,255,255,0.8)",
+    backdropFilter: "blur(10px)",
+    border: "1px solid rgba(0,0,0,0.05)",
+    boxShadow: "0 8px 32px 0 rgba(31, 38, 135, 0.05)",
+    overflow: "hidden",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center", // Center content horizontally
+  }}
+>
+  <Typography
+    variant="h5"
+    sx={{
+      mb: 3,
+      fontWeight: 700,
+      display: "flex",
+      alignItems: "center",
+      gap: 2,
+      width: "100%", // Ensure full width for proper alignment
+    }}
+  >
+    <Box
+      component="span"
+      sx={{
+        width: 6,
+        height: 24,
+        bgcolor: "secondary.main",
+        borderRadius: 1,
+      }}
+    />
+    Social Feed
+  </Typography>
+  <Box
+    sx={{
+      width: "100%",
+      maxWidth: 500, // Maximum width for larger screens
+      height: 500,
+      borderRadius: 3,
+      overflow: "hidden",
+      border: "1px solid rgba(0,0,0,0.1)",
+      mx: "auto", // Center horizontally
+    }}
+  >
+    <Box
+      sx={{
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        overflow: "hidden",
+      }}
+    >
+      <iframe
+        src="https://www.facebook.com/plugins/page.php?href=https%3A%2F%2Fwww.facebook.com%2FBlueWheelers%2F&tabs=timeline&width=500&height=550&small_header=true&adapt_container_width=true&hide_cover=true&hide_cta=true&show_facepile=false"
+        width="100%"
+        height="100%"
+        style={{ 
+          border: "none",
+          position: "absolute",
+          top: 0,
+          left: 0,
+        }}
+        scrolling="no"
+        frameBorder="0"
+        allowFullScreen={true}
+        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+        title="Facebook Stream"
+      />
+    </Box>
+  </Box>
+</Paper>
             </Stack>
           </Box>
         </Stack>
