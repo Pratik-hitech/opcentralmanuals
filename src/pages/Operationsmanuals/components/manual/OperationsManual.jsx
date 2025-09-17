@@ -225,7 +225,7 @@ const OperationsManual = () => {
     };
 
     initialize();
-  }, [id, policyId]);
+  }, [id, policyId, location.state?.refresh]);
 
   // Cleanup speech synthesis on component unmount
   useEffect(() => {
