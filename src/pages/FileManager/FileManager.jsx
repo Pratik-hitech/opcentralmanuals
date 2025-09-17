@@ -190,8 +190,8 @@ const MediaFolderViewer = ({
       const id = currentFolder.id;
       const url =
         id == null
-          ? "/files?per_page=100"
-          : `/files?parent_id=${id}&per_page=100`;
+          ? "/files?per_page=150"
+          : `/files?parent_id=${id}&per_page=150`;
       const response = await httpClient.get(url);
       const items = response.data.data;
       const subfolders = items

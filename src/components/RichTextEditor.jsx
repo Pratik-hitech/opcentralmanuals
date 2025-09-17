@@ -8,17 +8,19 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
     height: 500,
     menubar: false,
     statusbar: false,
+    toolbar_items_size: "small",
 
     plugins:
       "advlist autolink lists link charmap preview anchor " +
       "searchreplace visualblocks code codesample fullscreen " +
-      "insertdatetime media table help wordcount",
+      "insertdatetime media table help wordcount hr",
 
     toolbar:
       "undo redo | blocks | bold italic underline forecolor | " +
       "alignleft aligncenter alignright alignjustify | " +
       "bullist numlist outdent indent | removeformat | " +
-      "image link | code codesample | preview | fullscreen | help",
+      "image link hr table preview | fullscreen | " +
+      "code codesample | help | searchreplace",
 
     formats: {
       inlinecode: { inline: "code" },

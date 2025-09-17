@@ -882,7 +882,7 @@ const PolicyDetails = () => {
         }
 
         setTimeout(() => {
-          navigate(-1);
+          navigate(-1, { state: { refresh: true } });
         }, 1000);
       }
     } catch (err) {
@@ -919,7 +919,7 @@ const PolicyDetails = () => {
       >
         <Box
           sx={{
-            width: "65%",
+            width: "70%",
             display: "flex",
             flexDirection: "column",
             gap: 3,
@@ -948,7 +948,7 @@ const PolicyDetails = () => {
               variant="outlined"
               color="primary"
               startIcon={<ArrowBack />}
-              onClick={() => navigate(-1)}
+              onClick={() => navigate(-1, { state: { refresh: true } })}
             >
               Back
             </Button>
