@@ -94,18 +94,36 @@ export const router = createBrowserRouter([
     path : "/reset-password",
     element : <ResetPasswordVerify />
   },
-  {
-    path: "/dashboard",
-    element: (
-      <PrivateRoute>
-        <PrivateLayout />
-      </PrivateRoute>
-    ),
+  // {
+  //   path: "/dashboard",
+  //   element: (
+  //     <PrivateRoute>
+  //       <PrivateLayout />
+  //     </PrivateRoute>
+  //   ),
+  //   errorElement: <PermissionDenied />,
 
-    children: [
-      { index: true, element: <Dashboard />, loader: dashboardLoader },
-    ],
-  },
+  //   children: [
+  //     { index: true, element: <Dashboard />, loader: dashboardLoader },
+  //   ],
+  // },
+
+{
+  path: "/dashboard",
+  element: (
+    <PrivateRoute>
+      <ProtectedRoute allowedRoles={["admin"]}>
+        <PrivateLayout />
+      </ProtectedRoute>
+    </PrivateRoute>
+  ),
+  errorElement: <PermissionDenied />,
+  children: [
+    { index: true, element: <Dashboard />, loader: dashboardLoader },
+  ],
+},
+
+
 {
 path : "/search",
 element :(

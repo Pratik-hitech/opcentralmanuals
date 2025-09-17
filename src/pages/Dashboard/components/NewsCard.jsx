@@ -392,6 +392,15 @@ export default function NewsCard({ newsData }) {
             </Typography>
 
             <Typography
+  variant="body2"
+  sx={{ mt: 1, color: "#555" }}
+  dangerouslySetInnerHTML={{
+    __html: truncateContent(newsItem.content, 300),
+  }}
+/>
+
+{/* 
+            <Typography
               variant="body2"
               sx={{
                 mt: 1,
@@ -399,7 +408,7 @@ export default function NewsCard({ newsData }) {
               }}
             >
               {truncateContent(newsItem.content, 150)}
-            </Typography>
+            </Typography> */}
 
             <Typography variant="caption" display="block" sx={{ mt: 1 }}>
               {new Date(newsItem.created_at).toLocaleDateString()}

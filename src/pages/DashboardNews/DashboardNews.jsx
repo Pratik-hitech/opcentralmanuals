@@ -1487,9 +1487,16 @@ const isAdmin = user?.role.name === "admin";
           </Box>
 
           <Divider sx={{ my: 3 }} />
-          <Typography variant="body1" paragraph sx={{ whiteSpace: "pre-line", fontSize: "1.1rem", lineHeight: "1.8" }}>
+          {/* <Typography variant="body1" paragraph sx={{ whiteSpace: "pre-line", fontSize: "1.1rem", lineHeight: "1.8" }}>
             {article.content}
-          </Typography>
+          </Typography> */}
+          <Typography
+  variant="body1"
+  paragraph
+  sx={{ fontSize: "1.1rem", lineHeight: "1.8" }}
+  dangerouslySetInnerHTML={{ __html: article.content }}
+/>
+
         </Paper>
       )}
 

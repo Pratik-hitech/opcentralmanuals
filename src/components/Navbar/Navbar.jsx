@@ -1740,7 +1740,7 @@ const Navbar = () => {
 
       <AppBar position="static" sx={{ backgroundColor: "#002B5B" }}>
         <Toolbar sx={{ justifyContent: "space-between" }}>
-          <Link to="/dashboard" style={{ display: "inline-block" }}>
+          <Link to="/operations/manuals" style={{ display: "inline-block" }}>
             <Box
               component="img"
               src={Logo}
