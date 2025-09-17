@@ -2200,7 +2200,7 @@ const ManageArticles = () => {
           Manage News Categories
         </MenuItem>
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+        {/* <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem> */}
       </Menu>
 
       <ManageCategoriesModal
@@ -2216,7 +2216,7 @@ const ManageArticles = () => {
         onClose={handleMenuClose(setDownloadAnchorEl)}
       >
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+        {/* <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem> */}
       </Menu>
 
       {/* Row Actions Menu */}
@@ -2265,7 +2265,7 @@ const ManageArticles = () => {
         >
           Delete
         </MenuItem>
-        <MenuItem disabled={isActionLoading}>Viewer List</MenuItem>
+        {/* <MenuItem disabled={isActionLoading}>Viewer List</MenuItem> */}
         <MenuItem
           onClick={() => {
             exportData("csv");

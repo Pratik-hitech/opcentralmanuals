@@ -543,7 +543,7 @@ export default function Login() {
           severity: "success",
         });
 
-        setTimeout(() => navigate("/dashboard"), 1000);
+        setTimeout(() => navigate("/operations/manuals"), 1000);
       } else {
         throw new Error(response.data?.message || "Invalid credentials");
       }

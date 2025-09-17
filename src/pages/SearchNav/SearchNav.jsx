@@ -1037,9 +1037,9 @@ const HtmlRenderer = ({ htmlContent, className = '' }) => {
 // ];
 const allCategories = [
   { key: "policies", label: "Operations Manuals", icon: ArticleIcon, color: "#1976d2" },
-  { key: "users", label: "Users", icon: PeopleIcon, color: "#d32f2f" },
-  { key: "files", label: "File Manager", icon: FolderIcon, color: "#ed6c02" },
-  { key: "news", label: "News", icon: FeedIcon, color: "#2e7d32" },
+  // { key: "users", label: "Users", icon: PeopleIcon, color: "#d32f2f" },
+  // { key: "files", label: "File Manager", icon: FolderIcon, color: "#ed6c02" },
+  // { key: "news", label: "News", icon: FeedIcon, color: "#2e7d32" },
 ];
 
 

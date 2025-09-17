@@ -1433,7 +1433,11 @@ const Navbar = () => {
         flex: 1,
         py: 1 
       }}>
+
+        
         <List sx={{ py: 0 }}>
+
+          {isAdmin && (
           <ListItem 
             button 
             component={NavLink} 
@@ -1450,6 +1454,7 @@ const Navbar = () => {
               }} 
             />
           </ListItem>
+          )}
           
           <ListItem 
             button 
@@ -1813,6 +1818,8 @@ const Navbar = () => {
           ) : (
             <>
               <Box sx={{ display: "flex", gap: 2, alignItems: 'center' }}>
+
+                {isAdmin &&  
                 <Button
                   color="inherit"
                   component={NavLink}
@@ -1821,6 +1828,7 @@ const Navbar = () => {
                 >
                   Dashboard
                 </Button>
+}
                 <Button
                   color="inherit"
                   component={NavLink}
@@ -1831,6 +1839,7 @@ const Navbar = () => {
                 </Button>
 
                 {isAdmin && 
+
                   <Button
                     color="inherit"
                     component={NavLink}
@@ -1839,6 +1848,7 @@ const Navbar = () => {
                   >
                     Reporting
                   </Button>
+
                 }
                 
                 {isAdmin && (

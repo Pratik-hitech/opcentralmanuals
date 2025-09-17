@@ -1595,37 +1595,118 @@ const handleTypesUpdated = () => {
   };
 
   // Export
-  const exportData = (type) => {
-    const data = locations.map(loc => ({
-      Name: loc.name,
-      Type: loc.type?.name || "Unknown",
-      "Street Number": loc.street_number,
-      "Street Name": loc.street_name,
-      Suburb: loc.suburb,
-      State: loc.state,
-      Postcode: loc.postcode,
-      Country: loc.country,
-      Email: loc.email,
-      Phone: loc.phone,
-      Contact: loc.contact,
-      Status: loc.status === 1 ? "Active" : "Inactive",
-      "Created At": loc.created_at,
-    }));
+  // const exportData = (type) => {
+  //   const data = locations.map(loc => ({
+  //     Name: loc.name,
+  //     Type: loc.type?.name || "Unknown",
+  //     "Street Number": loc.street_number,
+  //     "Street Name": loc.street_name,
+  //     Suburb: loc.suburb,
+  //     State: loc.state,
+  //     Postcode: loc.postcode,
+  //     Country: loc.country,
+  //     Email: loc.email,
+  //     Phone: loc.phone,
+  //     Contact: loc.contact,
+  //     Status: loc.status === 1 ? "Active" : "Inactive",
+  //     "Created At": loc.created_at,
+  //   }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Locations");
+  //   const ws = XLSX.utils.json_to_sheet(data);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, "Locations");
 
-    const fileType = type === "csv" ? "csv" : "xlsx";
-    const wbout = type === "csv"
-      ? XLSX.utils.sheet_to_csv(ws)
-      : XLSX.write(wb, { bookType: fileType, type: "array" });
-    const blob = new Blob([wbout], {
-      type: type === "csv" ? "text/csv;charset=utf-8;" : "application/octet-stream",
+  //   const fileType = type === "csv" ? "csv" : "xlsx";
+  //   const wbout = type === "csv"
+  //     ? XLSX.utils.sheet_to_csv(ws)
+  //     : XLSX.write(wb, { bookType: fileType, type: "array" });
+  //   const blob = new Blob([wbout], {
+  //     type: type === "csv" ? "text/csv;charset=utf-8;" : "application/octet-stream",
+  //   });
+  //   saveAs(blob, `locations_export.${fileType}`);
+  //   setDownloadAnchorEl(null);
+  // };
+
+
+const exportData = async (type, selectedOnly = false) => {
+  try {
+    // Collect selected IDs if any
+    const ids = selectedOnly && selected.length > 0 ? selected : [];
+    if (selectedOnly && ids.length === 0) {
+      setSnackbar({
+        open: true,
+        message: "Please select at least one location to export.",
+        severity: "warning",
+      });
+      return;
+    }
+
+    // Build query string like ids[]=1&ids[]=3
+    const params = new URLSearchParams();
+    ids.forEach((id) => {
+      params.append("ids[]", id);
     });
-    saveAs(blob, `locations_export.${fileType}`);
+    const queryString = ids.length > 0 ? `?${params.toString()}` : "";
+
+    // Call backend export endpoint
+    const response = await httpClient.get(`/locations/export${queryString}`, {
+      responseType: "blob",
+    });
+
+    // Extract filename from headers if available
+    const contentDisposition = response.headers["content-disposition"];
+    let fileName = "locations_export";
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match && match[1]) fileName = match[1];
+    }
+
+    // Determine extension from type
+    let fileExtension = "";
+    if (type === "csv") {
+      if (!fileName.toLowerCase().endsWith(".csv")) fileExtension = ".csv";
+    } else if (type === "xlsx") {
+      if (
+        !fileName.toLowerCase().endsWith(".xlsx") &&
+        !fileName.toLowerCase().endsWith(".xls")
+      )
+        fileExtension = ".xlsx";
+    }
+
+    const mimeTypes = {
+      csv: "text/csv;charset=utf-8;",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+    const mimeType = mimeTypes[type] || "application/octet-stream";
+
+    const blob = new Blob([response.data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName + fileExtension;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    setSnackbar({
+      open: true,
+      message: "Locations export successful!",
+      severity: "success",
+    });
+  } catch (error) {
+    console.error(error);
+    setSnackbar({
+      open: true,
+      message: "Failed to export locations.",
+      severity: "error",
+    });
+  } finally {
     setDownloadAnchorEl(null);
-  };
+  }
+};
+
+
 
   const renderSkeletonRows = () => {
     return Array(rowsPerPage).fill(0).map((_, index) => (
@@ -1741,13 +1822,20 @@ const handleTypesUpdated = () => {
         {tab === "inactive" && <MenuItem onClick={() => handleBulkStatusChange(true)}>Activate Selected</MenuItem>}
         {tab === "active" && <MenuItem onClick={() => handleBulkStatusChange(false)}>Deactivate Selected</MenuItem>}
         <MenuItem onClick={() => { setOpenBulkDeleteModal(true); handleMenuClose(setBulkAnchorEl)(); }}>Delete Selected</MenuItem>
-        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
+        <MenuItem
+  onClick={() => {
+    exportData("csv",true); // or exportData("csv", true) if you want only selected
+    handleMenuClose(setDownloadAnchorEl)(); // close the menu after click
+  }}
+>
+  Export
+</MenuItem>
       </Menu>
 
      <Menu anchorEl={anchorEl} open={Boolean(anchorEl)} onClose={handleMenuClose(setAnchorEl)}>
   <MenuItem onClick={handleOpenTypesModal}>Manage Location Types</MenuItem>
   <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-  <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+  {/* <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem> */}
 </Menu>
   <ManageTypesModal
         open={openTypesModal}
@@ -1756,7 +1844,7 @@ const handleTypesUpdated = () => {
       />
       <Menu anchorEl={downloadAnchorEl} open={Boolean(downloadAnchorEl)} onClose={handleMenuClose(setDownloadAnchorEl)}>
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+        {/* <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem> */}
       </Menu>
 
       {/* Delete Dialogs */}

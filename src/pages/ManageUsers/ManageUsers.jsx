@@ -1393,47 +1393,130 @@ const ManageUsers = () => {
     }
   };
 
-  const exportData = (type) => {
-    const data = filteredUsers.map((user) => ({
-      "First Name": displayValue(user.first_name),
-      "Middle Name": displayValue(user.middle_name),
-      "Last Name": displayValue(user.last_name),
-      "Full Name": displayValue(user.name),
-      Username: displayValue(user.user_name),
-      Email: displayValue(user.email),
-      "Company ID": user.company_id,
-      "Role ID": user.role_id,
-      "Location ID": user.location_id,
-      "Location Name": user.location ? displayValue(user.location.name) : "N/A",
-      "Verified At": user.email_verified_at || "Not Verified",
-      Status: user.status === 1 ? "Active" : "Inactive",
-      "Created At": new Date(user.created_at).toLocaleString(),
-      "Updated At": new Date(user.updated_at).toLocaleString(),
-    }));
+  // const exportData = (type) => {
+  //   const data = filteredUsers.map((user) => ({
+  //     "First Name": displayValue(user.first_name),
+  //     "Middle Name": displayValue(user.middle_name),
+  //     "Last Name": displayValue(user.last_name),
+  //     "Full Name": displayValue(user.name),
+  //     Username: displayValue(user.user_name),
+  //     Email: displayValue(user.email),
+  //     "Company ID": user.company_id,
+  //     "Role ID": user.role_id,
+  //     "Location ID": user.location_id,
+  //     "Location Name": user.location ? displayValue(user.location.name) : "N/A",
+  //     "Verified At": user.email_verified_at || "Not Verified",
+  //     Status: user.status === 1 ? "Active" : "Inactive",
+  //     "Created At": new Date(user.created_at).toLocaleString(),
+  //     "Updated At": new Date(user.updated_at).toLocaleString(),
+  //   }));
 
-    const ws = XLSX.utils.json_to_sheet(data);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Users");
+  //   const ws = XLSX.utils.json_to_sheet(data);
+  //   const wb = XLSX.utils.book_new();
+  //   XLSX.utils.book_append_sheet(wb, ws, "Users");
 
-    const fileType = type === "csv" ? "csv" : "xlsx";
+  //   const fileType = type === "csv" ? "csv" : "xlsx";
 
-    let wbout, blob, fileExtension, mimeType;
-    if (fileType === "csv") {
-      wbout = XLSX.utils.sheet_to_csv(ws);
-      fileExtension = "csv";
-      mimeType = "text/csv;charset=utf-8;";
-      blob = new Blob([wbout], { type: mimeType });
-    } else {
-      wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-      fileExtension = "xlsx";
-      mimeType =
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-      blob = new Blob([wbout], { type: mimeType });
+  //   let wbout, blob, fileExtension, mimeType;
+  //   if (fileType === "csv") {
+  //     wbout = XLSX.utils.sheet_to_csv(ws);
+  //     fileExtension = "csv";
+  //     mimeType = "text/csv;charset=utf-8;";
+  //     blob = new Blob([wbout], { type: mimeType });
+  //   } else {
+  //     wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  //     fileExtension = "xlsx";
+  //     mimeType =
+  //       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  //     blob = new Blob([wbout], { type: mimeType });
+  //   }
+
+  //   saveAs(blob, `users_export.${fileExtension}`);
+  //   setDownloadAnchorEl(null);
+  // };
+
+
+const exportData = async (type, selectedOnly = false) => {
+  try {
+    const ids = selectedOnly && selected.length > 0 ? selected : [];
+    if (selectedOnly && ids.length === 0) {
+      setSnackbar({
+        open: true,
+        message: "Please select at least one user to export.",
+        severity: "warning",
+      });
+      return;
     }
 
-    saveAs(blob, `users_export.${fileExtension}`);
+    // Build query param string like ids[]=2&ids[]=5
+    const params = new URLSearchParams();
+    ids.forEach((id) => {
+      params.append("ids[]", id);
+    });
+
+    // If no selection, no ids[] => exports all
+    const queryString = ids.length > 0 ? `?${params.toString()}` : "";
+
+    const response = await httpClient.get(`/users/export${queryString}`, {
+      responseType: "blob",
+    });
+
+    // Try to extract filename from headers
+    const contentDisposition = response.headers["content-disposition"];
+    let fileName = "users_export";
+
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match && match[1]) {
+        fileName = match[1];
+      }
+    }
+
+    // Infer extension from type if missing
+    let fileExtension = "";
+    if (type === "csv") {
+      if (!fileName.toLowerCase().endsWith(".csv")) fileExtension = ".csv";
+    } else if (type === "xlsx") {
+      if (
+        !fileName.toLowerCase().endsWith(".xlsx") &&
+        !fileName.toLowerCase().endsWith(".xls")
+      )
+        fileExtension = ".xlsx";
+    }
+
+    const mimeTypes = {
+      csv: "text/csv;charset=utf-8;",
+      xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    };
+
+    const mimeType = mimeTypes[type] || "application/octet-stream";
+
+    const blob = new Blob([response.data], { type: mimeType });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = fileName + fileExtension;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+
+    setSnackbar({
+      open: true,
+      message: "User export successful!",
+      severity: "success",
+    });
+  } catch (error) {
+    setSnackbar({
+      open: true,
+      message: "Failed to export users.",
+      severity: "error",
+    });
+  } finally {
     setDownloadAnchorEl(null);
-  };
+  }
+};
+
 
   const handleDeleteClick = (id) => {
     setUserToDelete(id);
@@ -1737,17 +1820,28 @@ const ManageUsers = () => {
 
       {/* Bulk Actions Menu */}
       <Menu
-        anchorEl={bulkAnchorEl}
-        open={Boolean(bulkAnchorEl)}
-        onClose={handleMenuClose(setBulkAnchorEl)}
-      >
-        <MenuItem onClick={handleBulkDeleteClick}>
-          Delete Selected Users
-        </MenuItem>
+  anchorEl={bulkAnchorEl}
+  open={Boolean(bulkAnchorEl)}
+  onClose={handleMenuClose(setBulkAnchorEl)}
+>
+  <MenuItem
+    onClick={() => {
+      handleBulkDeleteClick();
+      handleMenuClose(setBulkAnchorEl)(); // close after action
+    }}
+  >
+    Delete Selected Users
+  </MenuItem>
 
-        <MenuItem onClick={() => exportData("csv")}>Export</MenuItem>
-        {/* Additional bulk actions can be added here */}
-      </Menu>
+  <MenuItem
+    onClick={() => {
+      exportData("csv", true);
+      handleMenuClose(setBulkAnchorEl)(); // close after export
+    }}
+  >
+    Export Selected (CSV)
+  </MenuItem>
+</Menu>
 
       {/* Settings Menu */}
       <Menu
@@ -1768,7 +1862,7 @@ const ManageUsers = () => {
         onClose={handleMenuClose(setDownloadAnchorEl)}
       >
         <MenuItem onClick={() => exportData("csv")}>Export as CSV</MenuItem>
-        <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem>
+        {/* <MenuItem onClick={() => exportData("xlsx")}>Export as Excel</MenuItem> */}
       </Menu>
 
       {/* Row Actions Menu */}

@@ -2795,7 +2795,7 @@ const NewsArticleForm = () => {
       if (response.data.success) {
         let message = "";
         if (isScheduled) {
-          message = `Article scheduled with ${formData.status.toLowerCase()} status`;
+          message = `Article Updated with ${formData.status.toLowerCase()} status`;
         } else {
           message = isEditMode ? "Article updated" : "Article published";
         }
@@ -2804,9 +2804,30 @@ const NewsArticleForm = () => {
         setTimeout(() => navigate("/manage/news"), 1500);
       }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to save article");
-      showSnackbar(err.response?.data?.message || "Failed to save article", "error");
-    } finally { setIsLoading(false); }
+  let errorMessage = "Failed to save article";
+
+  if (err.response?.data) {
+    const { message, errors } = err.response.data;
+
+    // Start with backend general message if available
+    errorMessage = message || errorMessage;
+
+    // If errors object exists, flatten and append them
+    if (errors && typeof errors === "object") {
+      const allErrors = Object.values(errors)
+        .flat() // flatten arrays of errors
+        .join(", "); // join into one string
+
+      if (allErrors) {
+        errorMessage += ` - ${allErrors}`;
+      }
+    }
+  }
+
+  setError(errorMessage);
+  showSnackbar(errorMessage, "error");
+}
+ finally { setIsLoading(false); }
   };
 
   const showSnackbar = (message, severity) => {
@@ -3056,7 +3077,7 @@ const NewsArticleForm = () => {
 
         {/* Submit Button */}
         <Button type="submit" variant="contained" color="primary" fullWidth size="large" disabled={isLoading} startIcon={isLoading ? <CircularProgress size={20} /> : null}>
-          {isScheduled ? "Schedule Article" : 
+          {isScheduled ? "Update Article" : 
            isEditMode ? "Update Article" : "Publish Article"}
         </Button>
       </Paper>
