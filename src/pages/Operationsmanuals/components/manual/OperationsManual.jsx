@@ -44,6 +44,7 @@ import {
   UnfoldMore as UnfoldMoreIcon,
   UnfoldLess as UnfoldLessIcon,
   PictureAsPdf,
+  GppBad,
 } from "@mui/icons-material";
 import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
@@ -76,12 +77,15 @@ const OperationsManual = () => {
   const [isViewNotesDialogOpen, setIsViewNotesDialogOpen] = useState(false);
   const [viewNotesData, setViewNotesData] = useState(null);
   const [versionDownloadLoading, setVersionDownloadLoading] = useState({});
+  const [isWarningDialogOpen, setIsWarningDialogOpen] = useState(false);
 
   // Ref for the right column content area to enable scrolling to top
   const contentRef = useRef(null);
 
   const { user } = useAuth();
   const isAdmin = user?.role?.name === "admin";
+
+  console.log(isAdmin, "is admin");
 
   // Calculate current version based on versions array
   const calculateCurrentVersion = (versions) => {
@@ -253,6 +257,36 @@ const OperationsManual = () => {
       }, 100); // Small delay to ensure content has loaded
     }
   }, [selectedPolicy]);
+
+  // Disable context menu and certain keyboard shortcuts
+  useEffect(() => {
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+      setIsWarningDialogOpen(true);
+    };
+    const handleKeyDown = (e) => {
+      // Prevent Ctrl+S (save) and Ctrl+P (print)
+      if ((e.ctrlKey || e.metaKey) && (e.key === "s" || e.key === "p")) {
+        e.preventDefault();
+        setIsWarningDialogOpen(true);
+      }
+      // Attempt to prevent print screen, though not foolproof
+      if (e.key === "PrintScreen") {
+        e.preventDefault();
+        setIsWarningDialogOpen(true);
+      }
+    };
+
+    if (!isAdmin) {
+      document.addEventListener("contextmenu", handleContextMenu);
+      document.addEventListener("keydown", handleKeyDown);
+
+      return () => {
+        document.removeEventListener("contextmenu", handleContextMenu);
+        document.removeEventListener("keydown", handleKeyDown);
+      };
+    }
+  }, [isAdmin]);
 
   // Toggle expand/collapse for navigation items
   const toggleExpand = (itemId) => {
@@ -1290,25 +1324,27 @@ const OperationsManual = () => {
                       </Tooltip>
 
                       {/* PDF Export Button */}
-                      <Tooltip title="Export to PDF">
-                        <IconButton
-                          onClick={() =>
-                            handleExportPDF(
-                              selectedPolicy,
-                              calculateCurrentVersion(selectedPolicy.versions)
-                            )
-                          }
-                          disabled={isExportingPDF}
-                          size="small"
-                          sx={{ border: "1px solid #ccc", mr: 1 }}
-                        >
-                          {isExportingPDF ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <PictureAsPdf />
-                          )}
-                        </IconButton>
-                      </Tooltip>
+                      {isAdmin && (
+                        <Tooltip title="Export to PDF">
+                          <IconButton
+                            onClick={() =>
+                              handleExportPDF(
+                                selectedPolicy,
+                                calculateCurrentVersion(selectedPolicy.versions)
+                              )
+                            }
+                            disabled={isExportingPDF}
+                            size="small"
+                            sx={{ border: "1px solid #ccc", mr: 1 }}
+                          >
+                            {isExportingPDF ? (
+                              <CircularProgress size={20} />
+                            ) : (
+                              <PictureAsPdf />
+                            )}
+                          </IconButton>
+                        </Tooltip>
+                      )}
 
                       {/* Edit Button */}
                       {isAdmin && (
@@ -1483,12 +1519,49 @@ const OperationsManual = () => {
           });
           setIsViewNotesDialogOpen(true);
         }}
+        isAdmin={isAdmin}
       />
       <ViewNotesDialog
         open={isViewNotesDialogOpen}
         onClose={() => setIsViewNotesDialogOpen(false)}
         notesData={viewNotesData}
       />
+      <Dialog
+        open={isWarningDialogOpen}
+        onClose={() => setIsWarningDialogOpen(false)}
+        PaperProps={{
+          sx: {
+            borderRadius: 2,
+            boxShadow: 24,
+            minWidth: 300,
+          },
+        }}
+      >
+        <DialogTitle sx={{ bgcolor: "error.main", color: "white", p: 2 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <GppBad sx={{ fontSize: 28 }} />
+            <Typography variant="h6" component="div">
+              Action Forbidden
+            </Typography>
+          </Box>
+        </DialogTitle>
+        <DialogContent sx={{ p: 3 }}>
+          <Typography variant="body1" sx={{ mt: 1 }}>
+            This action is disabled. Copying, saving, or distributing this
+            document is not permitted.
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ p: 2, justifyContent: "center" }}>
+          <Button
+            onClick={() => setIsWarningDialogOpen(false)}
+            variant="contained"
+            color="primary"
+            sx={{ borderRadius: "20px", px: 4 }}
+          >
+            I Understand
+          </Button>
+        </DialogActions>
+      </Dialog>
     </>
   );
 };
@@ -1502,6 +1575,7 @@ const VersionHistoryDialog = ({
   selectedPolicy,
   versionDownloadLoading,
   onViewNotes,
+  isAdmin,
 }) => {
   const [page, setPage] = useState(0);
   const [rowsPerPage] = useState(10);
@@ -1584,23 +1658,25 @@ const VersionHistoryDialog = ({
                     </TableCell>
                     <TableCell>{version?.updator?.name || "N/A"}</TableCell>
                     <TableCell>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{ mr: 1 }}
-                        onClick={() =>
-                          handleDownloadVersion(
-                            version,
-                            getVersionNumber(originalIndex)
-                          )
-                        }
-                        disabled={versionDownloadLoading[version.id]}
-                      >
-                        <Typography variant="body2">Download</Typography>
-                        {versionDownloadLoading[version.id] && (
-                          <CircularProgress size={16} sx={{ ml: 1 }} />
-                        )}
-                      </Button>
+                      {isAdmin && (
+                        <Button
+                          size="small"
+                          variant="outlined"
+                          sx={{ mr: 1 }}
+                          onClick={() =>
+                            handleDownloadVersion(
+                              version,
+                              getVersionNumber(originalIndex)
+                            )
+                          }
+                          disabled={versionDownloadLoading[version.id]}
+                        >
+                          <Typography variant="body2">Download</Typography>
+                          {versionDownloadLoading[version.id] && (
+                            <CircularProgress size={16} sx={{ ml: 1 }} />
+                          )}
+                        </Button>
+                      )}
                       <Button
                         size="small"
                         variant="outlined"
