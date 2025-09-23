@@ -986,7 +986,14 @@ const OperationsManual = () => {
           {/* Left Column - Table of Contents */}
           {isSidebarExpanded && (
             <Grid size={{ xs: 12, md: 3 }}>
-              <Paper elevation={3} sx={{ p: 2, height: "100%" }}>
+              <Paper
+                elevation={3}
+                sx={{
+                  p: 2,
+                  height: "100%",
+                  userSelect: !isAdmin ? "none" : "auto",
+                }}
+              >
                 <Box
                   sx={{
                     display: "flex",
@@ -1101,7 +1108,12 @@ const OperationsManual = () => {
                     }}
                   >
                     {/* Breadcrumb */}
-                    <Box sx={{ width: "65%" }}>
+                    <Box
+                      sx={{
+                        width: "65%",
+                        userSelect: !isAdmin ? "none" : "auto",
+                      }}
+                    >
                       {breadcrumbPath.length > 0 && (
                         <Box
                           sx={{
@@ -1399,54 +1411,57 @@ const OperationsManual = () => {
                   <Divider sx={{ mb: 3 }} />
 
                   {/* Policy Content */}
-                  <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
-                    {selectedPolicy.title}
-                  </Typography>
+                  <Box sx={{ userSelect: !isAdmin ? "none" : "auto" }}>
+                    <Typography variant="h4" gutterBottom sx={{ mb: 3 }}>
+                      {selectedPolicy.title}
+                    </Typography>
 
-                  {selectedPolicy.content && (
-                    <RichTextContent
-                      content={selectedPolicy.content}
-                      sx={{ mt: 2, mb: 3 }}
-                    />
-                  )}
+                    {selectedPolicy.content && (
+                      <RichTextContent
+                        content={selectedPolicy.content}
+                        sx={{ mt: 2, mb: 3 }}
+                      />
+                    )}
 
-                  {/* Videos */}
-                  {selectedPolicy.videos &&
-                    selectedPolicy.videos.length > 0 && (
+                    {/* Videos */}
+                    {selectedPolicy.videos &&
+                      selectedPolicy.videos.length > 0 && (
+                        <Box sx={{ mt: 3 }}>
+                          {selectedPolicy.videos.map((video) =>
+                            renderVideo(video)
+                          )}
+                        </Box>
+                      )}
+
+                    {/* Tags */}
+                    {selectedPolicy.tags && selectedPolicy.tags.length > 0 && (
                       <Box sx={{ mt: 3 }}>
-                        {selectedPolicy.videos.map((video) =>
-                          renderVideo(video)
-                        )}
+                        <Typography variant="h6" gutterBottom>
+                          Tags
+                        </Typography>
+                        <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+                          {selectedPolicy.tags.map((tag) => (
+                            <Chip
+                              key={tag.id}
+                              label={tag.title}
+                              variant="outlined"
+                            />
+                          ))}
+                        </Box>
                       </Box>
                     )}
 
-                  {/* Tags */}
-                  {selectedPolicy.tags && selectedPolicy.tags.length > 0 && (
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="h6" gutterBottom>
-                        Tags
-                      </Typography>
-                      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
-                        {selectedPolicy.tags.map((tag) => (
-                          <Chip
-                            key={tag.id}
-                            label={tag.title}
-                            variant="outlined"
-                          />
-                        ))}
-                      </Box>
-                    </Box>
-                  )}
-
-                  {/* Links */}
-                  {selectedPolicy.links && selectedPolicy.links.length > 0 && (
-                    <Box sx={{ mt: 3 }}>
-                      <Typography variant="h6" gutterBottom>
-                        Links
-                      </Typography>
-                      {selectedPolicy.links.map((link) => renderLink(link))}
-                    </Box>
-                  )}
+                    {/* Links */}
+                    {selectedPolicy.links &&
+                      selectedPolicy.links.length > 0 && (
+                        <Box sx={{ mt: 3 }}>
+                          <Typography variant="h6" gutterBottom>
+                            Links
+                          </Typography>
+                          {selectedPolicy.links.map((link) => renderLink(link))}
+                        </Box>
+                      )}
+                  </Box>
 
                   {/* Previous/Next Buttons */}
                   <Box
