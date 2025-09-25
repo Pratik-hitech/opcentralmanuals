@@ -115,15 +115,6 @@ const FormFieldContainer = styled(Box)(({ theme }) => ({
   borderRadius: theme.shape.borderRadius,
   backgroundColor: theme.palette.background.paper,
 }));
-const SelectedPdfBox = styled(Box)(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: theme.spacing(1),
-  backgroundColor: theme.palette.action.hover,
-  borderRadius: theme.shape.borderRadius,
-  marginTop: theme.spacing(1),
-}));
 
 const PolicyDetails = () => {
   const [formData, setFormData] = useState({
@@ -154,7 +145,6 @@ const PolicyDetails = () => {
   const [mappedMappings, setMappedMappings] = useState([]);
   const [previewVideo, setPreviewVideo] = useState(null);
   const [showVideoPreview, setShowVideoPreview] = useState(false);
-  const [editingVideo, setEditingVideo] = useState(null);
   const [showImageMediaViewer, setShowImageMediaViewer] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [updateToVersion, setUpdateToVersion] = useState(false);
@@ -251,7 +241,6 @@ const PolicyDetails = () => {
             setSelectedLinks(updatedLinks);
             setEmbeddedPdf(data.pdf || null);
 
-            const mappings = [];
             const navigationPromises = data.navigations.map(async (nav) => {
               const colRes = await httpClient.get(
                 `/collections/${nav.collection_id}`
@@ -303,6 +292,7 @@ const PolicyDetails = () => {
         });
     }
   }, [policyId]);
+
   const autoMapNavigation = async (navId) => {
     try {
       const navRes = await httpClient.get(`/navigations/${navId}`);
@@ -641,10 +631,6 @@ const PolicyDetails = () => {
     }
   };
 
-  const handleRemoveEmbeddedPdf = () => {
-    setEmbeddedPdf(null);
-  };
-
   const toggleExpand = (id) => {
     setExpandedItems((prev) => ({
       ...prev,
@@ -795,9 +781,7 @@ const PolicyDetails = () => {
         );
       }
     });
-    // if (embeddedPdf) {
-    //   submitData.append("embeded_pdf", embeddedPdf.id);
-    // }
+
     const findNavigationItem = (tree, targetId) => {
       for (let item of tree) {
         if (item.id === targetId) {
@@ -1173,58 +1157,6 @@ const PolicyDetails = () => {
                   </TableContainer>
                 </LinkTableContainer>
               )}
-              {/* <FormFieldContainer>
-              <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
-                <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mr: 1 }}>
-                  Embed PDF
-                </FormLabel>
-                <Tooltip
-                  title="Embedding a PDF will display the PDF to the user on screen, it will not be able to be downloaded. Only 1 PDF can be embedded. Choose 'Links' instead if you want the PDF to be downloadable or multiple files."
-                  placement="top-start"
-                  arrow
-                >
-                  <InfoIcon
-                    sx={{
-                      color: "action.active",
-                      fontSize: 18,
-                      cursor: "pointer",
-                    }}
-                  />
-                </Tooltip>
-              </Box>
-              {embeddedPdf ? (
-                <SelectedPdfBox>
-                  <Typography
-                    variant="body2"
-                    sx={{
-                      flexGrow: 1,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                    }}
-                  >
-                    {embeddedPdf.name}
-                  </Typography>
-                  <IconButton
-                    aria-label="remove embedded pdf"
-                    size="small"
-                    onClick={handleRemoveEmbeddedPdf}
-                  >
-                    <CloseIcon fontSize="small" />
-                  </IconButton>
-                </SelectedPdfBox>
-              ) : (
-                <Box sx={{ mt: 1 }}>
-                  <Button
-                    variant="outlined"
-                    color="primary"
-                    onClick={handleSelectEmbedPdf}
-                    sx={{ borderRadius: 2 }}
-                  >
-                    Select file
-                  </Button>
-                </Box>
-              )}
-            </FormFieldContainer> */}
               <FormGrid size={{ xs: 12 }}>
                 <Box sx={{ display: "flex", alignItems: "center" }}>
                   <FormLabel sx={{ color: "#4a5568", fontWeight: 500, mb: 1 }}>
