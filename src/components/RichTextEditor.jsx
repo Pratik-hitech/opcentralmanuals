@@ -11,16 +11,19 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
     toolbar_items_size: "small",
 
     plugins:
-      "advlist autolink lists link charmap preview anchor " +
+      "advlist autolink lists link image charmap preview anchor " +
       "searchreplace visualblocks code codesample fullscreen " +
+      "quickbars charmap wordcount emoticons " +
       "insertdatetime media table help wordcount hr",
 
     toolbar:
-      "undo redo | blocks | bold italic underline forecolor | " +
-      "alignleft aligncenter alignright alignjustify | " +
-      "bullist numlist outdent indent | removeformat | " +
-      "image link hr table preview | fullscreen | " +
-      "code codesample | help | searchreplace",
+      "undo redo | blocks fontsize | bold italic underline strikethrough | " +
+      "forecolor backcolor removeformat | align numlist bullist | " +
+      "lineheight outdent indent | link imageupload | code codesample | " +
+      "table | charmap emoticons blockquote hr | " +
+      "fullscreen preview | searchreplace ",
+
+    font_size_formats: "8px 10px 12px 14px 16px 18px 24px 36px 48px",
 
     formats: {
       inlinecode: { inline: "code" },
@@ -29,6 +32,10 @@ const RichTextEditor = forwardRef(function TinyEditor(props, ref) {
       { title: "Inline code", format: "inlinecode" },
       { title: "Code block", format: "code" },
     ],
+
+    quickbars_selection_toolbar: "bold italic underline strikethrough | link",
+    quickbars_insert_toolbar: "",
+    toolbar_mode: "sliding",
 
     content_style:
       "body{font-family:Helvetica,Arial,sans-serif;font-size:14px}" +
