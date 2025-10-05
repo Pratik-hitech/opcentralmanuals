@@ -1,6 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
-import { getYouTubeVideoId, getVimeoVideoId } from "../../utils/videoUtils";
+import { getYouTubeVideoId, getVimeoVideoId } from "../utils/videoUtils";
 
 /**
  * Responsive video component that handles YouTube, Vimeo, and uploaded videos

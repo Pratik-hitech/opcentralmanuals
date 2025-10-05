@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   Box,
@@ -16,10 +16,12 @@ import {
   Edit as EditIcon,
   ArrowBack,
 } from "@mui/icons-material";
+
 import { httpClient } from "../../../utils/httpClientSetup";
-import RichTextContent from "./RichTextContent";
 import { useAuth } from "../../../context/AuthContext";
-import VideoRenderer from "./common/VideoRenderer";
+
+import RichTextContent from "../components/RichTextContent";
+import VideoRenderer from "../components/VideoRenderer";
 
 const PolicyDetailsView = () => {
   const { policyId } = useParams();

@@ -40,11 +40,11 @@ import {
 } from "@mui/icons-material";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
-import { httpClient } from "../../../utils/httpClientSetup";
+import { httpClient } from "../../utils/httpClientSetup";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
-import { useNotification } from "../../../hooks/useNotification";
-import { useAuth } from "../../../context/AuthContext";
+import { useNotification } from "../../hooks/useNotification";
+import { useAuth } from "../../context/AuthContext";
 
 const AllPolicies = () => {
   // State declarations

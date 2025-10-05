@@ -48,10 +48,11 @@ import {
 } from "@mui/icons-material";
 import ExpandIcon from "@mui/icons-material/Expand";
 import TocIcon from "@mui/icons-material/Toc";
-import { httpClient } from "../../../../utils/httpClientSetup";
-import { useAuth } from "../../../../context/AuthContext";
-import RichTextContent from "../RichTextContent";
-import VideoRenderer from "../common/VideoRenderer";
+
+import { useAuth } from "../../../context/AuthContext";
+import { httpClient } from "../../../utils/httpClientSetup";
+import RichTextContent from "../components/RichTextContent";
+import VideoRenderer from "../components/VideoRenderer";
 
 const OperationsManual = () => {
   const { id, policyId } = useParams();
@@ -84,8 +85,6 @@ const OperationsManual = () => {
 
   const { user } = useAuth();
   const isAdmin = user?.role?.name === "admin";
-
-  console.log(isAdmin, "is admin");
 
   // Calculate current version based on versions array
   const calculateCurrentVersion = (versions) => {

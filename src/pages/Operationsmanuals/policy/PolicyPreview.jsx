@@ -1,4 +1,3 @@
-import React from "react";
 import {
   Box,
   Typography,
@@ -8,8 +7,9 @@ import {
   Divider,
 } from "@mui/material";
 import { Link as LinkIcon } from "@mui/icons-material";
-import RichTextContent from "../RichTextContent";
-import VideoRenderer from "../common/VideoRenderer";
+
+import RichTextContent from "../components/RichTextContent";
+import VideoRenderer from "../components/VideoRenderer";
 
 const PolicyPreview = ({
   title,

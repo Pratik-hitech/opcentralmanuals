@@ -1,18 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { 
-  Box, 
-  Paper, 
-  Typography, 
-  Divider, 
+import { useState, useEffect } from "react";
+import { useParams } from "react-router-dom";
+import {
+  Box,
+  Paper,
+  Typography,
+  Divider,
   Skeleton,
   Alert,
   IconButton,
-  Container
-} from '@mui/material';
-import { PlayArrow, Pause } from '@mui/icons-material';
-import { httpClient } from '../../../utils/httpClientSetup';
-import { format } from 'date-fns';
+  Container,
+} from "@mui/material";
+import { PlayArrow, Pause } from "@mui/icons-material";
+import { format } from "date-fns";
+
+import { httpClient } from "../../../utils/httpClientSetup";
 
 const ViewPolicy = () => {
   const { id } = useParams();
@@ -27,14 +28,14 @@ const ViewPolicy = () => {
       try {
         setLoading(true);
         const response = await httpClient.get(`policies/${id}`);
-        
+
         if (response.data.success) {
           setPolicy(response.data.data);
         } else {
-          setError(response.data.message || 'Failed to fetch policy');
+          setError(response.data.message || "Failed to fetch policy");
         }
       } catch (err) {
-        setError(err.message || 'An error occurred while fetching the policy');
+        setError(err.message || "An error occurred while fetching the policy");
       } finally {
         setLoading(false);
       }
@@ -59,20 +60,20 @@ const ViewPolicy = () => {
       window.speechSynthesis.cancel();
       const speech = new SpeechSynthesisUtterance();
       speech.text = `${policy.title}. ${policy.content}`;
-      
+
       speech.onend = () => {
         setIsSpeaking(false);
         setUtterance(null);
       };
-      
+
       speech.onerror = (e) => {
-        console.error('Speech error:', e);
+        console.error("Speech error:", e);
         setIsSpeaking(false);
         setUtterance(null);
       };
-      
+
       speech.onboundary = () => {};
-      
+
       setUtterance(speech);
       window.speechSynthesis.speak(speech);
       setIsSpeaking(true);
@@ -109,55 +110,58 @@ const ViewPolicy = () => {
   }
 
   return (
-    <Container 
-      maxWidth="lg" 
-      sx={{ 
+    <Container
+      maxWidth="lg"
+      sx={{
         py: 4,
-        width: '80%',
-        maxWidth: { xs: '100%', sm: '90%', md: '80%' }
+        width: "80%",
+        maxWidth: { xs: "100%", sm: "90%", md: "80%" },
       }}
     >
-      <Paper 
-        elevation={3} 
-        sx={{ 
+      <Paper
+        elevation={3}
+        sx={{
           p: { xs: 2, sm: 3 },
-          width: '100%'
+          width: "100%",
         }}
       >
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'flex-start',
-          mb: 2,
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: { xs: 2, sm: 0 }
-        }}>
-          <Box sx={{ width: { xs: '100%', sm: 'calc(100% - 48px)' } }}>
-            <Typography 
-              variant="h4" 
-              component="h1" 
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
+            mb: 2,
+            flexDirection: { xs: "column", sm: "row" },
+            gap: { xs: 2, sm: 0 },
+          }}
+        >
+          <Box sx={{ width: { xs: "100%", sm: "calc(100% - 48px)" } }}>
+            <Typography
+              variant="h4"
+              component="h1"
               gutterBottom
-              sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+              sx={{ fontSize: { xs: "1.5rem", sm: "2rem" } }}
             >
               {policy.title}
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Last updated: {format(new Date(policy.updated_at), 'MMM dd, yyyy')}
+              Last updated:{" "}
+              {format(new Date(policy.updated_at), "MMM dd, yyyy")}
             </Typography>
           </Box>
-          
+
           <IconButton
             onClick={handleSpeech}
             aria-label={isSpeaking ? "Pause reading" : "Read aloud"}
             sx={{
-              border: '1px solid',
-              borderColor: 'divider',
+              border: "1px solid",
+              borderColor: "divider",
               borderRadius: 1,
               p: 1,
-              '&:hover': {
-                backgroundColor: 'action.hover'
+              "&:hover": {
+                backgroundColor: "action.hover",
               },
-              alignSelf: { xs: 'flex-start', sm: 'center' }
+              alignSelf: { xs: "flex-start", sm: "center" },
             }}
             size="small"
           >
@@ -172,10 +176,10 @@ const ViewPolicy = () => {
         <Divider sx={{ my: 2 }} />
 
         <Box sx={{ mb: 3 }}>
-          <Typography 
-            variant="body1" 
+          <Typography
+            variant="body1"
             whiteSpace="pre-line"
-            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+            sx={{ fontSize: { xs: "0.875rem", sm: "1rem" } }}
           >
             {policy.content}
           </Typography>
