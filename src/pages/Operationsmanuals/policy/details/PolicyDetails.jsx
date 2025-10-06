@@ -36,6 +36,7 @@ import PolicyDialogs from "./PolicyDialogs";
 const PolicyDetails = () => {
   const [anchorEl, setAnchorEl] = useState(null);
   const openDropdown = Boolean(anchorEl);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [searchParams] = useSearchParams();
   const navigationId = searchParams.get("navigationId");
@@ -147,37 +148,44 @@ const PolicyDetails = () => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    const submitData = buildSubmitData(
-      formState.formData,
-      formState.tags,
-      formState.selectedLinks,
-      formState.videos,
-      navState.mappedMappings,
-      navState.navigationTree,
-      id,
-      isEdit,
-      dialogState.updateToVersion,
-      dialogState.versionNotes
-    );
+    if (e && e.preventDefault) e.preventDefault();
+    if (isSubmitting) return;
 
-    const success = await submitPolicy(
-      submitData,
-      policyId,
-      isEdit,
-      showNotification,
-      navigate
-    );
+    setIsSubmitting(true);
+    try {
+      const submitData = buildSubmitData(
+        formState.formData,
+        formState.tags,
+        formState.selectedLinks,
+        formState.videos,
+        navState.mappedMappings,
+        navState.navigationTree,
+        id,
+        isEdit,
+        dialogState.updateToVersion,
+        dialogState.versionNotes
+      );
 
-    if (success && !isEdit) {
-      // Reset form on create
-      formState.setFormData({ title: "", content: "" });
-      formState.setTags([]);
-      formState.setSelectedLinks([]);
-      formState.setVideos([]);
-      formState.setIsVideoEnabled(false);
-      navState.setMappedMappings([]);
-      navState.setSelectedCollection(null);
+      const success = await submitPolicy(
+        submitData,
+        policyId,
+        isEdit,
+        showNotification,
+        navigate
+      );
+
+      if (success && !isEdit) {
+        // Reset form on create
+        formState.setFormData({ title: "", content: "" });
+        formState.setTags([]);
+        formState.setSelectedLinks([]);
+        formState.setVideos([]);
+        formState.setIsVideoEnabled(false);
+        navState.setMappedMappings([]);
+        navState.setSelectedCollection(null);
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -276,7 +284,7 @@ const PolicyDetails = () => {
               isMapped={navState.isMapped}
             />
             <PolicyFormActions
-              isSubmitting={false} // You can add isSubmitting state if needed
+              isSubmitting={isSubmitting}
               isEdit={isEdit}
               handleUpdateClick={dialogState.handleUpdateClick}
               handleSubmit={handleSubmit}
