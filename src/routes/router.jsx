@@ -60,7 +60,7 @@ import ResetPasswordVerify from "../pages/ResetPaasswordVerify/ResetPasswordVeri
 import SearchNav from "../pages/SearchNav/SearchNav";
 
 import PolicyDetailsView from "../pages/Operationsmanuals/policy/PolicyDetailsView";
-import OperationsManual from "../pages/Operationsmanuals/manual/OperationsManual";
+import ViewManual from "../pages/Operationsmanuals/manual/ViewManual";
 import PolicyDetails from "../pages/Operationsmanuals/policy/details/PolicyDetails";
 import CreatePolicies from "../pages/Operationsmanuals/policy/CreatePolicies";
 import PolicyPermissions from "../pages/Operationsmanuals/policy/PolicyPermissions";
@@ -200,8 +200,8 @@ export const router = createBrowserRouter([
       </PrivateRoute>
     ),
     children: [
-      { index: true, element: <OperationsManual /> },
-      { path: "policy/:policyId", element: <OperationsManual /> },
+      { index: true, element: <ViewManual /> },
+      { path: "policy/:policyId", element: <ViewManual /> },
     ],
   },
   {

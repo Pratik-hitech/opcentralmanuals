@@ -54,7 +54,7 @@ import { httpClient } from "../../../utils/httpClientSetup";
 import RichTextContent from "../components/RichTextContent";
 import VideoRenderer from "../components/VideoRenderer";
 
-const OperationsManual = () => {
+const ViewManual = () => {
   const { id, policyId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -1852,4 +1852,4 @@ const ViewNotesDialog = ({ open, onClose, notesData }) => {
   );
 };
 
-export default OperationsManual;
+export default ViewManual;
